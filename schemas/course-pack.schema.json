@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MindOS public practice course pack v0.1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "version", "title", "language", "level", "audience", "license", "review_status", "learning_goals", "dimensions", "concepts", "relations", "resources", "tasks"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": "0.1.0"},
+    "id": {"$ref": "#/$defs/id"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "title": {"$ref": "#/$defs/text"},
+    "language": {"$ref": "#/$defs/text"},
+    "level": {"enum": ["beginner", "intermediate", "advanced"]},
+    "audience": {"$ref": "#/$defs/text"},
+    "license": {"$ref": "#/$defs/text"},
+    "review_status": {"enum": ["draft", "reviewed"]},
+    "learning_goals": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}},
+    "dimensions": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "label", "description"],
+        "properties": {"id": {"$ref": "#/$defs/id"}, "label": {"$ref": "#/$defs/text"}, "description": {"$ref": "#/$defs/text"}}
+      }
+    },
+    "concepts": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "title", "dimension_ids"],
+        "properties": {"id": {"$ref": "#/$defs/id"}, "title": {"$ref": "#/$defs/text"}, "dimension_ids": {"$ref": "#/$defs/ids"}}
+      }
+    },
+    "relations": {
+      "type": "array", "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["from", "to", "type"],
+        "properties": {"from": {"$ref": "#/$defs/id"}, "to": {"$ref": "#/$defs/id"}, "type": {"enum": ["prerequisite", "part_of", "related"]}}
+      }
+    },
+    "resources": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "title", "path", "concept_ids", "license", "provenance"],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"}, "title": {"$ref": "#/$defs/text"}, "path": {"$ref": "#/$defs/text"},
+          "concept_ids": {"$ref": "#/$defs/ids"}, "license": {"$ref": "#/$defs/text"}, "provenance": {"$ref": "#/$defs/text"}
+        }
+      }
+    },
+    "tasks": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "task_type", "purpose", "prompt", "concept_ids", "dimension_ids", "rubric", "reference_answer"],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"}, "task_type": {"enum": ["short_answer", "numeric", "code"]},
+          "purpose": {"const": "practice"}, "prompt": {"$ref": "#/$defs/text"},
+          "concept_ids": {"$ref": "#/$defs/ids"}, "dimension_ids": {"$ref": "#/$defs/ids"},
+          "reference_answer": {"type": ["string", "number"], "minLength": 1},
+          "rubric": {
+            "type": "array", "minItems": 1,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["dimension_id", "criterion", "max_score"],
+              "properties": {"dimension_id": {"$ref": "#/$defs/id"}, "criterion": {"$ref": "#/$defs/text"}, "max_score": {"type": "integer", "minimum": 1}}
+            }
+          }
+        },
+        "allOf": [{
+          "if": {"properties": {"task_type": {"const": "numeric"}}},
+          "then": {"properties": {"reference_answer": {"type": "number"}}},
+          "else": {"properties": {"reference_answer": {"type": "string"}}}
+        }]
+      }
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "text": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}
+  }
+}

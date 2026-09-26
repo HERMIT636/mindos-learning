@@ -1,0 +1,62 @@
+{
+  "$schema": "../../schemas/course-pack.schema.json",
+  "schema_version": "0.1.0",
+  "id": "python-foundations",
+  "version": "0.1.0",
+  "title": "Python 基础：函数与返回值",
+  "language": "zh-CN",
+  "level": "beginner",
+  "audience": "了解变量和基本算术运算的编程入门者",
+  "license": "MIT",
+  "review_status": "draft",
+  "learning_goals": ["说明函数调用与返回值的关系", "编写返回两个数之和的函数"],
+  "dimensions": [
+    {"id": "understanding", "label": "概念理解", "description": "能解释函数与返回值的作用"},
+    {"id": "implementation", "label": "代码实现", "description": "能根据明确要求编写函数"}
+  ],
+  "concepts": [
+    {"id": "functions", "title": "函数定义与调用", "dimension_ids": ["understanding", "implementation"]},
+    {"id": "return-value", "title": "返回值", "dimension_ids": ["understanding", "implementation"]}
+  ],
+  "relations": [
+    {"from": "functions", "to": "return-value", "type": "prerequisite"}
+  ],
+  "resources": [
+    {
+      "id": "functions-note",
+      "title": "函数与返回值入门",
+      "path": "materials/functions.md",
+      "concept_ids": ["functions", "return-value"],
+      "license": "MIT",
+      "provenance": "MindOS 原创公开示例，待教学审核"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "explain-return",
+      "task_type": "short_answer",
+      "purpose": "practice",
+      "prompt": "在函数中，return 和 print 的主要作用有什么不同？",
+      "concept_ids": ["return-value"],
+      "dimension_ids": ["understanding"],
+      "rubric": [
+        {"dimension_id": "understanding", "criterion": "指出 return 将值交回调用者并结束本次函数执行", "max_score": 2},
+        {"dimension_id": "understanding", "criterion": "指出 print 的主要作用是输出显示内容，不会自动把显示内容作为所在函数的返回值", "max_score": 2}
+      ],
+      "reference_answer": "return 将值交给调用者并结束本次函数执行；print 用于显示内容。仅调用 print 且没有执行返回具体值语句的普通函数通常返回 None。"
+    },
+    {
+      "id": "implement-add",
+      "task_type": "code",
+      "purpose": "practice",
+      "prompt": "实现 add(a, b)，要求返回两个输入数的和，不需要打印。",
+      "concept_ids": ["functions", "return-value"],
+      "dimension_ids": ["implementation"],
+      "rubric": [
+        {"dimension_id": "implementation", "criterion": "定义接受 a 和 b 两个参数的 add 函数", "max_score": 1},
+        {"dimension_id": "implementation", "criterion": "使用 return 返回 a + b，调用者可以取得结果", "max_score": 2}
+      ],
+      "reference_answer": "def add(a, b):\n    return a + b"
+    }
+  ]
+}

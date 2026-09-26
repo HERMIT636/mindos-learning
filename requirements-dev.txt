@@ -1,0 +1,2 @@
+# Course-pack validation only; the application is not implemented yet.
+jsonschema>=4.19.2,<5

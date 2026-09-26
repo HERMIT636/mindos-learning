@@ -1,0 +1,61 @@
+{
+  "$schema": "../../schemas/course-pack.schema.json",
+  "schema_version": "0.1.0",
+  "id": "linear-algebra",
+  "version": "0.1.0",
+  "title": "线性代数基础：二维向量与点积",
+  "language": "zh-CN",
+  "level": "beginner",
+  "audience": "了解有序数对及基本算术运算的大学基础课学习者",
+  "license": "MIT",
+  "review_status": "draft",
+  "learning_goals": ["识别二维向量的两个分量", "计算二维实向量的标准点积并解释简单结果"],
+  "dimensions": [
+    {"id": "understanding", "label": "概念理解", "description": "能解释向量分量及点积的基本含义"},
+    {"id": "calculation", "label": "计算", "description": "能按定义正确计算点积"}
+  ],
+  "concepts": [
+    {"id": "vectors", "title": "二维实向量", "dimension_ids": ["understanding"]},
+    {"id": "dot-product", "title": "标准点积", "dimension_ids": ["understanding", "calculation"]}
+  ],
+  "relations": [
+    {"from": "vectors", "to": "dot-product", "type": "prerequisite"}
+  ],
+  "resources": [
+    {
+      "id": "dot-product-note",
+      "title": "二维向量与点积入门",
+      "path": "materials/dot-product.md",
+      "concept_ids": ["vectors", "dot-product"],
+      "license": "MIT",
+      "provenance": "MindOS 原创公开示例，待教学审核"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "calculate-dot-product",
+      "task_type": "numeric",
+      "purpose": "practice",
+      "prompt": "计算二维实向量 (1, 2) 与 (3, 4) 的标准点积。",
+      "concept_ids": ["dot-product"],
+      "dimension_ids": ["calculation"],
+      "rubric": [
+        {"dimension_id": "calculation", "criterion": "按对应分量乘积求和，得到 11", "max_score": 2}
+      ],
+      "reference_answer": 11
+    },
+    {
+      "id": "explain-zero-dot-product",
+      "task_type": "short_answer",
+      "purpose": "practice",
+      "prompt": "向量 (1, 0) 与 (0, 1) 的点积为 0。它们是否都是零向量？说明原因。",
+      "concept_ids": ["vectors", "dot-product"],
+      "dimension_ids": ["understanding"],
+      "rubric": [
+        {"dimension_id": "understanding", "criterion": "指出两个向量都含非零分量，因此都不是零向量", "max_score": 2},
+        {"dimension_id": "understanding", "criterion": "说明非零向量也可能点积为 0，在标准欧氏几何中这两个向量相互垂直", "max_score": 2}
+      ],
+      "reference_answer": "都不是零向量，因为它们各有一个分量是 1；点积为 1×0 + 0×1 = 0。在标准欧氏几何中，这两个非零向量相互垂直。"
+    }
+  ]
+}

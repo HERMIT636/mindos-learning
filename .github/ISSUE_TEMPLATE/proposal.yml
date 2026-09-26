@@ -1,0 +1,21 @@
+name: 功能或课程提案
+description: 提议新的使用场景、平台能力或课程包
+title: "[提案] "
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: 谁需要解决什么问题
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: 建议方案与最小范围
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: 如何验证
+      description: 课程提案请补充资料来源、分发许可与内容审核安排。

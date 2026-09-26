@@ -1,0 +1,50 @@
+# Local credentials and settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials*.json
+.codex/
+.agents/
+
+# Python and frontend build output
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+.next/
+dist/
+build/
+coverage/
+
+# Runtime data and private evaluation materials
+data/
+uploads/
+storage/
+logs/
+models/
+vectors/
+private/
+evaluation-private/
+*.log
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.gguf
+*.safetensors
+*.pt
+*.pth
+
+# Local drafts, backups and publication archives
+历史版本/
+MindOS_大创挑战杯优化建议稿.md
+release/
+.DS_Store
+Thumbs.db

@@ -271,6 +271,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
                 self.server.storage.mark_help(self._session(), pack, task_id)
             ai_mode = self.server.storage.mode(self._session()) == "ai"
             chunks = self.server.catalog.teaching_chunks(pack)
+            if concept_id:
+                chunks = [item for item in chunks if concept_id in item["concept_ids"]]
             if ai_mode:
                 chunks += self.server.catalog.external_chunks(pack, concept_id)
             sources, retrieval_mode, notice = retrieve(

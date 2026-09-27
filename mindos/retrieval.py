@@ -73,4 +73,10 @@ def retrieve(question: str, chunks: list[dict], concept_id: str | None,
         score = keyword_score + (0.6 * semantic_score if mode != "关键词" else 0.0) + concept_boost
         ranked.append((score, chunk["id"], chunk))
     ranked.sort(key=lambda item: (-item[0], item[1]))
-    return [item[2] for item in ranked[:3]], mode, notice
+    selected = ranked[:2]
+    if len(ranked) > 2:
+        used_resources = {item[2]["resource_id"] for item in selected}
+        diverse = next((item for item in ranked[2:]
+                        if item[2]["resource_id"] not in used_resources), ranked[2])
+        selected.append(diverse)
+    return [item[2] for item in selected], mode, notice

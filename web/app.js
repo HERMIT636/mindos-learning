@@ -259,9 +259,10 @@ function renderLesson(result) {
   }
   if (result.notice) wrapper.append(element('small', '', result.notice));
   (result.sources || [result.source]).forEach((source, index) => {
-    const link = element('a', '', `${result.generated ? `[${index + 1}] ` : ''}查看课程原文：${source.title} ↗`);
+    const link = element('a', '', `${result.generated ? `[${index + 1}] ` : ''}查看资料来源：${source.title} ↗`);
     link.href = source.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
     wrapper.append(link);
+    if (source.provenance) wrapper.append(element('small', '', source.provenance));
   });
   ui.lessonResult.replaceChildren(wrapper);
 }
@@ -680,7 +681,7 @@ ui.askForm.addEventListener('submit', async event => {
       link.rel = 'noopener noreferrer';
       card.append(link, element('small', '', source.provenance));
       const details = element('details');
-      details.append(element('summary', '', '查看引用原文'), element('pre', '', source.content));
+      details.append(element('summary', '', '查看检索片段'), element('pre', '', source.content));
       card.append(details);
       wrapper.append(card);
     });

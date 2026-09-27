@@ -15,6 +15,7 @@ from pathlib import Path
 
 from mindos.catalog import Catalog
 from mindos.model import ModelGateway
+from mindos.retrieval import retrieve
 from mindos.server import MindOSServer
 
 
@@ -125,6 +126,25 @@ class PrototypeTests(unittest.TestCase):
                     self.assertGreater(len(lesson), 1500)
                     self.assertIn("## 常见", lesson)
                     self.assertNotIn("reference_answer", lesson)
+
+    def test_curated_guides_are_retrievable_for_each_concept(self) -> None:
+        catalog = Catalog()
+        questions = [
+            ("python-foundations", "functions", "函数定义和调用有什么区别？", "python-functions-official-guide"),
+            ("python-foundations", "return-value", "return 和 print 有什么区别？", "python-return-official-guide"),
+            ("linear-algebra", "vectors", "二维向量的分量是什么意思？", "linear-vectors-hefferon-guide"),
+            ("linear-algebra", "dot-product", "点积为零为什么说明垂直？", "linear-dot-hefferon-guide"),
+        ]
+        for course_id, concept_id, question, guide_id in questions:
+            with self.subTest(course=course_id, concept=concept_id):
+                pack = catalog.get(course_id)
+                chunks = [chunk for chunk in catalog.teaching_chunks(pack)
+                          if concept_id in chunk["concept_ids"]]
+                chunks += catalog.external_chunks(pack, concept_id)
+                sources, _, _ = retrieve(question, chunks, concept_id, ModelGateway(),
+                                         self.server.storage, use_vectors=False)
+                self.assertIn(guide_id, [source["id"] for source in sources])
+                self.assertTrue(all(concept_id in source["concept_ids"] for source in sources))
 
     def test_help_and_practice_never_count_as_independent(self) -> None:
         self.call("/api/dashboard?course_id=linear-algebra")

@@ -37,7 +37,7 @@
       "course_id": "linear-algebra",
       "concept_ids": ["dot-product"],
       "title": "Hefferon 教材导读：点积、长度与夹角",
-      "content": "Hefferon《Linear Algebra》第一章 Length and Angle Measures 小节将向量的长度、点积和夹角联系起来。二维标准点积按对应分量乘积求和，结果是标量；对非零向量，可用 a·b=|a||b|cosθ 解释正负号与垂直关系。判断点积为零是否意味着垂直时必须先排除零向量。教材第三章的投影部分可作为进阶延伸，不是当前点积计算的起点。",
+      "content": "Hefferon《Linear Algebra》第一章 Length and Angle Measures 小节将向量的长度、点积和夹角联系起来。二维标准点积按对应分量乘积求和，结果是标量；对非零向量，可用 a·b=|a||b|cosθ 解释正负号与垂直关系。MindOS 入门讲义只对两个非零向量讨论夹角；该教材另外约定：若其中一个是零向量，则夹角取直角。这是教材的定义选择，不应把它说成通常几何解释下零向量天然有方向。教材后面的投影内容可作进阶延伸，不是当前点积计算的起点。",
       "url": "https://jheffero.w3.uvm.edu/linearalgebra/book.pdf",
       "provenance": "MindOS 根据 Hefferon《Linear Algebra》第 1 章 II.2 撰写的中文导读；作者站标注 GFDL 或 CC BY-SA 3.0 US；待教师审核",
       "source_resource_ids": ["hefferon-linear-algebra-textbook"]

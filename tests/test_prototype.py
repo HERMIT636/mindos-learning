@@ -41,7 +41,7 @@ class FakeModelHandler(BaseHTTPRequestHandler):
                 assert "参考答案" not in payload["messages"][1]["content"]
                 assert "不是你讲解时唯一能用的知识" in system
                 assert "扩展说明" in system
-                if "请深入讲解知识点" in payload["messages"][1]["content"]:
+                if "请从零基础逐步讲解知识点" in payload["messages"][1]["content"]:
                     assert "不要只给定义或简短摘要" in system
                     assert "函数定义与调用" in payload["messages"][1]["content"]
                     assert "独立作答证据" in payload["messages"][1]["content"]
@@ -128,6 +128,10 @@ class PrototypeTests(unittest.TestCase):
                     minimum = 1500 if pack["id"] in {"python-foundations", "linear-algebra"} else 650
                     self.assertGreater(len(lesson), minimum)
                     self.assertIn("## 常见", lesson)
+                    if pack["id"] in {"machine-learning", "hpc-foundations", "ascend-c-operators"}:
+                        self.assertIn("## 第 0 步：先认清本讲的词", lesson)
+                        self.assertIn("### 1.", lesson)
+                        self.assertIn("## 自己试一试", lesson)
                     self.assertNotIn("reference_answer", lesson)
 
     def test_curated_guides_are_retrievable_for_each_concept(self) -> None:
@@ -168,6 +172,36 @@ class PrototypeTests(unittest.TestCase):
         self.assertIn("分类与回归评价指标", lesson["title"])
         self.assertIn("混淆矩阵", lesson["answer"])
 
+    def test_skip_diagnostics_opens_route_without_fabricating_evidence(self) -> None:
+        self.call("/api/mode", {"mode": "materials"})
+        status, blocked = self.call("/api/skip-diagnostics", {"course_id": "machine-learning"})
+        self.assertEqual(status, 400)
+        self.assertIn("目标", blocked["error"])
+        self.call("/api/target", {"course_id": "machine-learning", "chapter_id": "evaluation",
+                                  "concept_id": "evaluation"})
+        status, blocked = self.call("/api/lesson", {"course_id": "machine-learning"})
+        self.assertEqual(status, 400)
+        self.assertIn("完成或跳过", blocked["error"])
+        status, result = self.call("/api/skip-diagnostics", {"course_id": "machine-learning"})
+        self.assertEqual(status, 200)
+        self.assertTrue(result["dashboard"]["diagnostic_skipped"])
+        self.assertTrue(all(item["result"] is None for item in result["dashboard"]["diagnostic"]))
+        self.assertEqual(result["dashboard"]["valid_evidence_count"], 0)
+        first = result["dashboard"]["plan"][0]["concept_id"]
+        status, lesson = self.call("/api/lesson", {"course_id": "machine-learning", "concept_id": first})
+        self.assertEqual(status, 200)
+        self.assertIn("##", lesson["answer"])
+        second = result["dashboard"]["plan"][1]["concept_id"]
+        status, next_lesson = self.call("/api/lesson", {"course_id": "machine-learning", "concept_id": second})
+        self.assertEqual(status, 200)
+        self.assertNotEqual(next_lesson["title"], lesson["title"])
+        status, outside = self.call("/api/lesson", {"course_id": "machine-learning", "concept_id": "neural-networks"})
+        self.assertEqual(status, 400)
+        self.assertIn("目标路线", outside["error"])
+        _, changed = self.call("/api/target", {"course_id": "machine-learning", "chapter_id": "classical-models",
+                                              "concept_id": "linear-models"})
+        self.assertFalse(changed["dashboard"]["diagnostic_skipped"])
+
     def test_priority_courses_open_their_first_lessons(self) -> None:
         self.call("/api/mode", {"mode": "materials"})
         catalog = Catalog()
@@ -206,7 +240,7 @@ class PrototypeTests(unittest.TestCase):
         self.assertEqual(dashboard["valid_evidence_count"], 0)
         self.assertEqual(dashboard["recommendation"]["task_id"], "zero-vector")
 
-    def test_goal_diagnosis_plan_and_local_tiered_hints(self) -> None:
+    def test_goal_diagnosis_plan_and_local_material_answer(self) -> None:
         _, dashboard = self.call("/api/dashboard?course_id=python-foundations")
         self.assertIsNone(dashboard["goal"])
         self.assertNotIn("answer", json.dumps(dashboard["diagnostic"]))
@@ -242,12 +276,12 @@ class PrototypeTests(unittest.TestCase):
         self.assertGreater(len(lesson["answer"]), 1500)
         self.assertEqual(lesson["answer"], lesson["base_lesson"])
         self.assertNotIn("reference_answer", json.dumps(lesson))
-        for level in (1, 2, 3):
-            status, hint = self.call("/api/ask", {"course_id": "python-foundations", "question": "return 和 print 有什么区别？", "hint_level": level})
-            self.assertEqual(status, 200)
-            self.assertFalse(hint["generated"])
-            self.assertIn(f"{level}", hint["answer"] if level < 3 else "3")
-            self.assertTrue(hint["sources"])
+        status, hint = self.call("/api/ask", {"course_id": "python-foundations",
+                                               "question": "return 和 print 有什么区别？"})
+        self.assertEqual(status, 200)
+        self.assertFalse(hint["generated"])
+        self.assertIn("课程资料", hint["answer"])
+        self.assertTrue(hint["sources"])
         other_client = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
         with other_client.open(self.url + "/api/dashboard?course_id=python-foundations") as result:
             other = json.loads(result.read())

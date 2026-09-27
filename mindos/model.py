@@ -75,7 +75,7 @@ class ModelGateway:
         except (KeyError, TypeError, ValueError, OverflowError) as exc:
             raise ModelUnavailable("向量模型返回了无效数据") from exc
 
-    def explain(self, question: str, sources: list[dict], learner_hint: str, hint_level: int = 3,
+    def explain(self, question: str, sources: list[dict], learner_hint: str,
                 deep_lesson: bool = False) -> str:
         if not self.chat_ready:
             raise ModelUnavailable("讲解模型尚未配置")
@@ -98,12 +98,12 @@ class ModelGateway:
                     "只给确由片段支持的关键结论标引用编号，如[1]；来源之外的重要补充标明‘扩展说明’，不伪造引用。"
                     "资料不足或不确定时明确说明，不声称已联网查证，也不要声称仅凭有限作答状态就已准确评估学习者能力。"
                     "不要提供当前独立作答题目的答案，讲解例子应与独立题不同。"
-                    + ("现在是正式知识点讲解。像耐心的老师一样，根据现有学习证据选择起点，"
-                       "从直观理解逐步进入准确规则或数学原理，至少用一个不同于测评题的例子展示完整推导，"
-                       "再解释易错点、反例和自查方法。若学习状态证据不足，从基础讲起并提供进阶解释；"
-                       "不要只给定义或简短摘要，也不要扩展到与当前目标无关的大量知识。" if deep_lesson else "")
-                    + {1: "只给一个概念方向，不给答案或完整步骤。", 2: "给部分步骤和来源，不给最终答案。",
-                       3: "可以结合来源完整讲解概念，但不要解答当前独立题。"}[hint_level]
+                    + ("现在是正式知识点讲解。默认学习者零基础，先解释本讲会做什么、每个新术语是什么意思；"
+                       "按小步排列：直观场景、基础规则、逐步算例或代码、常见误解、简短自查。"
+                       "每一步说明为什么，避免跳步；有证据表明已掌握时才适当加快。"
+                       "至少用一个不同于测评题的例子展示完整推导。不要只给定义或简短摘要，"
+                       "也不要扩展到与当前目标无关的大量知识。" if deep_lesson else
+                       "针对学习者的问题直接解释，用简单例子和必要步骤说明，不设置提示等级。")
                 )},
                 {"role": "user", "content": f"课程资料：\n{context}\n\n学习状态：{learner_hint}\n学习者问题：{question}"},
             ],

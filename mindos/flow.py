@@ -74,7 +74,7 @@ def learning_plan(pack: dict, states: list[dict], answers: dict[str, bool], goal
         elif diagnosed.get(concept_id) is True:
             status, reason = "继续验证", "短诊断通过，但仍需新的独立变式题验证。"
         else:
-            status, reason = "待诊断", "完成短诊断后再确定这一知识点的起点。"
+            status, reason = "从基础开始", "尚无诊断证据，先阅读讲解，再用练习确认理解。"
         prior = [concept_by_id[item]["title"] for item in order if item in prerequisites[concept_id]]
         result.append({"concept_id": concept_id, "title": concept_by_id[concept_id]["title"],
                        "status": status, "reason": reason, "prerequisites": prior})

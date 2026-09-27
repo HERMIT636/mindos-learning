@@ -111,6 +111,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
             "course": self.server.catalog.public_course(course_id),
             "goal": goal,
             "target": target,
+            "diagnostic_skipped": bool(target and self.server.storage.diagnostics_skipped(
+                self._session(), pack, target["concept_id"])),
             "learning_mode": self.server.storage.mode(self._session()),
             "diagnostic": public_diagnostics(pack, answers, target["concept_id"] if target else None),
             "progress": states,
@@ -252,15 +254,19 @@ class MindOSHandler(BaseHTTPRequestHandler):
             correct = answer == task["answer"]
             self.server.storage.add_diagnostic(self._session(), pack, task["id"], answer, correct)
             self._json(HTTPStatus.OK, {"result": {"correct": correct}, "dashboard": self._dashboard(pack["id"])})
+        elif parsed.path == "/api/skip-diagnostics":
+            pack = self.server.catalog.get(payload.get("course_id", ""))
+            target = self.server.storage.target(self._session(), pack)
+            if target is None:
+                raise ValueError("请先确认目标知识点")
+            self.server.storage.skip_diagnostics(self._session(), pack, target["concept_id"])
+            self._json(HTTPStatus.OK, {"dashboard": self._dashboard(pack["id"])})
         elif parsed.path == "/api/ask":
             course_id = payload.get("course_id", "")
             pack = self.server.catalog.get(course_id)
             question = payload.get("question", "")
             concept_id = payload.get("concept_id")
             task_id = payload.get("task_id")
-            level = payload.get("hint_level", 3)
-            if type(level) is not int or level not in (1, 2, 3):
-                raise ValueError("提示级别无效")
             if payload.get("mode", "practice") == "independent":
                 raise ValueError("独立作答期间不提供讲解")
             if not isinstance(question, str) or not 2 <= len(question.strip()) <= 500:
@@ -285,7 +291,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
             elif ai_mode and self.server.model.chat_ready:
                 hint = self._learner_hint(pack, concept_id)
                 try:
-                    answer = self.server.model.explain(question.strip(), sources, hint, level)
+                    answer = self.server.model.explain(question.strip(), sources, hint)
                     generated = True
                     citations = {int(number) for number in re.findall(r"\[(\d+)\]", answer)}
                     if citations - set(range(1, len(sources) + 1)):
@@ -293,10 +299,10 @@ class MindOSHandler(BaseHTTPRequestHandler):
                                         if int(match.group(1)) <= len(sources) else "", answer)
                         notice = "模型引用了本次检索之外的编号，已移除无效编号；请核对原文。"
                 except ModelUnavailable:
-                    answer = self._source_hint(sources[0], level)
+                    answer = self._source_hint(sources[0])
                     notice = "模型连接失败；作答记录未受影响。"
             else:
-                answer = self._source_hint(sources[0], level)
+                answer = self._source_hint(sources[0])
             self._json(HTTPStatus.OK, {
                 "answer": answer, "retrieval_mode": retrieval_mode,
                 "sources": [{key: item[key] for key in ("id", "title", "content", "url", "provenance")}
@@ -310,9 +316,14 @@ class MindOSHandler(BaseHTTPRequestHandler):
             if target is None:
                 raise ValueError("请先确认目标知识点")
             answers = self.server.storage.diagnostics(self._session(), pack)
-            if any(task["id"] not in answers for task in diagnostic_tasks(pack, target["concept_id"])):
-                raise ValueError("请先完成基础测试")
-            concept = next(item for item in pack["concepts"] if item["id"] == target["concept_id"])
+            if (not self.server.storage.diagnostics_skipped(self._session(), pack, target["concept_id"])
+                    and any(task["id"] not in answers for task in diagnostic_tasks(pack, target["concept_id"]))):
+                raise ValueError("请先完成或跳过基础测试")
+            route = {item["concept_id"] for item in self._dashboard(pack["id"])["plan"]}
+            concept_id = payload.get("concept_id", target["concept_id"])
+            if concept_id not in route:
+                raise ValueError("请选择当前目标路线中的知识点")
+            concept = next(item for item in pack["concepts"] if item["id"] == concept_id)
             materials = self.server.catalog.lesson_materials(pack, concept["id"])
             if not materials:
                 raise ValueError("该知识点暂无课程资料")
@@ -326,9 +337,10 @@ class MindOSHandler(BaseHTTPRequestHandler):
             if self.server.storage.mode(self._session()) == "ai" and self.server.model.chat_ready:
                 try:
                     answer = self.server.model.explain(
-                        f"请深入讲解知识点「{concept['title']}」，结合课程资料逐层展开，"
+                        f"请从零基础逐步讲解知识点「{concept['title']}」，先解释术语和学习目的，"
+                        "再分步骤展示例子，每一步说明为什么这样做，最后用一道不泄露独立测评的小检查帮助理解。"
                         "根据学习者状态调整起点和难度，但不要解答当前独立题。",
-                        sources, learner_hint, 3, deep_lesson=True)
+                        sources, learner_hint, deep_lesson=True)
                     generated = True
                     citations = {int(number) for number in re.findall(r"\[(\d+)\]", answer)}
                     if citations - set(range(1, len(sources) + 1)):
@@ -394,13 +406,9 @@ class MindOSHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.NOT_FOUND, {"error": "接口不存在"})
 
     @staticmethod
-    def _source_hint(source: dict, level: int) -> str:
+    def _source_hint(source: dict) -> str:
         content = source["content"].strip()
-        if level == 1:
-            return f"提示 1：先回想「{source['title']}」中的核心概念，再自己尝试说出解题步骤。可核对下方原文 [1]。"
-        if level == 2:
-            return f"提示 2：课程资料 [1] 给出的线索是：\n{content[:320]}"
-        return f"资料讲解：请对照课程原文 [1] 梳理概念、例子和本题条件：\n{content[:1100]}"
+        return f"课程资料 [1]：\n{content[:1800]}"
 
     def do_GET(self) -> None:
         self._safe_call(self._get)

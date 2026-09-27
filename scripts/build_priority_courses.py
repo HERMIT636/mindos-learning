@@ -26,15 +26,20 @@ def question(raw: dict, topic_id: str, suffix: str, diagnostic: bool = False) ->
 
 
 def lesson(topic: dict) -> str:
+    terms = "\n".join(f"- **{item['name']}**：{item['meaning']}" for item in topic["beginner_terms"])
+    worked_steps = "\n\n".join(f"### {index}. {item['title']}\n\n{item['text']}"
+                               for index, item in enumerate(topic.get("worked_steps", []), 1))
     return (f"# {topic['title']}\n\n"
-            "本讲义为 MindOS 原创课程草稿，尚待教师审核。先理解现象与条件，再尝试完整例子。\n\n"
-            f"## 为什么要学\n\n{topic['motivation']}\n\n"
-            f"## 核心原理\n\n{topic['principle']}\n\n"
-            f"## 逐步例子\n\n{topic['example']}\n\n"
+            "这是从零开始的 MindOS 课程草稿，尚待教师审核。读不懂某个词时，先看下面的术语，再按步骤阅读；无需先会做题。\n\n"
+            f"## 第 0 步：先认清本讲的词\n\n{terms}\n\n"
+            f"## 第 1 步：从一个问题出发\n\n{topic['motivation']}\n\n"
+            f"## 第 2 步：理解它怎样工作\n\n{topic['principle']}\n\n"
+            f"## 第 3 步：跟着例子做\n\n{topic['example']}\n\n"
+            + (f"{worked_steps}\n\n" if worked_steps else "") +
             f"## 常见误区与自查\n\n{topic['pitfall']}\n\n"
-            "## 学完后的检验\n\n先合上讲义，自己复述：这个方法解决什么问题、前提是什么、"
-            "例子中的每一步为何成立、换一组输入时哪些判断必须重做。再完成两道不同的公开练习；"
-            "练习表现只是初步证据，不能代替真实项目中的实现与复核。\n\n"
+            f"## 自己试一试\n\n{topic['check']}\n\n"
+            "先不用急着做正式练习。能用自己的话说清这道小检查，才进入下一讲；答不出来就回到第 2、3 步。"
+            "后面的公开练习只提供初步证据，不能代替真实项目中的实现与复核。\n\n"
             f"延伸阅读：[原始官方资料]({topic['source']})。本讲义为原创概述，不复制原站正文；"
             "不同软件版本的接口以对应版本官方文档为准。\n")
 
@@ -58,6 +63,8 @@ def build(course_id: str) -> None:
     materials = folder / "materials"
     materials.mkdir(exist_ok=True)
     for topic in topics:
+        if not topic.get("beginner_terms") or not topic.get("check"):
+            raise ValueError(f"{course_id}/{topic['id']}: 缺少零基础术语或自查题")
         if len(topic["questions"]) != 3 or any(len(item["choices"]) != 3 or item["answer"] not in (0, 1, 2)
                                                for item in topic["questions"]):
             raise ValueError(f"{course_id}/{topic['id']}: 需三道三选一题")

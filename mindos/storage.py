@@ -57,6 +57,11 @@ class Storage:
                   chapter_id TEXT NOT NULL, concept_id TEXT NOT NULL, custom_text TEXT NOT NULL,
                   PRIMARY KEY(session_id,course_id,course_version)
                 );
+                CREATE TABLE IF NOT EXISTS diagnostic_skips (
+                  session_id TEXT NOT NULL, course_id TEXT NOT NULL, course_version TEXT NOT NULL,
+                  concept_id TEXT NOT NULL,
+                  PRIMARY KEY(session_id,course_id,course_version,concept_id)
+                );
                 CREATE TABLE IF NOT EXISTS generated_quizzes (
                   quiz_id TEXT PRIMARY KEY, session_id TEXT NOT NULL, course_id TEXT NOT NULL,
                   course_version TEXT NOT NULL, concept_id TEXT NOT NULL, prompt TEXT NOT NULL,
@@ -137,6 +142,18 @@ class Storage:
         with self.connect() as db:
             db.execute("INSERT INTO diagnostic_answers VALUES(?,?,?,?,?,?)",
                        (session_id, pack["id"], pack["version"], task_id, answer, int(correct)))
+
+    def skip_diagnostics(self, session_id: str, pack: dict, concept_id: str) -> None:
+        with self.connect() as db:
+            db.execute("INSERT OR IGNORE INTO diagnostic_skips VALUES(?,?,?,?)",
+                       (session_id, pack["id"], pack["version"], concept_id))
+
+    def diagnostics_skipped(self, session_id: str, pack: dict, concept_id: str) -> bool:
+        with self.connect() as db:
+            row = db.execute("SELECT 1 FROM diagnostic_skips WHERE session_id=? AND course_id=? "
+                             "AND course_version=? AND concept_id=?",
+                             (session_id, pack["id"], pack["version"], concept_id)).fetchone()
+        return row is not None
 
     def mode(self, session_id: str) -> str | None:
         with self.connect() as db:

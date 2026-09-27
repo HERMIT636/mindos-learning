@@ -23,6 +23,9 @@ const ui = {
   lessonContext: document.querySelector('#lesson-context'),
   lessonResult: document.querySelector('#lesson-result'),
   lessonRefresh: document.querySelector('#lesson-refresh'),
+  lessonPosition: document.querySelector('#lesson-position'),
+  lessonPrev: document.querySelector('#lesson-prev'),
+  lessonNext: document.querySelector('#lesson-next'),
   goPractice: document.querySelector('#go-practice'),
   goStatus: document.querySelector('#go-status'),
   backExplain: document.querySelector('#back-explain'),
@@ -43,6 +46,7 @@ const ui = {
   diagnosticPrompt: document.querySelector('#diagnostic-prompt'),
   diagnosticChoices: document.querySelector('#diagnostic-choices'),
   diagnosticSubmit: document.querySelector('#diagnostic-submit'),
+  diagnosticSkip: document.querySelector('#diagnostic-skip'),
   diagnosticFeedback: document.querySelector('#diagnostic-feedback'),
   pathPanel: document.querySelector('#path-panel'),
   pathSummary: document.querySelector('#path-summary'),
@@ -84,7 +88,7 @@ const ui = {
 
 const state = { courses: [], dashboard: null, courseId: '', taskId: '', mode: 'practice',
   learningMode: null, chatReady: false, analysis: null, quiz: null, stage: 'target',
-  lessonCache: null, lessonLoadingKey: null, busy: false };
+  lessonCache: null, lessonLoadingKey: null, lessonConceptId: null, busy: false };
 const typeNames = { single_choice: '单选题', numeric: '数值题', short_answer: '简答题', code: '代码题' };
 
 function element(tag, className, text) {
@@ -148,7 +152,7 @@ function renderStages() {
   if (!state.dashboard) return;
   const target = state.dashboard.target;
   const pending = state.dashboard.diagnostic.some(item => item.result === null);
-  const complete = Boolean(target) && !pending;
+  const complete = Boolean(target) && (state.dashboard.diagnostic_skipped || !pending);
   if (state.stage === 'diagnostic' && !target) state.stage = 'target';
   if (['explain', 'practice', 'status'].includes(state.stage) && !complete) {
     state.stage = target ? 'diagnostic' : 'target';
@@ -168,7 +172,41 @@ function renderStages() {
       ['explain', 'practice', 'status'].includes(name) && !complete;
     button.setAttribute('aria-current', state.stage === name ? 'step' : 'false');
   });
-  if (state.stage === 'explain' && complete) loadLesson();
+  if (state.stage === 'explain' && complete) {
+    renderLessonNavigation();
+    loadLesson();
+  }
+}
+
+function lessonRoute() { return state.dashboard?.plan || []; }
+
+function currentLessonId() {
+  const route = lessonRoute();
+  if (!route.some(item => item.concept_id === state.lessonConceptId)) {
+    state.lessonConceptId = route[0]?.concept_id || null;
+  }
+  return state.lessonConceptId;
+}
+
+function renderLessonNavigation() {
+  const route = lessonRoute();
+  const index = route.findIndex(item => item.concept_id === currentLessonId());
+  ui.lessonPosition.textContent = index < 0 ? '' : `第 ${index + 1} / ${route.length} 讲 · ${route[index].title}`;
+  ui.lessonPrev.disabled = index <= 0;
+  ui.lessonNext.textContent = index === route.length - 1 ? '完成讲解，去练习' : '下一讲';
+}
+
+function moveLesson(direction) {
+  const route = lessonRoute();
+  const index = route.findIndex(item => item.concept_id === currentLessonId());
+  const next = index + direction;
+  if (next >= route.length) { showStage('practice'); return; }
+  if (next < 0) return;
+  state.lessonConceptId = route[next].concept_id;
+  ui.askResult.replaceChildren();
+  renderLessonNavigation();
+  loadLesson();
+  ui.lessonPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function showStage(stage) {
@@ -246,7 +284,7 @@ function lessonBody(markdown) {
 }
 
 function renderLesson(result) {
-  ui.lessonTitle.textContent = `${result.title} · 知识点讲解`;
+  ui.lessonTitle.textContent = result.title;
   ui.lessonContext.textContent = result.generated
     ? 'AI 参考课程资料和当前学习证据组织讲解；来源之外的重要补充会标为扩展说明。下方保留完整课程讲义供核对。'
     : '以下是该知识点的完整课程讲义；你可以按自己的节奏阅读和练习。';
@@ -270,7 +308,9 @@ function renderLesson(result) {
 async function loadLesson(force = false) {
   const dashboard = state.dashboard;
   if (!dashboard?.target) return;
-  const key = [state.courseId, dashboard.course.version, dashboard.target.concept_id,
+  const conceptId = currentLessonId();
+  if (!conceptId) return;
+  const key = [state.courseId, dashboard.course.version, dashboard.target.concept_id, conceptId,
     state.learningMode, dashboard.valid_evidence_count,
     dashboard.diagnostic.map(item => item.result).join(',')].join('|');
   if (!force && state.lessonCache?.key === key) {
@@ -282,8 +322,8 @@ async function loadLesson(force = false) {
   ui.lessonResult.textContent = '正在准备当前知识点的讲解…';
   ui.lessonRefresh.disabled = true;
   try {
-    const result = await api('/api/lesson', { method: 'POST', body: JSON.stringify({ course_id: state.courseId }) });
-    if (state.courseId !== dashboard.course.id || state.dashboard.target?.concept_id !== dashboard.target.concept_id) return;
+    const result = await api('/api/lesson', { method: 'POST', body: JSON.stringify({ course_id: state.courseId, concept_id: conceptId }) });
+    if (state.courseId !== dashboard.course.id || state.dashboard.target?.concept_id !== dashboard.target.concept_id || currentLessonId() !== conceptId) return;
     state.lessonCache = { key, result };
     renderLesson(result);
   } catch (error) { ui.lessonResult.textContent = error.message; }
@@ -405,9 +445,10 @@ function renderMode() {
 function renderConceptOptions(preferred = '') {
   const course = state.dashboard.course;
   const chapter = course.chapters.find(item => item.id === ui.chapterSelect.value) || course.chapters[0];
-  ui.conceptSelect.replaceChildren(...chapter.concept_ids.map(id => {
+  ui.conceptSelect.replaceChildren(...chapter.concept_ids.map((id, index) => {
     const concept = course.concepts.find(item => item.id === id);
-    const option = element('option', '', concept.title);
+    const chapterNumber = course.chapters.indexOf(chapter) + 1;
+    const option = element('option', '', `${chapterNumber}.${index + 1} ${concept.title}`);
     option.value = id;
     return option;
   }));
@@ -416,8 +457,8 @@ function renderConceptOptions(preferred = '') {
 
 function renderFlow() {
   const { course, target, diagnostic, plan } = state.dashboard;
-  ui.chapterSelect.replaceChildren(...course.chapters.map(item => {
-    const option = element('option', '', item.title);
+  ui.chapterSelect.replaceChildren(...course.chapters.map((item, index) => {
+    const option = element('option', '', `第 ${index + 1} 章 · ${item.title}`);
     option.value = item.id;
     return option;
   }));
@@ -427,9 +468,9 @@ function renderFlow() {
   const targetConcept = course.concepts.find(item => item.id === target?.concept_id);
   ui.goalCurrent.textContent = target
     ? `当前目标：${targetConcept?.title || target.concept_id}${target.custom_text ? `（你的描述：${target.custom_text}）` : ''}`
-    : '请按章节选择目标知识点，再完成对应的短诊断。';
+    : '请按编号选择想学到的知识点，然后做或跳过学前小测。';
   const pending = diagnostic.find(item => item.result === null);
-  const complete = Boolean(target) && !pending;
+  const complete = Boolean(target) && (state.dashboard.diagnostic_skipped || !pending);
   ui.diagnosticBox.hidden = !target || !pending;
   if (target && pending) {
     ui.diagnosticCount.textContent = `第 ${diagnostic.length - diagnostic.filter(item => item.result === null).length + 1} / ${diagnostic.length} 题`;
@@ -448,7 +489,8 @@ function renderFlow() {
     const weak = plan.filter(item => item.status === '优先补强');
     ui.pathSummary.textContent = weak.length
       ? `当前证据提示先补强：${weak.map(item => item.title).join('、')}。下方按先修顺序安排资料、练习和复测。`
-      : '当前目标仍可通过独立变式题继续验证。下方按先修顺序安排。';
+      : state.dashboard.diagnostic_skipped ? '已跳过学前小测，先从路线第一讲学起；当前还没有诊断结论。' :
+        '当前目标仍可通过独立变式题继续验证。下方按先修顺序安排。';
     ui.pathList.replaceChildren(...plan.map((item, index) => {
       const row = element('div', 'path-item');
       row.append(element('strong', '', `${index + 1}. ${item.title}`), element('span', '', item.status));
@@ -505,10 +547,11 @@ async function selectCourse(courseId) {
   state.analysis = null;
   state.quiz = null;
   state.lessonCache = null;
+  state.lessonConceptId = null;
   try {
     state.dashboard = await api(`/api/dashboard?course_id=${encodeURIComponent(courseId)}`);
     state.stage = !state.dashboard.target ? 'target' :
-      state.dashboard.diagnostic.some(item => item.result === null) ? 'diagnostic' : 'explain';
+      !state.dashboard.diagnostic_skipped && state.dashboard.diagnostic.some(item => item.result === null) ? 'diagnostic' : 'explain';
     renderDashboard();
     const url = new URL(window.location.href);
     url.searchParams.set('course', courseId);
@@ -539,6 +582,8 @@ ui.flowSteps.querySelectorAll('button[data-stage]').forEach(button => {
   button.addEventListener('click', () => showStage(button.dataset.stage));
 });
 ui.lessonRefresh.addEventListener('click', () => loadLesson(true));
+ui.lessonPrev.addEventListener('click', () => moveLesson(-1));
+ui.lessonNext.addEventListener('click', () => moveLesson(1));
 ui.goPractice.addEventListener('click', () => showStage('practice'));
 ui.goStatus.addEventListener('click', () => showStage('status'));
 ui.backExplain.addEventListener('click', () => showStage('explain'));
@@ -595,12 +640,29 @@ ui.goalButton.addEventListener('click', async () => {
       custom_text: customText,
     }) });
     state.dashboard = response.dashboard;
+    state.lessonConceptId = null;
     renderDashboard();
-    ui.diagnosticFeedback.textContent = '目标已保存。请完成短诊断。';
+    ui.diagnosticFeedback.textContent = '目标已保存。可以做学前小测，也可以从零开始讲解。';
     state.lessonCache = null;
-    showStage(state.dashboard.diagnostic.some(item => item.result === null) ? 'diagnostic' : 'explain');
+    showStage(!state.dashboard.diagnostic_skipped && state.dashboard.diagnostic.some(item => item.result === null) ? 'diagnostic' : 'explain');
   } catch (error) { ui.diagnosticFeedback.textContent = error.message; }
   finally { state.busy = false; }
+});
+ui.diagnosticSkip.addEventListener('click', async () => {
+  if (state.busy) return;
+  state.busy = true;
+  ui.diagnosticSkip.disabled = true;
+  try {
+    const response = await api('/api/skip-diagnostics', {
+      method: 'POST', body: JSON.stringify({ course_id: state.courseId }),
+    });
+    state.dashboard = response.dashboard;
+    state.lessonConceptId = null;
+    state.lessonCache = null;
+    renderDashboard();
+    showStage('explain');
+  } catch (error) { ui.diagnosticFeedback.textContent = error.message; }
+  finally { state.busy = false; ui.diagnosticSkip.disabled = false; }
 });
 ui.diagnosticSubmit.addEventListener('click', async () => {
   if (state.busy) return;
@@ -672,8 +734,8 @@ ui.askForm.addEventListener('submit', async event => {
     const result = await api('/api/ask', {
       method: 'POST',
       body: JSON.stringify({ course_id: state.courseId, task_id: state.stage === 'practice' ? task?.id : undefined,
-        concept_id: state.dashboard.target?.concept_id || task?.concept_ids[0], question,
-        hint_level: Number(document.querySelector('input[name="hint-level"]:checked')?.value || 1), mode: state.mode }),
+        concept_id: state.stage === 'explain' ? currentLessonId() : state.dashboard.target?.concept_id || task?.concept_ids[0],
+        question, mode: state.mode }),
     });
     const wrapper = element('div');
     wrapper.append(lessonBody(result.answer));
@@ -746,8 +808,7 @@ ui.quizGenerate.addEventListener('click', async () => {
 async function initialize() {
   try {
     const response = await api('/api/courses');
-    state.courses = response.courses.sort((left, right) =>
-      Number(right.id === 'python-foundations') - Number(left.id === 'python-foundations'));
+    state.courses = response.courses;
     state.chatReady = response.chat_ready;
     state.learningMode = response.learning_mode === 'ai' && !response.chat_ready
       ? null : response.learning_mode;

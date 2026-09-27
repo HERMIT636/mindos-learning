@@ -297,7 +297,8 @@ function renderCourses() {
     const button = element('button', `course-button${course.id === state.courseId ? ' active' : ''}`);
     button.type = 'button';
     button.setAttribute('aria-current', course.id === state.courseId ? 'page' : 'false');
-    button.append(element('span', 'course-icon', course.id === 'python-foundations' ? 'Py' : '∑'));
+    const courseIcons = { 'machine-learning': 'ML', 'hpc-foundations': 'HPC', 'ascend-c-operators': 'C', 'python-foundations': 'Py', 'linear-algebra': '∑' };
+    button.append(element('span', 'course-icon', courseIcons[course.id] || '课'));
     const text = element('span');
     text.append(element('span', 'course-name', course.title.split('：')[0]));
     text.append(element('span', 'course-subtitle', course.title.split('：')[1] || '基础课程'));
@@ -426,7 +427,7 @@ function renderFlow() {
   const targetConcept = course.concepts.find(item => item.id === target?.concept_id);
   ui.goalCurrent.textContent = target
     ? `当前目标：${targetConcept?.title || target.concept_id}${target.custom_text ? `（你的描述：${target.custom_text}）` : ''}`
-    : '请按章节选择目标知识点，再完成两道短诊断题。';
+    : '请按章节选择目标知识点，再完成对应的短诊断。';
   const pending = diagnostic.find(item => item.result === null);
   const complete = Boolean(target) && !pending;
   ui.diagnosticBox.hidden = !target || !pending;
@@ -464,20 +465,24 @@ function renderDashboard() {
   ui.audience.textContent = `适合：${course.audience}。课程内容尚待教师审核。`;
   ui.goals.replaceChildren(...course.learning_goals.map(goal => element('span', 'hero-tag', goal)));
   renderFlow();
-  ui.nextReason.textContent = recommendation?.reason || '本示例没有新的可独立评分题；可继续查阅资料或选择其他练习。';
+  ui.nextReason.textContent = recommendation?.reason || '当前路线没有新的可独立评分题；可继续查阅资料或选择其他知识点。';
   ui.nextButton.disabled = !recommendation;
   const last = state.dashboard.recent[0];
   const readyForVariant = last && Boolean(last.correct);
   ui.nextButton.firstChild.textContent = readyForVariant ? '做独立变式复测 ' : '先做补强练习 ';
   renderProgress();
   renderHistory();
-  ui.taskSelect.replaceChildren(...course.tasks.map(task => {
+  const routeConcepts = new Set(state.dashboard.plan.map(item => item.concept_id));
+  const availableTasks = state.dashboard.target
+    ? course.tasks.filter(task => task.concept_ids.some(id => routeConcepts.has(id)))
+    : course.tasks;
+  ui.taskSelect.replaceChildren(...availableTasks.map(task => {
     const option = element('option', '', task.prompt.slice(0, 52));
     option.value = task.id;
     return option;
   }));
-  if (!course.tasks.some(task => task.id === state.taskId)) {
-    state.taskId = recommendation?.task_id || course.tasks[0]?.id || '';
+  if (!availableTasks.some(task => task.id === state.taskId)) {
+    state.taskId = recommendation?.task_id || availableTasks[0]?.id || '';
   }
   ui.taskSelect.value = state.taskId;
   renderTask();

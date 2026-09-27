@@ -61,6 +61,22 @@ def validate_pack(path: Path, validator: Draft202012Validator) -> list[str]:
     for concept in pack["concepts"]:
         check_refs(concept["dimension_ids"], dimension_ids, f"concept {concept['id']}")
 
+    diagnostics = pack.get("diagnostics", [])
+    if diagnostics:
+        duplicate_diagnostics = [key for key, count in Counter(item["id"] for item in diagnostics).items() if count > 1]
+        if duplicate_diagnostics:
+            errors.append(f"diagnostics 存在重复编号：{', '.join(duplicate_diagnostics)}")
+        for item in diagnostics:
+            check_refs([item["concept_id"]], concept_ids, f"diagnostic {item['id']}")
+            if item["concept_id"] in concepts:
+                check_refs([item["dimension_id"]], set(concepts[item["concept_id"]]["dimension_ids"]),
+                           f"diagnostic {item['id']} 对应知识点维度")
+            options = [choice["id"] for choice in item["choices"]]
+            if len(options) != len(set(options)) or item["answer"] not in options:
+                errors.append(f"diagnostic {item['id']} 选项或答案无效")
+        if {item["concept_id"] for item in diagnostics} != concept_ids:
+            errors.append("diagnostics 必须覆盖每个知识点")
+
     graph = TopologicalSorter()
     for concept_id in concept_ids:
         graph.add(concept_id)

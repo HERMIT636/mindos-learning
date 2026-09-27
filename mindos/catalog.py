@@ -9,6 +9,8 @@ from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[1]
 COURSES = ROOT / "course-packs"
+COURSE_ORDER = ("machine-learning", "hpc-foundations", "ascend-c-operators",
+                "python-foundations", "linear-algebra")
 EXTERNAL_GUIDES = ROOT / "external-resources/curated/concept-guides.json"
 EXTERNAL_MANIFESTS = ROOT / "external-resources/manifests"
 PUBLIC_TASK_FIELDS = ("id", "task_type", "purpose", "prompt", "concept_ids", "dimension_ids", "choices")
@@ -17,7 +19,10 @@ PUBLIC_TASK_FIELDS = ("id", "task_type", "purpose", "prompt", "concept_ids", "di
 class Catalog:
     def __init__(self) -> None:
         self.packs: dict[str, dict] = {}
-        for manifest in sorted(COURSES.glob("*/manifest.json")):
+        for manifest in sorted(COURSES.glob("*/manifest.json"),
+                               key=lambda path: (COURSE_ORDER.index(path.parent.name)
+                                                 if path.parent.name in COURSE_ORDER else len(COURSE_ORDER),
+                                                 path.parent.name)):
             pack = json.loads(manifest.read_text(encoding="utf-8"))
             if pack["id"] != manifest.parent.name or not re.fullmatch(r"[a-z][a-z0-9-]*", pack["id"]):
                 raise ValueError(f"课程包编号与目录不一致：{manifest}")

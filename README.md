@@ -10,7 +10,7 @@ An open-source adaptive learning platform built around course packs, retrieval-a
 
 MindOS 希望帮助学习者明确当前薄弱点，获取有来源的学习材料，并通过独立任务检验学习结果。教师与贡献者通过课程包补充内容、练习和评分标准，平台复用学习流程。
 
-课程包可面向编程、数学、语言等不同方向。首批示例为 Python 基础和线性代数基础；PyTorch 保留为后续进阶课程方向。
+当前主课程为机器学习、HPC 高性能计算和昇腾 Ascend C 算子开发；Python 基础与线性代数保留为可选先修示例。机器学习课程覆盖多种模型与评估方法，神经网络单元会使用 PyTorch 示例，但整门课不限定于 PyTorch。
 
 ## 设计中的学习流程
 
@@ -27,15 +27,17 @@ MindOS 希望帮助学习者明确当前薄弱点，获取有来源的学习材�
 ## 已有内容
 
 - [完整设计大纲](MindOS_最终设计大纲.md)：产品范围、架构、评估与落地路线。
+- [主课程学习路线](docs/learning-paths.md)：三门优先课程的章节、知识点与当前内容边界。
 - [课程包约定](docs/course-packs.md)与 [JSON Schema](schemas/course-pack.schema.json)。
+- [机器学习](course-packs/machine-learning/manifest.json)、[HPC](course-packs/hpc-foundations/manifest.json)、[昇腾 Ascend C](course-packs/ascend-c-operators/manifest.json)课程包。
 - [Python 基础示例](course-packs/python-foundations/manifest.json)。
 - [Python 函数单元内容复核](docs/python-unit-review.md)。
 - [线性代数示例](course-packs/linear-algebra/manifest.json)。
 - [外部开放资料审核与知识点导读](external-resources/manifests/AUDIT_REPORT.md)：模型模式可引用四则带原始出处的导读；原始下载文件留在本地供审核，不随项目发布。
 - [开发路线](ROADMAP.md)、[贡献指南](CONTRIBUTING.md)与 [开源发布说明](docs/open-source.md)。
-- [本地原型运行说明](docs/prototype.md)：两门课程的练习、状态记录和资料助手。
+- [本地原型运行说明](docs/prototype.md)：五门课程的讲解、练习、状态记录和资料助手。
 
-示例包均为少量原创材料与公开练习，用于讨论和验证格式；内容尚未经过教师审核，不代表完整课程或已经证明的学习效果。正式试点题目单独维护。
+三门主课程已有贯通的首版章节和逐知识点讲义，但内容仍是入门草稿，工程实操与深度推导尚待扩充；Python、线性代数两个旧包仍是小范围示例。所有课程尚未经过教师审核，不代表已证明学习效果。正式试点题目单独维护。
 
 ## 运行本地原型
 

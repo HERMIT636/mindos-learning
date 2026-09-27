@@ -15,7 +15,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from .catalog import Catalog, ROOT
-from .flow import DIAGNOSTICS, learning_plan, public_diagnostics
+from .flow import diagnostic_tasks, learning_plan, public_diagnostics
 from .learning import progress, recommendation, submit
 from .model import ModelGateway, ModelUnavailable
 from .retrieval import retrieve, terms
@@ -102,7 +102,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
         rows = self.server.storage.submissions(self._session(), course_id, pack["version"])
         answers = self.server.storage.diagnostics(self._session(), pack)
         by_concept = {(task["concept_id"], task["dimension_id"]): answers[task["id"]]
-                      for task in DIAGNOSTICS.get(course_id, []) if task["id"] in answers}
+                      for task in diagnostic_tasks(pack) if task["id"] in answers}
         states = progress(pack, rows, by_concept)
         goal = self.server.storage.goal(self._session(), pack)
         target = self.server.storage.target(self._session(), pack)
@@ -112,7 +112,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
             "goal": goal,
             "target": target,
             "learning_mode": self.server.storage.mode(self._session()),
-            "diagnostic": public_diagnostics(pack, answers),
+            "diagnostic": public_diagnostics(pack, answers, target["concept_id"] if target else None),
             "progress": states,
             "plan": plan,
             "recommendation": recommendation(pack, states, rows, self.server.storage.helped_tasks(self._session(), pack),
@@ -239,7 +239,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
             pack = self.server.catalog.get(payload.get("course_id", ""))
             if not self.server.storage.goal(self._session(), pack) and not self.server.storage.target(self._session(), pack):
                 raise ValueError("请先选择学习目标")
-            task = next((item for item in DIAGNOSTICS.get(pack["id"], [])
+            target = self.server.storage.target(self._session(), pack)
+            task = next((item for item in diagnostic_tasks(pack, target["concept_id"] if target else None)
                          if item["id"] == payload.get("task_id")), None)
             if task is None:
                 raise ValueError("诊断题不存在")
@@ -309,7 +310,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
             if target is None:
                 raise ValueError("请先确认目标知识点")
             answers = self.server.storage.diagnostics(self._session(), pack)
-            if any(task["id"] not in answers for task in DIAGNOSTICS.get(pack["id"], [])):
+            if any(task["id"] not in answers for task in diagnostic_tasks(pack, target["concept_id"])):
                 raise ValueError("请先完成基础测试")
             concept = next(item for item in pack["concepts"] if item["id"] == target["concept_id"])
             materials = self.server.catalog.lesson_materials(pack, concept["id"])

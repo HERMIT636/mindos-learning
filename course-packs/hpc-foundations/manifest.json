@@ -1,0 +1,981 @@
+{
+  "$schema": "../../schemas/course-pack.schema.json",
+  "schema_version": "0.1.0",
+  "id": "hpc-foundations",
+  "version": "0.1.0",
+  "title": "HPC 高性能计算：体系结构到异构优化",
+  "language": "zh-CN",
+  "level": "intermediate",
+  "audience": "具备基础编程能力、准备学习并行计算和算子性能优化的学习者",
+  "license": "MIT",
+  "review_status": "draft",
+  "learning_goals": [
+    "能解释并行加速、内存层级与可靠测量",
+    "能选择共享内存、分布式或加速器的基本优化路径"
+  ],
+  "dimensions": [
+    {
+      "id": "understanding",
+      "label": "概念理解与判断",
+      "description": "能解释适用前提、关键步骤与常见错误；公开单选题仅提供初步证据"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "hardware-hierarchy",
+      "title": "处理器、缓存与内存层级",
+      "dimension_ids": [
+        "understanding"
+      ]
+    },
+    {
+      "id": "scaling-laws",
+      "title": "并行分解与加速比",
+      "dimension_ids": [
+        "understanding"
+      ]
+    },
+    {
+      "id": "benchmark-profiling",
+      "title": "基线、计时与性能剖析",
+      "dimension_ids": [
+        "understanding"
+      ]
+    },
+    {
+      "id": "openmp-parallel",
+      "title": "OpenMP 共享内存并行",
+      "dimension_ids": [
+        "understanding"
+      ]
+    },
+    {
+      "id": "races-synchronization",
+      "title": "数据竞争、同步与任务划分",
+      "dimension_ids": [
+        "understanding"
+      ]
+    },
+    {
+      "id": "mpi-distributed",
+      "title": "MPI 进程、通信与分布式分解",
+      "dimension_ids": [
+        "understanding"
+      ]
+    },
+    {
+      "id": "gpu-model",
+      "title": "GPU 异构执行与数据传输",
+      "dimension_ids": [
+        "understanding"
+      ]
+    },
+    {
+      "id": "memory-optimization",
+      "title": "分块、向量化与性能模型",
+      "dimension_ids": [
+        "understanding"
+      ]
+    }
+  ],
+  "chapters": [
+    {
+      "id": "architecture",
+      "title": "硬件与并行性能",
+      "concept_ids": [
+        "hardware-hierarchy",
+        "scaling-laws"
+      ]
+    },
+    {
+      "id": "measurement",
+      "title": "测量与剖析",
+      "concept_ids": [
+        "benchmark-profiling"
+      ]
+    },
+    {
+      "id": "shared-memory",
+      "title": "共享内存并行",
+      "concept_ids": [
+        "openmp-parallel",
+        "races-synchronization"
+      ]
+    },
+    {
+      "id": "distributed",
+      "title": "分布式计算",
+      "concept_ids": [
+        "mpi-distributed"
+      ]
+    },
+    {
+      "id": "accelerators",
+      "title": "加速器与访存优化",
+      "concept_ids": [
+        "gpu-model",
+        "memory-optimization"
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "from": "hardware-hierarchy",
+      "to": "scaling-laws",
+      "type": "prerequisite"
+    },
+    {
+      "from": "hardware-hierarchy",
+      "to": "benchmark-profiling",
+      "type": "prerequisite"
+    },
+    {
+      "from": "scaling-laws",
+      "to": "openmp-parallel",
+      "type": "prerequisite"
+    },
+    {
+      "from": "benchmark-profiling",
+      "to": "openmp-parallel",
+      "type": "prerequisite"
+    },
+    {
+      "from": "openmp-parallel",
+      "to": "races-synchronization",
+      "type": "prerequisite"
+    },
+    {
+      "from": "scaling-laws",
+      "to": "mpi-distributed",
+      "type": "prerequisite"
+    },
+    {
+      "from": "benchmark-profiling",
+      "to": "mpi-distributed",
+      "type": "prerequisite"
+    },
+    {
+      "from": "hardware-hierarchy",
+      "to": "gpu-model",
+      "type": "prerequisite"
+    },
+    {
+      "from": "scaling-laws",
+      "to": "gpu-model",
+      "type": "prerequisite"
+    },
+    {
+      "from": "hardware-hierarchy",
+      "to": "memory-optimization",
+      "type": "prerequisite"
+    },
+    {
+      "from": "benchmark-profiling",
+      "to": "memory-optimization",
+      "type": "prerequisite"
+    },
+    {
+      "from": "gpu-model",
+      "to": "memory-optimization",
+      "type": "prerequisite"
+    }
+  ],
+  "diagnostics": [
+    {
+      "id": "diagnose-hardware-hierarchy",
+      "prompt": "连续访问相邻元素主要利用哪种局部性？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "空间局部性"
+        },
+        {
+          "id": "b",
+          "text": "随机性"
+        },
+        {
+          "id": "c",
+          "text": "网络延迟"
+        }
+      ],
+      "concept_id": "hardware-hierarchy",
+      "dimension_id": "understanding",
+      "answer": "a"
+    },
+    {
+      "id": "diagnose-scaling-laws",
+      "prompt": "并行加速比如何定义？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "串行耗时除以并行耗时"
+        },
+        {
+          "id": "b",
+          "text": "并行耗时除以串行耗时"
+        },
+        {
+          "id": "c",
+          "text": "核心数除以输入数"
+        }
+      ],
+      "concept_id": "scaling-laws",
+      "dimension_id": "understanding",
+      "answer": "a"
+    },
+    {
+      "id": "diagnose-benchmark-profiling",
+      "prompt": "比较两版性能前，首先应固定什么？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "输入与测量条件"
+        },
+        {
+          "id": "b",
+          "text": "只保留最快成绩"
+        },
+        {
+          "id": "c",
+          "text": "关闭正确性检查"
+        }
+      ],
+      "concept_id": "benchmark-profiling",
+      "dimension_id": "understanding",
+      "answer": "a"
+    },
+    {
+      "id": "diagnose-openmp-parallel",
+      "prompt": "并行求和通常应使用哪种机制？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "reduction 归约"
+        },
+        {
+          "id": "b",
+          "text": "所有线程无保护写同一变量"
+        },
+        {
+          "id": "c",
+          "text": "只增加线程数"
+        }
+      ],
+      "concept_id": "openmp-parallel",
+      "dimension_id": "understanding",
+      "answer": "a"
+    },
+    {
+      "id": "diagnose-races-synchronization",
+      "prompt": "多线程无同步更新同一计数器可能发生什么？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "丢失更新"
+        },
+        {
+          "id": "b",
+          "text": "自动原子化"
+        },
+        {
+          "id": "c",
+          "text": "只影响编译速度"
+        }
+      ],
+      "concept_id": "races-synchronization",
+      "dimension_id": "understanding",
+      "answer": "a"
+    },
+    {
+      "id": "diagnose-mpi-distributed",
+      "prompt": "MPI 各进程默认共享同一地址空间吗？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "不共享"
+        },
+        {
+          "id": "b",
+          "text": "完全共享"
+        },
+        {
+          "id": "c",
+          "text": "只共享栈"
+        }
+      ],
+      "concept_id": "mpi-distributed",
+      "dimension_id": "understanding",
+      "answer": "a"
+    },
+    {
+      "id": "diagnose-gpu-model",
+      "prompt": "很小的 GPU 任务可能不划算，主要因为什么？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "启动和数据搬运开销"
+        },
+        {
+          "id": "b",
+          "text": "GPU 无法做加法"
+        },
+        {
+          "id": "c",
+          "text": "CPU 不需要内存"
+        }
+      ],
+      "concept_id": "gpu-model",
+      "dimension_id": "understanding",
+      "answer": "a"
+    },
+    {
+      "id": "diagnose-memory-optimization",
+      "prompt": "算术强度通常是什么之比？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "运算量除以数据搬运量"
+        },
+        {
+          "id": "b",
+          "text": "核心数除以线程数"
+        },
+        {
+          "id": "c",
+          "text": "内存大小除以时钟频率"
+        }
+      ],
+      "concept_id": "memory-optimization",
+      "dimension_id": "understanding",
+      "answer": "a"
+    }
+  ],
+  "resources": [
+    {
+      "id": "hardware-hierarchy-note",
+      "title": "处理器、缓存与内存层级讲义",
+      "path": "materials/hardware-hierarchy.md",
+      "concept_ids": [
+        "hardware-hierarchy"
+      ],
+      "license": "MIT",
+      "provenance": "MindOS 原创课程草稿；末尾列出官方延伸阅读；待教师审核"
+    },
+    {
+      "id": "scaling-laws-note",
+      "title": "并行分解与加速比讲义",
+      "path": "materials/scaling-laws.md",
+      "concept_ids": [
+        "scaling-laws"
+      ],
+      "license": "MIT",
+      "provenance": "MindOS 原创课程草稿；末尾列出官方延伸阅读；待教师审核"
+    },
+    {
+      "id": "benchmark-profiling-note",
+      "title": "基线、计时与性能剖析讲义",
+      "path": "materials/benchmark-profiling.md",
+      "concept_ids": [
+        "benchmark-profiling"
+      ],
+      "license": "MIT",
+      "provenance": "MindOS 原创课程草稿；末尾列出官方延伸阅读；待教师审核"
+    },
+    {
+      "id": "openmp-parallel-note",
+      "title": "OpenMP 共享内存并行讲义",
+      "path": "materials/openmp-parallel.md",
+      "concept_ids": [
+        "openmp-parallel"
+      ],
+      "license": "MIT",
+      "provenance": "MindOS 原创课程草稿；末尾列出官方延伸阅读；待教师审核"
+    },
+    {
+      "id": "races-synchronization-note",
+      "title": "数据竞争、同步与任务划分讲义",
+      "path": "materials/races-synchronization.md",
+      "concept_ids": [
+        "races-synchronization"
+      ],
+      "license": "MIT",
+      "provenance": "MindOS 原创课程草稿；末尾列出官方延伸阅读；待教师审核"
+    },
+    {
+      "id": "mpi-distributed-note",
+      "title": "MPI 进程、通信与分布式分解讲义",
+      "path": "materials/mpi-distributed.md",
+      "concept_ids": [
+        "mpi-distributed"
+      ],
+      "license": "MIT",
+      "provenance": "MindOS 原创课程草稿；末尾列出官方延伸阅读；待教师审核"
+    },
+    {
+      "id": "gpu-model-note",
+      "title": "GPU 异构执行与数据传输讲义",
+      "path": "materials/gpu-model.md",
+      "concept_ids": [
+        "gpu-model"
+      ],
+      "license": "MIT",
+      "provenance": "MindOS 原创课程草稿；末尾列出官方延伸阅读；待教师审核"
+    },
+    {
+      "id": "memory-optimization-note",
+      "title": "分块、向量化与性能模型讲义",
+      "path": "materials/memory-optimization.md",
+      "concept_ids": [
+        "memory-optimization"
+      ],
+      "license": "MIT",
+      "provenance": "MindOS 原创课程草稿；末尾列出官方延伸阅读；待教师审核"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "practice-1-hardware-hierarchy",
+      "prompt": "为什么跨步遍历行主序矩阵可能更慢？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "缓存行中有用字节利用率较低"
+        },
+        {
+          "id": "b",
+          "text": "乘法次数一定增加"
+        },
+        {
+          "id": "c",
+          "text": "线程数一定减少"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "hardware-hierarchy"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-2-hardware-hierarchy",
+      "prompt": "性能分析前应先确认什么？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "热点与数据布局"
+        },
+        {
+          "id": "b",
+          "text": "只看总核心数"
+        },
+        {
+          "id": "c",
+          "text": "先把所有循环并行化"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "hardware-hierarchy"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-1-scaling-laws",
+      "prompt": "串行部分存在时，增加核心数的收益通常怎样？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "逐渐受限"
+        },
+        {
+          "id": "b",
+          "text": "始终线性增加"
+        },
+        {
+          "id": "c",
+          "text": "与串行部分无关"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "scaling-laws"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-2-scaling-laws",
+      "prompt": "比较强扩展时必须保持什么？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "总问题规模一致"
+        },
+        {
+          "id": "b",
+          "text": "每核问题规模一致"
+        },
+        {
+          "id": "c",
+          "text": "编译器名称不同"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "scaling-laws"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-1-benchmark-profiling",
+      "prompt": "目标函数只占总耗时 10%，将其加速两倍，总时间最多约减少多少？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "5%"
+        },
+        {
+          "id": "b",
+          "text": "50%"
+        },
+        {
+          "id": "c",
+          "text": "90%"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "benchmark-profiling"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-2-benchmark-profiling",
+      "prompt": "GPU 异步调用计时时最容易遗漏什么？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "同步完成点"
+        },
+        {
+          "id": "b",
+          "text": "源代码注释"
+        },
+        {
+          "id": "c",
+          "text": "文件名"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "benchmark-profiling"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-1-openmp-parallel",
+      "prompt": "循环迭代互相依赖时直接并行可能导致什么？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "结果错误"
+        },
+        {
+          "id": "b",
+          "text": "自动变成串行正确执行"
+        },
+        {
+          "id": "c",
+          "text": "编译器必然拒绝"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "openmp-parallel"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-2-openmp-parallel",
+      "prompt": "浮点归约与串行结果末位不同可能因为？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "加法顺序变化"
+        },
+        {
+          "id": "b",
+          "text": "数据类型一定变整数"
+        },
+        {
+          "id": "c",
+          "text": "输入必然被修改"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "openmp-parallel"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-1-races-synchronization",
+      "prompt": "减少直方图共享写入的结构性办法是什么？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "线程局部统计后合并"
+        },
+        {
+          "id": "b",
+          "text": "所有线程写同一个桶"
+        },
+        {
+          "id": "c",
+          "text": "取消结果校验"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "races-synchronization"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-2-races-synchronization",
+      "prompt": "两个线程相互等待对方释放资源属于？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "死锁"
+        },
+        {
+          "id": "b",
+          "text": "空间局部性"
+        },
+        {
+          "id": "c",
+          "text": "向量化"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "races-synchronization"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-1-mpi-distributed",
+      "prompt": "求所有进程局部和的总和通常使用什么？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "归约"
+        },
+        {
+          "id": "b",
+          "text": "每个进程只打印自己结果"
+        },
+        {
+          "id": "c",
+          "text": "仅本地排序"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "mpi-distributed"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-2-mpi-distributed",
+      "prompt": "分块邻域计算常需要什么额外操作？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "边界数据交换"
+        },
+        {
+          "id": "b",
+          "text": "删除边界"
+        },
+        {
+          "id": "c",
+          "text": "关闭通信器"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "mpi-distributed"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-1-gpu-model",
+      "prompt": "只测异步调用返回时间可能漏掉什么？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "设备计算完成时间"
+        },
+        {
+          "id": "b",
+          "text": "源代码长度"
+        },
+        {
+          "id": "c",
+          "text": "输入元素个数"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "gpu-model"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-2-gpu-model",
+      "prompt": "跨 GPU 平台迁移时哪项最可靠？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "先迁移并行与访存思路，再核对具体 API"
+        },
+        {
+          "id": "b",
+          "text": "逐字复制所有 API"
+        },
+        {
+          "id": "c",
+          "text": "忽略硬件差异"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "gpu-model"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-1-memory-optimization",
+      "prompt": "分块优化主要想提高什么？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "数据复用"
+        },
+        {
+          "id": "b",
+          "text": "源代码行数"
+        },
+        {
+          "id": "c",
+          "text": "进程启动次数"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "memory-optimization"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    },
+    {
+      "id": "practice-2-memory-optimization",
+      "prompt": "Roofline 给出的主要是？",
+      "choices": [
+        {
+          "id": "a",
+          "text": "理想化性能上界与瓶颈线索"
+        },
+        {
+          "id": "b",
+          "text": "最终实测成绩"
+        },
+        {
+          "id": "c",
+          "text": "正确性证明"
+        }
+      ],
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "concept_ids": [
+        "memory-optimization"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "根据概念与例子的条件选择唯一正确项；正确得 1 分，否则 0 分",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
+    }
+  ]
+}

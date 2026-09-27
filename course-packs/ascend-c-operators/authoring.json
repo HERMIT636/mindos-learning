@@ -1,0 +1,367 @@
+{
+  "title": "昇腾 Ascend C 算子开发与竞赛通用路线",
+  "level": "intermediate",
+  "audience": "具备 C/C++ 与基础并行计算知识、准备学习昇腾算子开发的学习者",
+  "learning_goals": [
+    "能按算子契约设计正确的 Ascend C 分块与流水线",
+    "能用参考实现、边界对拍与性能记录推进算子优化"
+  ],
+  "chapters": [
+    {
+      "id": "specification",
+      "title": "题意分析与开发环境"
+    },
+    {
+      "id": "kernel",
+      "title": "核函数与分块"
+    },
+    {
+      "id": "pipeline",
+      "title": "片上数据流水线"
+    },
+    {
+      "id": "verification",
+      "title": "正确性与性能迭代"
+    }
+  ],
+  "topics": [
+    {
+      "id": "operator-contract",
+      "title": "算子数学定义与输入输出契约",
+      "chapter": "specification",
+      "motivation": "算子赛第一步不是写核函数，而是把题目转成可验证的计算契约。公式、形状、数据类型、布局、广播、边界和误差标准若有一项理解错，即使代码很快也不算正确。",
+      "principle": "先写纯数学或 CPU 参考实现，列出每个输入的 shape、dtype、取值范围和输出约束。区分逐元素、归约、矩阵类与变形类算子，因为它们的数据依赖和并行分块方式不同。确认是否允许就地写入、是否有动态形状、输出要按什么容差比对；题目规定优先于通用经验。",
+      "example": "以逐元素 Add 为例，若两个长度为 N 的张量形状相同，结果第 i 项为 `x[i]+y[i]`。先确认 N=0 或不能整除块长时如何处理、是否支持 fp16 与 fp32、输出是否允许和输入别名。用小尺寸手算例子与 CPU 参考结果一致后，再设计核函数；不要从某个示例代码反推正式题意。",
+      "pitfall": "最常见错误是把样例形状当作全部形状，或忽略负数、非整块尾部和 dtype 转换。自查一张契约表：输入、输出、形状、精度、边界、判分口径。",
+      "source": "https://www.hiascend.com/document/detail/zh/canncommercial/900/programug/Ascendcopdevg/atlas_ascendc_map_10_0008.html",
+      "questions": [
+        {
+          "prompt": "开始写算子前最该先确定什么？",
+          "choices": [
+            "数学定义与输入输出契约",
+            "最快的线程数",
+            "最终排行榜名次"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "固定样例长度可整除块长，是否可忽略尾块？",
+          "choices": [
+            "不能，除非题目保证所有输入如此",
+            "可以",
+            "只在调试时处理"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "逐元素 Add 输出第 i 项依赖什么？",
+          "choices": [
+            "同位置的两个输入元素",
+            "全部输入的总和",
+            "上一块输出"
+          ],
+          "answer": 0
+        }
+      ],
+      "prerequisites": []
+    },
+    {
+      "id": "cann-environment",
+      "title": "CANN 环境、版本与工程流程",
+      "chapter": "specification",
+      "motivation": "同样的 Ascend C 代码在不同 CANN 版本、芯片型号或算子工程方式下，API 和约束可能不同。先建立可复现的工程与运行环境，避免把安装或接口不匹配误判为算法错误。",
+      "principle": "记录芯片型号、驱动、固件、CANN 版本、编译器和运行方式，按对应版本的官方文档构建样例。入门可先跑通官方 Add 类最小示例：生成或创建工程、编译核函数、运行、比对。区分主机侧的算子描述和 tiling 准备与设备侧核函数；编译成功只说明语法与链接通过，不代表数值或性能通过。",
+      "example": "先在指定环境运行一个已知正确的最小 Add 示例，保存命令、输入、输出和版本号。再只改动一个地方，比如元素数 N，从完整块变成带尾块，确认构建和对拍仍成功。如果示例都跑不通，先查环境与版本，暂不要叠加优化。",
+      "pitfall": "不要混用不同文档版本的代码片段，也不要把编译通过称为通过上板测试。自查安装路径、环境变量、编译目标、设备可见性和最小运行记录。",
+      "source": "https://www.hiascend.com/document/detail/zh/canncommercial/900/programug/Ascendcopdevg/atlas_ascendc_map_10_0008.html",
+      "questions": [
+        {
+          "prompt": "两份 Ascend C 示例 API 不一致时首先检查什么？",
+          "choices": [
+            "CANN 与目标设备版本",
+            "随机改函数名",
+            "忽略编译错误"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "编译成功能证明什么？",
+          "choices": [
+            "当前构建步骤通过，但不等于数值正确",
+            "性能必然达标",
+            "所有形状都支持"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "调试最小示例时应保留什么？",
+          "choices": [
+            "版本、命令、输入和输出",
+            "只保留截图",
+            "只记最快耗时"
+          ],
+          "answer": 0
+        }
+      ],
+      "prerequisites": []
+    },
+    {
+      "id": "programming-model",
+      "title": "AI Core 编程模型与核函数",
+      "chapter": "kernel",
+      "motivation": "Ascend C 让开发者把张量计算映射到 AI Core 上。理解主机和设备的职责、核函数入口以及多核执行方式，才能写出既正确又能扩展到较大输入的算子。",
+      "principle": "设备侧核函数负责访问输入输出并执行核心计算，主机侧准备参数并发起调用。多个核实例处理不同的数据区间，需保证索引不重叠、覆盖完整并遵守访存边界。全局内存与片上局部存储用途不同，通常需要显式搬入局部数据、计算后搬出。具体 API 名称、位置枚举和限制随版本查询官方文档。",
+      "example": "长度 N=1000 的逐元素任务若分给 4 个核，可先按连续区间分配，每核约 250 个元素。写出第 0 核访问 0..249、第 1 核 250..499 等范围，再考虑每核内部按块处理。若分块大小不是 250 的约数，还需一个尾块；不能让最后一核越界读取。",
+      "pitfall": "不要假设核实例之间共享普通局部变量，也不要只验证第一核的输出。自查核编号、块起止索引、覆盖与重叠、全局内存边界。",
+      "source": "https://www.hiascend.com/document/detail/zh/canncommercial/900/programug/Ascendcopdevg/atlas_ascendc_map_10_0008.html",
+      "questions": [
+        {
+          "prompt": "设备核函数通常负责什么？",
+          "choices": [
+            "核心张量计算",
+            "浏览器页面渲染",
+            "仓库权限设置"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "多核分区首先要保证什么？",
+          "choices": [
+            "不重叠且完整覆盖目标元素",
+            "所有核写同一位置",
+            "只处理第一块"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "长度 1000 分四个等长区间，每区间约多少元素？",
+          "choices": [
+            "250",
+            "1000",
+            "4"
+          ],
+          "answer": 0
+        }
+      ],
+      "prerequisites": [
+        "cann-environment",
+        "operator-contract"
+      ]
+    },
+    {
+      "id": "tiling",
+      "title": "Tiling、多核分块与尾块",
+      "chapter": "kernel",
+      "motivation": "输入尺寸常在运行时变化，芯片的片上缓冲区也有限。Tiling 把工作拆成可执行的核间与核内块，是连接数学问题和硬件资源的关键步骤。",
+      "principle": "先定核数和每核处理区间，再定循环次数、块长度及末尾不足一块时的有效元素数。分块需满足片上存储容量、数据类型、对齐和 API 约束；不同算子还可能受归约依赖与布局影响。正确性优先：用小于一块、恰好整块、多一元素和非整除多核数四类输入检查覆盖。",
+      "example": "N=1030、每块 256 个元素时，前 4 块覆盖 1024 项，余下 6 项必须单独处理或按允许方式填充并屏蔽无效项。若直接把第 5 块当 256 项读写，会越界。然后才比较不同块长对吞吐与片上缓冲占用的影响。",
+      "pitfall": "不要把“对齐后分配的物理空间”混同“逻辑有效元素”，也不要把调优得到的块长写死为所有形状的正确答案。自查每个 block 的 offset、valid length 和写回范围。",
+      "source": "https://www.hiascend.com/document/detail/zh/canncommercial/900/programug/Ascendcopdevg/atlas_ascendc_map_10_0008.html",
+      "questions": [
+        {
+          "prompt": "N=1030、块长 256，最后一块有效元素有多少？",
+          "choices": [
+            "6",
+            "256",
+            "0"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "设计 tiling 时优先保证什么？",
+          "choices": [
+            "覆盖完整且不越界",
+            "只追求最大核数",
+            "默认所有尺寸整除"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "为何要测试 N=块长+1？",
+          "choices": [
+            "暴露尾块处理错误",
+            "保证一定最快",
+            "测试网络连接"
+          ],
+          "answer": 0
+        }
+      ],
+      "prerequisites": [
+        "programming-model",
+        "operator-contract"
+      ]
+    },
+    {
+      "id": "pipeline-memory",
+      "title": "GlobalTensor、LocalTensor 与 TPipe/TQue",
+      "chapter": "pipeline",
+      "motivation": "核内计算与数据搬运并非同一件事。Ascend C 的局部张量和流水线框架帮助开发者在受限片上存储里组织搬入、计算、搬出，并在阶段之间传递数据。",
+      "principle": "GlobalTensor 对应全局可访问数据视图，LocalTensor 表示片上局部缓冲。典型矢量算子把处理拆为 CopyIn、Compute、CopyOut：从全局搬入局部，调用计算 API，再写回全局。TPipe 管理流水线所需资源，TQue 在阶段间传递缓冲与同步；申请、入队、出队、释放的生命周期必须成对。双缓冲可用于重叠搬运与计算，但先证明单缓冲正确。",
+      "example": "逐元素加法的一次 tile：先为两个输入各准备局部缓冲并搬入，再申请输出局部缓冲计算 `x+y`，最后把有效结果写回全局。若在 Compute 仍使用输入时就 FreeTensor，会造成数据生命周期错误；若遗漏 DeQue，阶段无法得到就绪数据。画出每个缓冲在三阶段的所有权，比直接堆 API 更稳妥。",
+      "pitfall": "不要把队列理解为普通数组，也不要认为 TPipe/TQue 会替你修复越界和错误 tiling。自查位置类型、队列深度、每次申请和释放、数据依赖顺序。",
+      "source": "https://www.hiascend.com/document/detail/zh/canncommercial/900/programug/Ascendcopdevg/atlas_ascendc_map_10_0008.html",
+      "questions": [
+        {
+          "prompt": "典型矢量算子流水顺序是什么？",
+          "choices": [
+            "CopyIn→Compute→CopyOut",
+            "CopyOut→CopyIn→Compute",
+            "Compute→CopyOut→CopyIn"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "LocalTensor 主要表示什么？",
+          "choices": [
+            "片上局部数据缓冲",
+            "GitHub 文件",
+            "模型训练标签"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "缓冲仍被下游阶段使用时能否提前释放？",
+          "choices": [
+            "不能",
+            "可以提高正确性",
+            "与生命周期无关"
+          ],
+          "answer": 0
+        }
+      ],
+      "prerequisites": [
+        "programming-model",
+        "tiling"
+      ]
+    },
+    {
+      "id": "vector-api",
+      "title": "矢量计算 API、类型与数值语义",
+      "chapter": "pipeline",
+      "motivation": "逐元素加减乘除、比较和归约等操作都要匹配具体 API 的输入类型与数据布局。知道数学式子还不够，必须确认目标平台支持的精度、对齐和计算语义。",
+      "principle": "先按算子契约选择支持的矢量或高阶 API，再核对每个 API 对输入输出 dtype、shape、重复次数和掩码的要求。fp16、fp32 等浮点类型的舍入与溢出行为不同，计算顺序变化也可能带来误差。归约比逐元素运算更依赖跨块合并策略；无效尾部数据不可进入结果。",
+      "example": "要计算 `z=x+y`，先检查两个输入张量的类型与布局是否匹配，再用官方 Add 相关接口处理一个有效 tile。若最后仅 6 个有效元素，不可把填充位计算结果当作真实输出。把 CPU 参考的逐项结果按指定绝对或相对容差比较，并分别检查正负数、零和较大值。",
+      "pitfall": "不要以“看起来接近”代替正式精度标准，也不要跨数据类型复用未经核对的向量指令参数。自查 dtype、有效长度、对齐、溢出和误差度量。",
+      "source": "https://www.hiascend.com/document/detail/zh/canncommercial/900/programug/Ascendcopdevg/atlas_ascendc_map_10_0008.html",
+      "questions": [
+        {
+          "prompt": "调用矢量 API 前必须核对什么？",
+          "choices": [
+            "数据类型、布局与有效长度",
+            "只看函数名字",
+            "Git 分支数量"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "尾块填充位应如何对待？",
+          "choices": [
+            "不能当作有效输出",
+            "与真实输入完全等价",
+            "必须计入归约"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "fp16 与 fp32 结果可能不同，主要因为什么？",
+          "choices": [
+            "精度与舍入差异",
+            "输入一定变化",
+            "设备必须故障"
+          ],
+          "answer": 0
+        }
+      ],
+      "prerequisites": [
+        "pipeline-memory"
+      ]
+    },
+    {
+      "id": "correctness-testing",
+      "title": "CPU 参考、边界测试与精度对拍",
+      "chapter": "verification",
+      "motivation": "算子优化只有在全部要求形状和数据上正确才有意义。竞赛环境通常会有未公开用例，所以测试不能围着公开样例写特殊分支。",
+      "principle": "建立与题意一致的简单参考实现和确定性输入生成器。分层验证：数学公式正确、单 tile 正确、多 tile 覆盖正确、多核无重叠、不同 dtype/shape/边界都通过。浮点比较要按赛题规定的绝对误差、相对误差或混合容差执行；在接近零时单纯相对误差会不稳定。每次性能改动都跑回归用例。",
+      "example": "为 Add 算子准备长度 1、块长-1、块长、块长+1、非整除核数的输入，再加正负混合、零和极值。CPU 参考逐项计算，比较所有输出索引，打印首次失败的位置、输入和误差。若只在最后 6 项失败，先查尾块；若每个核交界处失败，查核间 offset。",
+      "pitfall": "不要用同一套有相同 bug 的优化实现当参考，也不要只检查均值误差而掩盖少数越界元素。自查失败用例的可复现种子和最小化输入。",
+      "source": "https://www.hiascend.com/document/detail/zh/canncommercial/900/programug/Ascendcopdevg/atlas_ascendc_map_10_0008.html",
+      "questions": [
+        {
+          "prompt": "尾块错误最可能在哪类输入暴露？",
+          "choices": [
+            "块长加一",
+            "恰好一个整块",
+            "只有零长度被允许时"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "接近零的浮点值只用相对误差可能怎样？",
+          "choices": [
+            "不稳定或放大误差",
+            "永远最准确",
+            "自动等于绝对误差"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "性能改动后首先应重新运行什么？",
+          "choices": [
+            "正确性回归用例",
+            "只看排行榜",
+            "只做代码格式化"
+          ],
+          "answer": 0
+        }
+      ],
+      "prerequisites": [
+        "operator-contract",
+        "programming-model"
+      ]
+    },
+    {
+      "id": "profiling-optimization",
+      "title": "性能剖析与算子赛迭代",
+      "chapter": "verification",
+      "motivation": "通过正确性后，才进入性能迭代。算子性能可能受带宽、计算吞吐、片上容量、核数、同步或主机调用影响，不能靠猜测选择优化方向。",
+      "principle": "先记录基线版本和不同形状的耗时，按正式计分口径计算改进。对热点观察搬运与计算占比、核利用率和数据复用，再一次调整一个主要参数，如核数、块长、流水深度。每个候选必须重新对拍全部边界与精度用例。最终版本保留可复现的源码、构建环境、输入生成、原始时间与回退基线。",
+      "example": "若大形状耗时随数据量近似线性增长且计算很少，先怀疑带宽或搬运；若小形状主要被启动开销占据，盲目增加核数可能更慢。比较块长 128、256、512 时，固定同一设备和输入，重复计时并记录中位数与每种尺寸的正确性。赛题若按多尺寸综合计分，不能只优化一个尺寸。",
+      "pitfall": "不要为了跑分硬编码公开样例答案或牺牲题目要求的精度；也不要把模拟运行的成绩当成真实设备性能。自查测量范围、硬件型号、正式规则与可复现日志。",
+      "source": "https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/83RC1alpha003/opdevg/ascendcbestP",
+      "questions": [
+        {
+          "prompt": "调优前必须先满足什么？",
+          "choices": [
+            "完整正确性",
+            "只通过一个样例",
+            "只选最大核数"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "优化小形状任务时应警惕什么？",
+          "choices": [
+            "启动开销占比高",
+            "带宽一定为零",
+            "精度一定无关"
+          ],
+          "answer": 0
+        },
+        {
+          "prompt": "多尺寸计分时只优化一个尺寸有什么风险？",
+          "choices": [
+            "综合成绩可能下降",
+            "一定得到最高分",
+            "自动兼容所有形状"
+          ],
+          "answer": 0
+        }
+      ],
+      "prerequisites": [
+        "correctness-testing",
+        "tiling",
+        "pipeline-memory"
+      ]
+    }
+  ]
+}

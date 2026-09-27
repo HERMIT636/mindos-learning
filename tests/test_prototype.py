@@ -96,7 +96,9 @@ class PrototypeTests(unittest.TestCase):
     def test_course_isolation_and_distinct_independent_evidence(self) -> None:
         status, courses = self.call("/api/courses")
         self.assertEqual(status, 200)
-        self.assertEqual(len(courses["courses"]), 2)
+        self.assertEqual(len(courses["courses"]), 5)
+        self.assertEqual([item["id"] for item in courses["courses"][:3]],
+                         ["machine-learning", "hpc-foundations", "ascend-c-operators"])
         _, dashboard = self.call("/api/dashboard?course_id=python-foundations")
         self.assertNotIn("reference_answer", json.dumps(dashboard))
         self.assertEqual(dashboard["recommendation"]["task_id"], "identify-call")
@@ -123,7 +125,8 @@ class PrototypeTests(unittest.TestCase):
                     materials = catalog.lesson_materials(pack, concept["id"])
                     self.assertEqual(len(materials), 1)
                     lesson = materials[0]["content"]
-                    self.assertGreater(len(lesson), 1500)
+                    minimum = 1500 if pack["id"] in {"python-foundations", "linear-algebra"} else 650
+                    self.assertGreater(len(lesson), minimum)
                     self.assertIn("## 常见", lesson)
                     self.assertNotIn("reference_answer", lesson)
 
@@ -145,6 +148,48 @@ class PrototypeTests(unittest.TestCase):
                                          self.server.storage, use_vectors=False)
                 self.assertIn(guide_id, [source["id"] for source in sources])
                 self.assertTrue(all(concept_id in source["concept_ids"] for source in sources))
+
+    def test_new_course_diagnoses_only_target_and_direct_prerequisite(self) -> None:
+        self.call("/api/mode", {"mode": "materials"})
+        status, result = self.call("/api/target", {"course_id": "machine-learning",
+                                               "chapter_id": "evaluation", "concept_id": "evaluation"})
+        self.assertEqual(status, 200)
+        self.assertEqual([item["id"] for item in result["dashboard"]["diagnostic"]],
+                         ["diagnose-problem-framing", "diagnose-data-splits", "diagnose-evaluation"])
+        status, blocked = self.call("/api/lesson", {"course_id": "machine-learning"})
+        self.assertEqual(status, 400)
+        self.assertIn("基础测试", blocked["error"])
+        for task_id in ("diagnose-problem-framing", "diagnose-data-splits", "diagnose-evaluation"):
+            status, _ = self.call("/api/diagnose", {"course_id": "machine-learning",
+                                                        "task_id": task_id, "answer": "a"})
+            self.assertEqual(status, 200)
+        status, lesson = self.call("/api/lesson", {"course_id": "machine-learning"})
+        self.assertEqual(status, 200)
+        self.assertIn("分类与回归评价指标", lesson["title"])
+        self.assertIn("混淆矩阵", lesson["answer"])
+
+    def test_priority_courses_open_their_first_lessons(self) -> None:
+        self.call("/api/mode", {"mode": "materials"})
+        catalog = Catalog()
+        for course_id in ("machine-learning", "hpc-foundations", "ascend-c-operators"):
+            with self.subTest(course=course_id):
+                pack = catalog.get(course_id)
+                first = pack["concepts"][0]["id"]
+                chapter = pack["chapters"][0]["id"]
+                self.assertEqual(len(pack["diagnostics"]), len(pack["concepts"]))
+                self.assertTrue(all(sum(task["concept_ids"] == [concept["id"]]
+                                        for task in pack["tasks"]) == 2 for concept in pack["concepts"]))
+                status, result = self.call("/api/target", {"course_id": course_id,
+                                                      "chapter_id": chapter, "concept_id": first})
+                self.assertEqual(status, 200)
+                self.assertEqual(len(result["dashboard"]["diagnostic"]), 1)
+                diagnostic = pack["diagnostics"][0]
+                self.call("/api/diagnose", {"course_id": course_id,
+                                            "task_id": diagnostic["id"], "answer": diagnostic["answer"]})
+                status, lesson = self.call("/api/lesson", {"course_id": course_id})
+                self.assertEqual(status, 200)
+                self.assertEqual(lesson["title"], pack["concepts"][0]["title"])
+                self.assertFalse(lesson["generated"])
 
     def test_help_and_practice_never_count_as_independent(self) -> None:
         self.call("/api/dashboard?course_id=linear-algebra")

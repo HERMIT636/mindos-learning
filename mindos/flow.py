@@ -21,11 +21,20 @@ DIAGNOSTICS = {
 }
 
 
-def public_diagnostics(pack: dict, answers: dict[str, bool]) -> list[dict]:
+def diagnostic_tasks(pack: dict, target_concept_id: str | None = None) -> list[dict]:
+    tasks = pack.get("diagnostics", DIAGNOSTICS.get(pack["id"], []))
+    if not target_concept_id or "diagnostics" not in pack:
+        return tasks
+    prior = {edge["from"] for edge in pack["relations"]
+             if edge["type"] == "prerequisite" and edge["to"] == target_concept_id}
+    return [task for task in tasks if task["concept_id"] in prior | {target_concept_id}]
+
+
+def public_diagnostics(pack: dict, answers: dict[str, bool], target_concept_id: str | None = None) -> list[dict]:
     return [
         {key: task[key] for key in ("id", "concept_id", "dimension_id", "prompt", "choices")}
         | {"result": answers.get(task["id"])}
-        for task in DIAGNOSTICS.get(pack["id"], [])
+        for task in diagnostic_tasks(pack, target_concept_id)
     ]
 
 
@@ -38,7 +47,7 @@ def learning_plan(pack: dict, states: list[dict], answers: dict[str, bool], goal
     order = tuple(TopologicalSorter(prerequisites).static_order())
     concept_by_id = {item["id"]: item for item in pack["concepts"]}
     diagnosed = {task["concept_id"]: answers[task["id"]]
-                 for task in DIAGNOSTICS.get(pack["id"], []) if task["id"] in answers}
+                 for task in diagnostic_tasks(pack) if task["id"] in answers}
     target = target_concept_id or (pack["concepts"][0]["id"] if goal == pack["learning_goals"][0] else pack["concepts"][-1]["id"])
     included = {target}
     while any(prerequisites[item] - included for item in included):

@@ -48,6 +48,19 @@
         "properties": {"from": {"$ref": "#/$defs/id"}, "to": {"$ref": "#/$defs/id"}, "type": {"enum": ["prerequisite", "part_of", "related"]}}
       }
     },
+    "diagnostics": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "concept_id", "dimension_id", "prompt", "choices", "answer"],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"}, "concept_id": {"$ref": "#/$defs/id"},
+          "dimension_id": {"$ref": "#/$defs/id"}, "prompt": {"$ref": "#/$defs/text"},
+          "choices": {"type": "array", "minItems": 2, "items": {"type": "object", "additionalProperties": false, "required": ["id", "text"], "properties": {"id": {"$ref": "#/$defs/id"}, "text": {"$ref": "#/$defs/text"}}}},
+          "answer": {"$ref": "#/$defs/id"}
+        }
+      }
+    },
     "resources": {
       "type": "array", "minItems": 1,
       "items": {

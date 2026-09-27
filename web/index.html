@@ -43,10 +43,10 @@
         <div id="stage-status" class="stage-page" hidden><div class="stage-intro"><span class="eyebrow">STEP 05</span><h2>知识状态与后续计划</h2><p>对照短诊断、独立作答证据与先修关系，决定下一步。</p></div></div>
 
         <section class="panel setup-panel" id="setup" aria-labelledby="setup-title" hidden>
-          <div class="panel-head"><div><span class="eyebrow">STEP 01</span><h2 id="setup-title">按章节确定知识点，完成短诊断</h2></div><span class="small-badge">每门课程 2 题</span></div>
+          <div class="panel-head"><div><span class="eyebrow">STEP 01</span><h2 id="setup-title">按章节确定知识点，完成短诊断</h2></div><span class="small-badge">按目标出题</span></div>
           <p class="panel-intro">先选章节，再选本次目标知识点。短诊断只用于定位起点，不算作独立复测成绩。</p>
           <div class="goal-row"><label for="chapter-select">目标章节</label><select id="chapter-select"></select><label for="concept-select">目标知识点</label><select id="concept-select"></select><button id="goal-button" class="button button-primary" type="button">确认目标</button></div>
-          <div id="custom-goal-box" class="custom-goal" hidden><label for="custom-goal">也可以描述自己的目标，让 AI 对照当前课程目录分析</label><textarea id="custom-goal" rows="2" maxlength="200" placeholder="例如：我会写函数，但总分不清打印和返回值，想学会把结果交给后续代码使用。"></textarea><button id="analyze-goal" class="button button-secondary" type="button">分析并定位知识点</button><p id="goal-analysis" class="panel-intro" role="status"></p></div>
+          <div id="custom-goal-box" class="custom-goal" hidden><label for="custom-goal">也可以描述自己的目标，让 AI 对照当前课程目录分析</label><textarea id="custom-goal" rows="2" maxlength="200" placeholder="例如：我想学会判断模型是否过拟合，或理解 Ascend C 的 Tiling 和尾块处理。"></textarea><button id="analyze-goal" class="button button-secondary" type="button">分析并定位知识点</button><p id="goal-analysis" class="panel-intro" role="status"></p></div>
           <p id="goal-current" class="goal-current"></p>
           <div id="diagnostic-box" class="diagnostic-box" hidden><span class="eyebrow">短诊断</span><p id="diagnostic-count"></p><h3 id="diagnostic-prompt"></h3><div id="diagnostic-choices" class="choice-list"></div><button id="diagnostic-submit" class="button button-secondary" type="button">提交诊断</button><p id="diagnostic-feedback" class="panel-intro" role="status"></p></div>
         </section>

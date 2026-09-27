@@ -15,6 +15,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from .catalog import Catalog, ROOT
+from .flow import DIAGNOSTICS, learning_plan, public_diagnostics
 from .learning import progress, recommendation, submit
 from .model import ModelGateway, ModelUnavailable
 from .retrieval import retrieve
@@ -99,11 +100,20 @@ class MindOSHandler(BaseHTTPRequestHandler):
     def _dashboard(self, course_id: str) -> dict:
         pack = self.server.catalog.get(course_id)
         rows = self.server.storage.submissions(self._session(), course_id, pack["version"])
-        states = progress(pack, rows)
+        answers = self.server.storage.diagnostics(self._session(), pack)
+        by_concept = {(task["concept_id"], task["dimension_id"]): answers[task["id"]]
+                      for task in DIAGNOSTICS.get(course_id, []) if task["id"] in answers}
+        states = progress(pack, rows, by_concept)
+        goal = self.server.storage.goal(self._session(), pack)
+        plan = learning_plan(pack, states, answers, goal) if goal else []
         return {
             "course": self.server.catalog.public_course(course_id),
+            "goal": goal,
+            "diagnostic": public_diagnostics(pack, answers),
             "progress": states,
-            "recommendation": recommendation(pack, states, rows, self.server.storage.helped_tasks(self._session(), pack)),
+            "plan": plan,
+            "recommendation": recommendation(pack, states, rows, self.server.storage.helped_tasks(self._session(), pack),
+                                             {item["concept_id"] for item in plan} if goal else None),
             "valid_evidence_count": sum(row["counts_for_state"] for row in rows),
             "recent": list(reversed(rows[-8:])),
         }
@@ -140,12 +150,38 @@ class MindOSHandler(BaseHTTPRequestHandler):
             result = submit(self.server.storage, self._session(), pack, task,
                             payload.get("answer"), payload.get("mode", "practice"))
             self._json(HTTPStatus.OK, {"result": result, "dashboard": self._dashboard(course_id)})
+        elif parsed.path == "/api/goal":
+            pack = self.server.catalog.get(payload.get("course_id", ""))
+            goal = payload.get("goal")
+            if not isinstance(goal, str) or goal not in pack["learning_goals"]:
+                raise ValueError("请选择当前课程提供的学习目标")
+            self.server.storage.set_goal(self._session(), pack, goal)
+            self._json(HTTPStatus.OK, {"dashboard": self._dashboard(pack["id"])})
+        elif parsed.path == "/api/diagnose":
+            pack = self.server.catalog.get(payload.get("course_id", ""))
+            if not self.server.storage.goal(self._session(), pack):
+                raise ValueError("请先选择学习目标")
+            task = next((item for item in DIAGNOSTICS.get(pack["id"], [])
+                         if item["id"] == payload.get("task_id")), None)
+            if task is None:
+                raise ValueError("诊断题不存在")
+            if task["id"] in self.server.storage.diagnostics(self._session(), pack):
+                raise ValueError("这道诊断题已完成")
+            answer = payload.get("answer")
+            if answer not in {item["id"] for item in task["choices"]}:
+                raise ValueError("请选择诊断题提供的选项")
+            correct = answer == task["answer"]
+            self.server.storage.add_diagnostic(self._session(), pack, task["id"], answer, correct)
+            self._json(HTTPStatus.OK, {"result": {"correct": correct}, "dashboard": self._dashboard(pack["id"])})
         elif parsed.path == "/api/ask":
             course_id = payload.get("course_id", "")
             pack = self.server.catalog.get(course_id)
             question = payload.get("question", "")
             concept_id = payload.get("concept_id")
             task_id = payload.get("task_id")
+            level = payload.get("hint_level", 3)
+            if type(level) is not int or level not in (1, 2, 3):
+                raise ValueError("提示级别无效")
             if payload.get("mode", "practice") == "independent":
                 raise ValueError("独立作答期间不提供讲解")
             if not isinstance(question, str) or not 2 <= len(question.strip()) <= 500:
@@ -166,7 +202,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
                 relevant = [item for item in states if item["concept_id"] == concept_id]
                 hint = "；".join(f"{item['dimension_label']}：{item['state_label']}" for item in relevant) or "暂无独立测评证据"
                 try:
-                    answer = self.server.model.explain(question.strip(), sources, hint)
+                    answer = self.server.model.explain(question.strip(), sources, hint, level)
                     generated = True
                     citations = {int(number) for number in re.findall(r"\[(\d+)\]", answer)}
                     if citations - set(range(1, len(sources) + 1)):
@@ -174,10 +210,10 @@ class MindOSHandler(BaseHTTPRequestHandler):
                                         if int(match.group(1)) <= len(sources) else "", answer)
                         notice = "模型引用了本次检索之外的编号，已移除无效编号；请核对原文。"
                 except ModelUnavailable:
-                    answer = "讲解模型暂不可用。请先查看下方课程原文。"
+                    answer = self._source_hint(sources[0], level)
                     notice = "模型连接失败；作答记录未受影响。"
             else:
-                answer = "已找到相关课程资料。配置模型服务后，可生成结合资料的讲解。"
+                answer = self._source_hint(sources[0], level)
             self._json(HTTPStatus.OK, {
                 "answer": answer, "retrieval_mode": retrieval_mode,
                 "sources": [{key: item[key] for key in ("id", "title", "content", "url", "provenance")}
@@ -187,6 +223,15 @@ class MindOSHandler(BaseHTTPRequestHandler):
             })
         else:
             self._json(HTTPStatus.NOT_FOUND, {"error": "接口不存在"})
+
+    @staticmethod
+    def _source_hint(source: dict, level: int) -> str:
+        content = source["content"].strip()
+        if level == 1:
+            return f"提示 1：先回想「{source['title']}」中的核心概念，再自己尝试说出解题步骤。可核对下方原文 [1]。"
+        if level == 2:
+            return f"提示 2：课程资料 [1] 给出的线索是：\n{content[:320]}"
+        return f"资料讲解：请对照课程原文 [1] 梳理概念、例子和本题条件：\n{content[:1100]}"
 
     def do_GET(self) -> None:
         self._safe_call(self._get)

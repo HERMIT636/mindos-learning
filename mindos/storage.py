@@ -40,6 +40,15 @@ class Storage:
                   task_id TEXT NOT NULL,
                   PRIMARY KEY(session_id, course_id, course_version, task_id)
                 );
+                CREATE TABLE IF NOT EXISTS learning_goals (
+                  session_id TEXT NOT NULL, course_id TEXT NOT NULL, course_version TEXT NOT NULL,
+                  goal TEXT NOT NULL, PRIMARY KEY(session_id,course_id,course_version)
+                );
+                CREATE TABLE IF NOT EXISTS diagnostic_answers (
+                  session_id TEXT NOT NULL, course_id TEXT NOT NULL, course_version TEXT NOT NULL,
+                  task_id TEXT NOT NULL, answer TEXT NOT NULL, correct INTEGER NOT NULL,
+                  PRIMARY KEY(session_id,course_id,course_version,task_id)
+                );
             """)
 
     @contextmanager
@@ -92,3 +101,25 @@ class Storage:
         with self.connect() as db:
             db.execute("INSERT OR REPLACE INTO embedding_cache(cache_key,vector) VALUES(?,?)",
                        (key, json.dumps(vector, separators=(",", ":"))))
+
+    def goal(self, session_id: str, pack: dict) -> str | None:
+        with self.connect() as db:
+            row = db.execute("SELECT goal FROM learning_goals WHERE session_id=? AND course_id=? AND course_version=?",
+                             (session_id, pack["id"], pack["version"])).fetchone()
+        return row["goal"] if row else None
+
+    def set_goal(self, session_id: str, pack: dict, goal: str) -> None:
+        with self.connect() as db:
+            db.execute("INSERT OR REPLACE INTO learning_goals VALUES(?,?,?,?)",
+                       (session_id, pack["id"], pack["version"], goal))
+
+    def diagnostics(self, session_id: str, pack: dict) -> dict[str, bool]:
+        with self.connect() as db:
+            rows = db.execute("SELECT task_id,correct FROM diagnostic_answers WHERE session_id=? AND course_id=? AND course_version=?",
+                              (session_id, pack["id"], pack["version"])).fetchall()
+        return {row["task_id"]: bool(row["correct"]) for row in rows}
+
+    def add_diagnostic(self, session_id: str, pack: dict, task_id: str, answer: str, correct: bool) -> None:
+        with self.connect() as db:
+            db.execute("INSERT INTO diagnostic_answers VALUES(?,?,?,?,?,?)",
+                       (session_id, pack["id"], pack["version"], task_id, answer, int(correct)))

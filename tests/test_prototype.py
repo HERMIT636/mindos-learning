@@ -112,6 +112,51 @@ class PrototypeTests(unittest.TestCase):
         self.assertEqual(dashboard["valid_evidence_count"], 0)
         self.assertEqual(dashboard["recommendation"]["task_id"], "zero-vector")
 
+    def test_goal_diagnosis_plan_and_local_tiered_hints(self) -> None:
+        _, dashboard = self.call("/api/dashboard?course_id=python-foundations")
+        self.assertIsNone(dashboard["goal"])
+        self.assertNotIn("answer", json.dumps(dashboard["diagnostic"]))
+        status, error = self.call("/api/diagnose", {"course_id": "python-foundations", "task_id": "diagnose-function", "answer": "a"})
+        self.assertEqual(status, 400)
+        self.assertIn("目标", error["error"])
+        goal = dashboard["course"]["learning_goals"][1]
+        _, response = self.call("/api/goal", {"course_id": "python-foundations", "goal": goal})
+        self.assertEqual(response["dashboard"]["goal"], goal)
+        self.assertEqual(len(response["dashboard"]["plan"]), 2)
+        for task_id, answer in (("diagnose-function", "a"), ("diagnose-return", "c")):
+            status, response = self.call("/api/diagnose", {"course_id": "python-foundations", "task_id": task_id, "answer": answer})
+            self.assertEqual(status, 200)
+        dashboard = response["dashboard"]
+        self.assertEqual(dashboard["valid_evidence_count"], 0)
+        self.assertEqual(dashboard["plan"][0]["status"], "优先补强")
+        understanding = next(row for row in dashboard["progress"] if row["concept_id"] == "functions" and row["dimension_id"] == "understanding")
+        implementation = next(row for row in dashboard["progress"] if row["concept_id"] == "functions" and row["dimension_id"] == "implementation")
+        self.assertEqual(understanding["state"], "needs_work")
+        self.assertEqual(implementation["state"], "unassessed")
+        for level in (1, 2, 3):
+            status, hint = self.call("/api/ask", {"course_id": "python-foundations", "question": "return 和 print 有什么区别？", "hint_level": level})
+            self.assertEqual(status, 200)
+            self.assertFalse(hint["generated"])
+            self.assertIn(f"{level}", hint["answer"] if level < 3 else "3")
+            self.assertTrue(hint["sources"])
+        other_client = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        with other_client.open(self.url + "/api/dashboard?course_id=python-foundations") as result:
+            other = json.loads(result.read())
+        self.assertIsNone(other["goal"])
+        self.assertTrue(all(item["result"] is None for item in other["diagnostic"]))
+
+    def test_first_goal_limits_plan_and_next_task(self) -> None:
+        _, dashboard = self.call("/api/dashboard?course_id=python-foundations")
+        goal = dashboard["course"]["learning_goals"][0]
+        _, response = self.call("/api/goal", {"course_id": "python-foundations", "goal": goal})
+        self.assertEqual([item["concept_id"] for item in response["dashboard"]["plan"]], ["functions"])
+        for task_id, answer in (("identify-call", "b"), ("identify-call-with-argument", "b")):
+            self.call("/api/submit", {"course_id": "python-foundations", "task_id": task_id,
+                                      "answer": answer, "mode": "independent"})
+        _, dashboard = self.call("/api/dashboard?course_id=python-foundations")
+        self.assertIsNone(dashboard["recommendation"])
+        self.assertEqual(dashboard["plan"][0]["status"], "已复测")
+
     def test_numeric_grading_and_no_answer_query(self) -> None:
         status, invalid = self.call("/api/submit", {"course_id": "linear-algebra", "task_id": "calculate-dot-product",
                                                   "answer": "NaN", "mode": "independent"})

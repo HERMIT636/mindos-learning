@@ -34,7 +34,7 @@ def assess(task: dict, answer: str) -> bool | None:
     return None
 
 
-def progress(pack: dict, submissions: list[dict]) -> list[dict]:
+def progress(pack: dict, submissions: list[dict], diagnostic: dict[str, bool] | None = None) -> list[dict]:
     tasks = {task["id"]: task for task in pack["tasks"]}
     latest_by_task = {
         row["task_id"]: row for row in submissions
@@ -61,17 +61,22 @@ def progress(pack: dict, submissions: list[dict]) -> list[dict]:
                 state = "needs_work"
             else:
                 state = "unassessed"
+            diagnostic_result = (diagnostic or {}).get((concept["id"], dimension_id))
+            if state == "unassessed" and diagnostic_result is not None:
+                state = "diagnostic_ready" if diagnostic_result else "needs_work"
             result.append({
                 "concept_id": concept["id"], "concept_title": concept["title"],
                 "dimension_id": dimension_id, "dimension_label": dimensions[dimension_id]["label"],
-                "state": state, "state_label": STATE_LABELS[state],
+                "state": state, "state_label": ("诊断通过·待复测" if state == "diagnostic_ready" else
+                    "诊断薄弱·待补强" if state == "needs_work" and not evidence and diagnostic_result is False else STATE_LABELS[state]),
                 "passed_tasks": passed, "failed_tasks": failed,
-                "evidence_count": len(evidence),
+                "evidence_count": len(evidence), "diagnostic_result": diagnostic_result,
             })
     return result
 
 
-def recommendation(pack: dict, states: list[dict], submissions: list[dict], helped: set[str]) -> dict | None:
+def recommendation(pack: dict, states: list[dict], submissions: list[dict], helped: set[str],
+                   allowed_concepts: set[str] | None = None) -> dict | None:
     prerequisites = {concept["id"]: set() for concept in pack["concepts"]}
     for relation in pack["relations"]:
         if relation["type"] == "prerequisite":
@@ -79,6 +84,8 @@ def recommendation(pack: dict, states: list[dict], submissions: list[dict], help
     order = tuple(TopologicalSorter(prerequisites).static_order())
     seen = {row["task_id"] for row in submissions} | helped
     for concept_id in order:
+        if allowed_concepts is not None and concept_id not in allowed_concepts:
+            continue
         for item in states:
             if item["concept_id"] != concept_id or item["state"] == "retested":
                 continue

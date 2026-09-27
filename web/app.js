@@ -5,6 +5,20 @@ const ui = {
   title: document.querySelector('#course-title'),
   audience: document.querySelector('#course-audience'),
   goals: document.querySelector('#course-goals'),
+  goalSelect: document.querySelector('#goal-select'),
+  goalButton: document.querySelector('#goal-button'),
+  goalCurrent: document.querySelector('#goal-current'),
+  diagnosticBox: document.querySelector('#diagnostic-box'),
+  diagnosticCount: document.querySelector('#diagnostic-count'),
+  diagnosticPrompt: document.querySelector('#diagnostic-prompt'),
+  diagnosticChoices: document.querySelector('#diagnostic-choices'),
+  diagnosticSubmit: document.querySelector('#diagnostic-submit'),
+  diagnosticFeedback: document.querySelector('#diagnostic-feedback'),
+  pathPanel: document.querySelector('#path-panel'),
+  pathSummary: document.querySelector('#path-summary'),
+  pathList: document.querySelector('#path-list'),
+  metrics: document.querySelector('#metrics'),
+  learningColumns: document.querySelector('#learning-columns'),
   total: document.querySelector('#metric-total'),
   retested: document.querySelector('#metric-retested'),
   needs: document.querySelector('#metric-needs'),
@@ -62,11 +76,11 @@ function showFeedback(message, needs = false) {
 
 function renderCourses() {
   ui.courses.replaceChildren();
-  state.courses.forEach((course, index) => {
+  state.courses.forEach(course => {
     const button = element('button', `course-button${course.id === state.courseId ? ' active' : ''}`);
     button.type = 'button';
     button.setAttribute('aria-current', course.id === state.courseId ? 'page' : 'false');
-    button.append(element('span', 'course-icon', index === 0 ? 'Py' : '∑'));
+    button.append(element('span', 'course-icon', course.id === 'python-foundations' ? 'Py' : '∑'));
     const text = element('span');
     text.append(element('span', 'course-name', course.title.split('：')[0]));
     text.append(element('span', 'course-subtitle', course.title.split('：')[1] || '基础课程'));
@@ -83,7 +97,7 @@ function renderProgress() {
     const row = element('div', 'progress-item');
     const title = element('div');
     title.append(element('strong', '', item.concept_title));
-    title.append(element('small', '', `${item.dimension_label} · ${item.evidence_count} 份独立证据`));
+    title.append(element('small', '', `${item.dimension_label} · ${item.evidence_count} 份独立作答证据${item.diagnostic_result === null ? '' : ` · 短诊断${item.diagnostic_result ? '通过' : '待补强'}`}`));
     row.append(title, element('span', `state-badge ${item.state}`, item.state_label));
     ui.progress.append(row);
   });
@@ -166,14 +180,60 @@ function renderMode() {
   if (independent) ui.askResult.replaceChildren();
 }
 
+function renderFlow() {
+  const { course, goal, diagnostic, plan } = state.dashboard;
+  ui.goalSelect.replaceChildren(...course.learning_goals.map(item => {
+    const option = element('option', '', item);
+    option.value = item;
+    return option;
+  }));
+  ui.goalSelect.value = goal || course.learning_goals[0];
+  ui.goalCurrent.textContent = goal ? `当前目标：${goal}` : '请选择一个目标，再完成两道短诊断题。';
+  const pending = diagnostic.find(item => item.result === null);
+  const complete = Boolean(goal) && !pending;
+  ui.diagnosticBox.hidden = !goal || !pending;
+  if (goal && pending) {
+    ui.diagnosticCount.textContent = `第 ${diagnostic.length - diagnostic.filter(item => item.result === null).length + 1} / ${diagnostic.length} 题`;
+    ui.diagnosticPrompt.textContent = pending.prompt;
+    ui.diagnosticChoices.replaceChildren(...pending.choices.map(choice => {
+      const label = element('label', 'choice');
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'diagnostic-choice';
+      input.value = choice.id;
+      label.append(input, element('span', '', choice.text));
+      return label;
+    }));
+  }
+  ui.pathPanel.hidden = !complete;
+  ui.metrics.hidden = !complete;
+  ui.learningColumns.hidden = !complete;
+  if (complete) {
+    const weak = plan.filter(item => item.status === '优先补强');
+    ui.pathSummary.textContent = weak.length
+      ? `短诊断提示先补强：${weak.map(item => item.title).join('、')}。下方按先修顺序安排资料、练习和复测。`
+      : '短诊断暂未发现明显薄弱点；仍需独立变式题验证。下方按先修顺序继续。';
+    ui.pathList.replaceChildren(...plan.map((item, index) => {
+      const row = element('div', 'path-item');
+      row.append(element('strong', '', `${index + 1}. ${item.title}`), element('span', '', item.status));
+      row.append(element('p', '', `${item.prerequisites.length ? `先修：${item.prerequisites.join('、')}。` : '本路线的起点。'}${item.reason}`));
+      return row;
+    }));
+  }
+}
+
 function renderDashboard() {
   const { course, recommendation } = state.dashboard;
   ui.breadcrumb.textContent = course.title.split('：')[0];
   ui.title.textContent = course.title;
   ui.audience.textContent = `适合：${course.audience}。课程内容尚待教师审核。`;
   ui.goals.replaceChildren(...course.learning_goals.map(goal => element('span', 'hero-tag', goal)));
+  renderFlow();
   ui.nextReason.textContent = recommendation?.reason || '本示例没有新的可独立评分题；可继续查阅资料或选择其他练习。';
   ui.nextButton.disabled = !recommendation;
+  const last = state.dashboard.recent[0];
+  const readyForVariant = last && Boolean(last.correct);
+  ui.nextButton.firstChild.textContent = readyForVariant ? '做独立变式复测 ' : '先做补强练习 ';
   renderProgress();
   renderHistory();
   ui.taskSelect.replaceChildren(...course.tasks.map(task => {
@@ -195,6 +255,7 @@ async function selectCourse(courseId) {
   state.courseId = courseId;
   state.taskId = '';
   state.mode = 'practice';
+  ui.diagnosticFeedback.textContent = '';
   ui.askResult.replaceChildren();
   ui.askInput.value = '';
   try {
@@ -213,13 +274,41 @@ ui.taskSelect.addEventListener('change', () => {
   ui.askResult.replaceChildren();
   renderTask();
 });
+ui.goalButton.addEventListener('click', async () => {
+  if (state.busy) return;
+  state.busy = true;
+  try {
+    const response = await api('/api/goal', { method: 'POST', body: JSON.stringify({ course_id: state.courseId, goal: ui.goalSelect.value }) });
+    state.dashboard = response.dashboard;
+    renderDashboard();
+    ui.diagnosticFeedback.textContent = '目标已保存。请完成短诊断。';
+  } catch (error) { ui.diagnosticFeedback.textContent = error.message; }
+  finally { state.busy = false; }
+});
+ui.diagnosticSubmit.addEventListener('click', async () => {
+  if (state.busy) return;
+  const task = state.dashboard?.diagnostic.find(item => item.result === null);
+  const answer = document.querySelector('input[name="diagnostic-choice"]:checked')?.value;
+  if (!task || !answer) { ui.diagnosticFeedback.textContent = '请先选择一个选项。'; return; }
+  state.busy = true;
+  try {
+    const response = await api('/api/diagnose', { method: 'POST', body: JSON.stringify({ course_id: state.courseId, task_id: task.id, answer }) });
+    state.dashboard = response.dashboard;
+    renderDashboard();
+    ui.diagnosticFeedback.textContent = response.result.correct ? '已记录。继续下一题。' : '已记录。稍后会把这个知识点列入补强路线。';
+    if (state.dashboard.diagnostic.every(item => item.result !== null)) {
+      ui.pathPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  } catch (error) { ui.diagnosticFeedback.textContent = error.message; }
+  finally { state.busy = false; }
+});
 ui.practice.addEventListener('click', () => { state.mode = 'practice'; renderMode(); });
 ui.independent.addEventListener('click', () => { state.mode = 'independent'; renderMode(); });
 ui.nextButton.addEventListener('click', () => {
   const recommended = state.dashboard?.recommendation;
   if (!recommended) return;
   state.taskId = recommended.task_id;
-  state.mode = 'independent';
+  state.mode = state.dashboard.recent[0]?.correct ? 'independent' : 'practice';
   ui.taskSelect.value = state.taskId;
   renderTask();
   renderMode();
@@ -264,7 +353,7 @@ ui.askForm.addEventListener('submit', async event => {
     const task = currentTask();
     const result = await api('/api/ask', {
       method: 'POST',
-      body: JSON.stringify({ course_id: state.courseId, task_id: task?.id, concept_id: task?.concept_ids[0], question, mode: state.mode }),
+      body: JSON.stringify({ course_id: state.courseId, task_id: task?.id, concept_id: task?.concept_ids[0], question, hint_level: Number(document.querySelector('input[name="hint-level"]:checked')?.value || 1), mode: state.mode }),
     });
     const wrapper = element('div');
     wrapper.append(element('p', '', result.answer));
@@ -293,7 +382,8 @@ ui.askForm.addEventListener('submit', async event => {
 async function initialize() {
   try {
     const response = await api('/api/courses');
-    state.courses = response.courses;
+    state.courses = response.courses.sort((left, right) =>
+      Number(right.id === 'python-foundations') - Number(left.id === 'python-foundations'));
     ui.modelStatus.textContent = response.chat_ready ? '模型讲解已接通' : '本地课程资料可用';
     const requested = new URL(window.location.href).searchParams.get('course');
     await selectCourse(state.courses.some(course => course.id === requested) ? requested : state.courses[0].id);

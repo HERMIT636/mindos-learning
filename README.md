@@ -29,6 +29,7 @@ MindOS 希望帮助学习者明确当前薄弱点，获取有来源的学习材�
 - [完整设计大纲](MindOS_最终设计大纲.md)：产品范围、架构、评估与落地路线。
 - [课程包约定](docs/course-packs.md)与 [JSON Schema](schemas/course-pack.schema.json)。
 - [Python 基础示例](course-packs/python-foundations/manifest.json)。
+- [Python 函数单元内容复核](docs/python-unit-review.md)。
 - [线性代数示例](course-packs/linear-algebra/manifest.json)。
 - [开发路线](ROADMAP.md)、[贡献指南](CONTRIBUTING.md)与 [开源发布说明](docs/open-source.md)。
 - [本地原型运行说明](docs/prototype.md)：两门课程的练习、状态记录和资料助手。

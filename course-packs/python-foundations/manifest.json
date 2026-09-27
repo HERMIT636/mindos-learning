@@ -2,7 +2,7 @@
   "$schema": "../../schemas/course-pack.schema.json",
   "schema_version": "0.1.0",
   "id": "python-foundations",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "title": "Python 基础：函数与返回值",
   "language": "zh-CN",
   "level": "beginner",
@@ -10,7 +10,8 @@
   "license": "MIT",
   "review_status": "draft",
   "learning_goals": [
-    "说明函数调用与返回值的关系",
+    "区分函数定义与调用、形参与实参",
+    "区分函数的屏幕输出与返回值",
     "编写返回两个数之和的函数"
   ],
   "dimensions": [
@@ -78,16 +79,16 @@
       "rubric": [
         {
           "dimension_id": "understanding",
-          "criterion": "指出 return 将值交回调用者并结束本次函数执行",
+          "criterion": "2 分：明确说明 return 将值交回调用者且结束本次函数执行；只说出其中一项得 1 分；均未说出得 0 分",
           "max_score": 2
         },
         {
           "dimension_id": "understanding",
-          "criterion": "指出 print 的主要作用是输出显示内容，不会自动把显示内容作为所在函数的返回值",
+          "criterion": "2 分：说明 print 用于显示且显示内容不会自动成为所在函数的返回值；只说出其中一项得 1 分；均未说出得 0 分",
           "max_score": 2
         }
       ],
-      "reference_answer": "return 将值交给调用者并结束本次函数执行；print 用于显示内容。仅调用 print 且没有执行返回具体值语句的普通函数通常返回 None。"
+      "reference_answer": "return 将值交给调用者并结束本次函数执行；print 用于显示内容。函数执行到末尾而没有执行 return 时，调用结果是 None。"
     },
     {
       "id": "implement-add",
@@ -104,13 +105,18 @@
       "rubric": [
         {
           "dimension_id": "implementation",
-          "criterion": "定义接受 a 和 b 两个参数的 add 函数",
+          "criterion": "1 分：定义名为 add、接受 a 和 b 两个参数的函数；否则 0 分",
           "max_score": 1
         },
         {
           "dimension_id": "implementation",
-          "criterion": "使用 return 返回 a + b，调用者可以取得结果",
+          "criterion": "2 分：对数值输入返回 a + b 且调用者可取得结果；仅正确计算但未返回得 1 分；否则 0 分",
           "max_score": 2
+        },
+        {
+          "dimension_id": "implementation",
+          "criterion": "1 分：函数内不使用 print 代替返回；否则 0 分",
+          "max_score": 1
         }
       ],
       "reference_answer": "def add(a, b):\n    return a + b"
@@ -143,17 +149,17 @@
       "rubric": [
         {
           "dimension_id": "understanding",
-          "criterion": "选出唯一正确答案",
+          "criterion": "1 分：识别 greet() 是调用，区别于 def 定义或 return 引用；否则 0 分",
           "max_score": 1
         }
       ],
       "reference_answer": "b"
     },
     {
-      "id": "identify-parameter",
+      "id": "identify-call-with-argument",
       "task_type": "single_choice",
       "purpose": "practice",
-      "prompt": "在 def double(x): 中，x 是什么？",
+      "prompt": "已定义函数 double(x)。下列哪一项会调用它，并把 3 传给 x？",
       "concept_ids": [
         "functions"
       ],
@@ -163,21 +169,21 @@
       "choices": [
         {
           "id": "a",
-          "text": "函数名"
+          "text": "double"
         },
         {
           "id": "b",
-          "text": "形参"
+          "text": "double(3)"
         },
         {
           "id": "c",
-          "text": "返回值"
+          "text": "def double(3):"
         }
       ],
       "rubric": [
         {
           "dimension_id": "understanding",
-          "criterion": "选出唯一正确答案",
+          "criterion": "1 分：识别 double(3) 为带实参的函数调用，区别于函数引用和定义；否则 0 分",
           "max_score": 1
         }
       ],
@@ -211,7 +217,7 @@
       "rubric": [
         {
           "dimension_id": "understanding",
-          "criterion": "选出唯一正确答案",
+          "criterion": "1 分：区分 return 交回调用者与 print 显示内容；否则 0 分",
           "max_score": 1
         }
       ],
@@ -221,7 +227,7 @@
       "id": "read-return-value",
       "task_type": "single_choice",
       "purpose": "practice",
-      "prompt": "执行 def add(a, b): return a + b，然后令 result = add(2, 4)。result 的值是什么？",
+      "prompt": "函数 show_then_add(x) 先执行 print(x)，再执行 return x + 2。调用 result = show_then_add(4) 后，屏幕显示什么，result 是什么？",
       "concept_ids": [
         "return-value"
       ],
@@ -231,21 +237,21 @@
       "choices": [
         {
           "id": "a",
-          "text": "6"
+          "text": "显示 4，result 为 6"
         },
         {
           "id": "b",
-          "text": "None"
+          "text": "显示 6，result 为 4"
         },
         {
           "id": "c",
-          "text": "字符串 \"2 + 4\""
+          "text": "显示 4，result 为 None"
         }
       ],
       "rubric": [
         {
           "dimension_id": "understanding",
-          "criterion": "选出唯一正确答案",
+          "criterion": "1 分：同时正确判断 print 的显示内容和 return 的调用结果；否则 0 分",
           "max_score": 1
         }
       ],

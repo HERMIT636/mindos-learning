@@ -82,7 +82,7 @@ class PrototypeTests(unittest.TestCase):
         _, dashboard = self.call("/api/dashboard?course_id=python-foundations")
         self.assertNotIn("reference_answer", json.dumps(dashboard))
         self.assertEqual(dashboard["recommendation"]["task_id"], "identify-call")
-        for task_id, answer in (("identify-call", "b"), ("identify-parameter", "b")):
+        for task_id, answer in (("identify-call", "b"), ("identify-call-with-argument", "b")):
             status, result = self.call("/api/submit", {"course_id": "python-foundations", "task_id": task_id,
                                                        "answer": answer, "mode": "independent"})
             self.assertEqual(status, 200)

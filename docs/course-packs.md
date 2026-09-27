@@ -23,7 +23,7 @@ course-packs/
 | 字段 | 作用 |
 | --- | --- |
 | schema_version | 当前固定为 0.1.0，指格式版本 |
-| id / version | 课程编号与内容版本，例如 python-foundations / 0.2.0 |
+| id / version | 课程编号与内容版本，例如 python-foundations / 0.2.1 |
 | title / language / level / audience | 课程名称、语言、层级与适用人群 |
 | license / review_status | 许可与审核状态，未审核使用 draft |
 | learning_goals | 可由任务检查的学习目标 |

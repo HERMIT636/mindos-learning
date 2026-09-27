@@ -12,6 +12,7 @@ COURSES = ROOT / "course-packs"
 COURSE_ORDER = ("machine-learning", "hpc-foundations", "ascend-c-operators",
                 "python-foundations", "linear-algebra")
 EXTERNAL_GUIDES = ROOT / "external-resources/curated/concept-guides.json"
+CURATED_SOURCE_INDEX = ROOT / "external-resources/curated/source-index.json"
 EXTERNAL_MANIFESTS = ROOT / "external-resources/manifests"
 PUBLIC_TASK_FIELDS = ("id", "task_type", "purpose", "prompt", "concept_ids", "dimension_ids", "choices")
 
@@ -40,6 +41,16 @@ class Catalog:
         for path in EXTERNAL_MANIFESTS.glob("*-manifest.json"):
             for resource in json.loads(path.read_text(encoding="utf-8"))["resources"]:
                 manifests[resource["id"]] = resource
+        curated_source_ids = set()
+        if CURATED_SOURCE_INDEX.is_file():
+            for resource in json.loads(CURATED_SOURCE_INDEX.read_text(encoding="utf-8"))["sources"]:
+                if resource["id"] in manifests and (
+                    resource["source_url"] != manifests[resource["id"]].get("source_url") or
+                    resource["sha256"] != manifests[resource["id"]].get("sha256")
+                ):
+                    raise ValueError("外部来源编号冲突")
+                manifests[resource["id"]] = resource
+                curated_source_ids.add(resource["id"])
         guides = []
         seen = set()
         for guide in data["guides"]:
@@ -53,7 +64,9 @@ class Catalog:
             if not guide["source_resource_ids"] or any(
                 source_id not in manifests or
                 manifests[source_id]["rag_index_status"] != "candidate_after_teacher_review" or
-                manifests[source_id]["local_path"] == "NOT_DOWNLOADED"
+                manifests[source_id].get("local_path") == "NOT_DOWNLOADED" or
+                (source_id in curated_source_ids and
+                 guide["url"].split("#", 1)[0] != manifests[source_id]["source_url"].split("#", 1)[0])
                 for source_id in guide["source_resource_ids"]
             ):
                 raise ValueError("外部导读引用了未通过初审的来源")
@@ -63,7 +76,7 @@ class Catalog:
         return guides
 
     def external_chunks(self, pack: dict, concept_id: str | None = None) -> list[dict]:
-        """Attributed editorial drafts for AI grounding, never raw downloaded files."""
+        """Attributed editorial drafts for reference retrieval, never raw downloaded files."""
         return [
             {"id": guide["id"], "course_id": pack["id"], "course_version": pack["version"],
              "resource_id": guide["id"], "title": guide["title"],

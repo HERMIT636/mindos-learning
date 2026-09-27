@@ -1,0 +1,87 @@
+{
+  "schema_version": "0.1.0",
+  "review_status": "integrity_checked_pending_teacher_review",
+  "note": "来源目录快照；原始下载文件未发布。导读是 MindOS 根据原文撰写的中文摘要，不是原文全文索引。",
+  "sources": [
+    {
+      "id": "sklearn-user-guide-index",
+      "title": "scikit-learn 用户指南首页",
+      "source_url": "https://scikit-learn.org/stable/user_guide.html",
+      "sha256": "6C6C264EF869E05CBD5A682BDCDBDFA7302478EB897BE90112FA3D2655766875",
+      "license": "BSD-3-Clause",
+      "license_url": "https://github.com/scikit-learn/scikit-learn/blob/main/COPYING",
+      "version": "1.9.1 (accessed 2026-09-27)",
+      "rag_index_status": "candidate_after_teacher_review"
+    },
+    {
+      "id": "sklearn-linear-model",
+      "title": "scikit-learn 线性模型模块文档",
+      "source_url": "https://scikit-learn.org/stable/modules/linear_model.html",
+      "sha256": "D2BAE900261AC8F09F2F8F4EF7F785FBE20DA6E1120FBBB20A316E59443AC318",
+      "license": "BSD-3-Clause",
+      "license_url": "https://github.com/scikit-learn/scikit-learn/blob/main/COPYING",
+      "version": "1.9.1",
+      "rag_index_status": "candidate_after_teacher_review"
+    },
+    {
+      "id": "sklearn-model-evaluation",
+      "title": "scikit-learn 模型评估模块文档",
+      "source_url": "https://scikit-learn.org/stable/modules/model_evaluation.html",
+      "sha256": "7E740E140BA75771BB1C7DE132BABFD958C277B5529D187E7BA744E69729120C",
+      "license": "BSD-3-Clause",
+      "license_url": "https://github.com/scikit-learn/scikit-learn/blob/main/COPYING",
+      "version": "1.9.1",
+      "rag_index_status": "candidate_after_teacher_review"
+    },
+    {
+      "id": "sklearn-cross-validation",
+      "title": "scikit-learn 交叉验证模块文档",
+      "source_url": "https://scikit-learn.org/stable/modules/cross_validation.html",
+      "sha256": "78D7587FA92BA3B3E480C9D841B50FEDC14AC29D571CCB319D4068235154F0E2",
+      "license": "BSD-3-Clause",
+      "license_url": "https://github.com/scikit-learn/scikit-learn/blob/main/COPYING",
+      "version": "1.9.1",
+      "rag_index_status": "candidate_after_teacher_review"
+    },
+    {
+      "id": "sklearn-preprocessing",
+      "title": "scikit-learn 预处理模块文档",
+      "source_url": "https://scikit-learn.org/stable/modules/preprocessing.html",
+      "sha256": "EFE09A2FC1FF719716078E77CEBC0620ABE3A1D899F51EE0C90EB60660915C89",
+      "license": "BSD-3-Clause",
+      "license_url": "https://github.com/scikit-learn/scikit-learn/blob/main/COPYING",
+      "version": "1.9.1",
+      "rag_index_status": "candidate_after_teacher_review"
+    },
+    {
+      "id": "sklearn-ensemble",
+      "title": "scikit-learn 集成学习模块文档",
+      "source_url": "https://scikit-learn.org/stable/modules/ensemble.html",
+      "sha256": "5380619B99561557CB7DE75559BF43FA63ADD3654B750FD1D6175D70DDCD170D",
+      "license": "BSD-3-Clause",
+      "license_url": "https://github.com/scikit-learn/scikit-learn/blob/main/COPYING",
+      "version": "1.9.1",
+      "rag_index_status": "candidate_after_teacher_review"
+    },
+    {
+      "id": "sklearn-neural-networks",
+      "title": "scikit-learn 神经网络(监督)模块文档",
+      "source_url": "https://scikit-learn.org/stable/modules/neural_networks_supervised.html",
+      "sha256": "AAF13265B9A7CA874E4E25614B057353B87D4B18B45912E9337598483DDD6A64",
+      "license": "BSD-3-Clause",
+      "license_url": "https://github.com/scikit-learn/scikit-learn/blob/main/COPYING",
+      "version": "1.9.1",
+      "rag_index_status": "candidate_after_teacher_review"
+    },
+    {
+      "id": "mindspore-ascendc-custom-op",
+      "title": "MindSpore Ascend C 自定义算子开发指南",
+      "source_url": "https://www.mindspore.cn/tutorials/experts/zh-CN/r2.3.1/operation/op_custom_ascendc.html",
+      "sha256": "CA244FBC1E090F1A9B4C8142AD3E3BD730B4E95621A2EA5FDACA6207F32BCCEA",
+      "license": "Apache License 2.0 (MindSpore 文档随框架同许可)",
+      "license_url": "https://gitee.com/mindspore/docs/blob/master/LICENSE",
+      "version": "MindSpore 2.3.1 (accessed 2026-09-27)",
+      "rag_index_status": "candidate_after_teacher_review"
+    }
+  ]
+}

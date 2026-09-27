@@ -1,0 +1,197 @@
+{
+  "course_pack_id": "hpc-foundations",
+  "generated_at": "2026-09-27",
+  "generator": "MindOS External Resource Audit",
+  "resources": [
+    {
+      "id": "openmp-5.2-spec",
+      "title": "OpenMP API Specification 5.2 (PDF)",
+      "source_url": "https://www.openmp.org/wp-content/uploads/OpenMP-API-Specification-5-2.pdf",
+      "local_path": "hpc-foundations/openmp-5.2-spec.pdf",
+      "sha256": "3A176AB131D7F83FF525AA5449F0E0880138AB444A69D19B4365F7F318381946",
+      "license": "OpenMP ARB 许可：允许免费复制全部或部分内容，须保留版权声明和文档标题",
+      "license_url": "https://www.openmp.org/spec-html/5.2/openmp.html",
+      "author": "OpenMP Architecture Review Board",
+      "version": "5.2 (November 2021, GIT rev 95b2e3a44)",
+      "retrieved_at": "2026-09-27",
+      "permissions": {
+        "download_save": true,
+        "public_redistribute": true,
+        "adapt_translate": false,
+        "commercial_use": null,
+        "rag_retrieval": null,
+        "ai_training": null
+      },
+      "covers_concepts": [
+        "openmp-parallel",
+        "races-synchronization"
+      ],
+      "content_scope": "完整OpenMP 5.2规范：指令/子句/运行时库/环境变量、任务并行(task/taskloop/depend)、SIMD指令、目标卸载(target/teams/distribute)、内存模型/flush/原子操作、工具接口(OMPT/OMPD)、Fortran/C/C++语法。",
+      "suitability": "authoritative_reference",
+      "notes": "OpenMP官方规范允许在保留版权声明和标题的条件下免费复制全部或部分文本；未从该文字推断翻译或改编许可。公开分发须满足署名条件。",
+      "rag_index_status": "pending_rights_review"
+    },
+    {
+      "id": "mpi-forum-procedures-3.5",
+      "title": "MPI Forum Procedures Version 3.5",
+      "source_url": "https://www.mpi-forum.org/docs/other/procedures-35.pdf",
+      "local_path": "hpc-foundations/mpi-forum-procedures-3.5.pdf",
+      "sha256": "51E418F860CCE19B0F2BAF14F2CD4FF3E7EAAFB1608F3F576B86E416DA660623",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "author": "MPI Forum",
+      "version": "3.5 (Effective December 8, 2023)",
+      "retrieved_at": "2026-09-27",
+      "permissions": {
+        "download_save": true,
+        "public_redistribute": true,
+        "adapt_translate": true,
+        "commercial_use": true,
+        "rag_retrieval": true,
+        "ai_training": null
+      },
+      "covers_concepts": [],
+      "content_scope": "MPI标准文档制定流程：正式阅读/投票/冻结RC/发布流程、章节委员会/工作组职责、文档版本管理、侧文档管理。非技术规范本身，但说明MPI标准治理。",
+      "suitability": "governance_reference_not_curricular",
+      "rag_index_status": "not_curricular"
+    },
+    {
+      "id": "mpi-4.0-standard",
+      "title": "MPI 4.0 Standard (PDF)",
+      "source_url": "https://www.mpi-forum.org/docs/mpi-4.0/mpi40-report.pdf",
+      "local_path": "hpc-foundations/mpi-4.0-standard.pdf",
+      "sha256": "8509DAAAA5860724E1233C4D1307DCE6CA1EDB9B96AC568DA99E07B4F5342A80",
+      "license": "官方PDF首页：允许附条件免费复制全部或部分文本，须保留版权声明、标题和许可提示",
+      "license_url": "https://www.mpi-forum.org/docs/mpi-4.0/mpi40-report.pdf",
+      "author": "MPI Forum",
+      "version": "4.0 (June 2021)",
+      "retrieved_at": "2026-09-27",
+      "permissions": {
+        "download_save": true,
+        "public_redistribute": true,
+        "adapt_translate": null,
+        "commercial_use": null,
+        "rag_retrieval": null,
+        "ai_training": null
+      },
+      "covers_concepts": [
+        "mpi-distributed"
+      ],
+      "content_scope": "MPI 4.0完整标准：大计数、持久集合通信、会话、信息查询、错误处理增强、工具接口、Fortran 2008绑定、常量/枚举更新。",
+      "suitability": "authoritative_reference",
+      "notes": "原报告称无明确复制许可不正确。官方PDF首页明确允许附条件免费复制；本项目尚未完成附带声明、改编、商用及RAG输出范围的复核，暂不接入检索或随公开仓库发布。",
+      "rag_index_status": "pending_rights_review"
+    }
+  ],
+  "only_links": [
+    {
+      "id": "openmp-5.1-spec",
+      "title": "OpenMP API Specification 5.1 (HTML/PDF)",
+      "source_url": "https://www.openmp.org/spec-html/5.1/openmp.html",
+      "license": "OpenMP ARB 许可：允许免费复制，保留版权声明",
+      "covers_concepts": [
+        "openmp-parallel",
+        "races-synchronization"
+      ],
+      "notes": "同5.2许可。HTML版便于在线检索。"
+    },
+    {
+      "id": "openmp-5.0-spec",
+      "title": "OpenMP API Specification 5.0 (HTML/PDF)",
+      "source_url": "https://www.openmp.org/spec-html/5.0/openmp.html",
+      "license": "OpenMP ARB 许可：允许免费复制，保留版权声明",
+      "covers_concepts": [
+        "openmp-parallel",
+        "races-synchronization"
+      ],
+      "notes": "同5.2许可。"
+    },
+    {
+      "id": "openmp-ref-guide-5.2",
+      "title": "OpenMP 5.2 API Syntax Reference Guide",
+      "source_url": "https://www.openmp.org/wp-content/uploads/OpenMPRef-5.2-1124-web.pdf",
+      "license": "OpenMP ARB 许可：允许免费复制，保留版权声明",
+      "covers_concepts": [
+        "openmp-parallel"
+      ],
+      "notes": "下载失败(403)，仅记录链接。"
+    },
+    {
+      "id": "mpi-4.1-standard",
+      "title": "MPI 4.1 Standard",
+      "source_url": "https://www.mpi-forum.org/docs/mpi-4.1/",
+      "license": "MPI Forum 标准文档版权，未明确开放许可",
+      "covers_concepts": [
+        "mpi-distributed"
+      ],
+      "notes": "PDF下载链接失效(404)，仅记录官网入口。"
+    },
+    {
+      "id": "cuda-programming-guide",
+      "title": "NVIDIA CUDA C++ Programming Guide",
+      "source_url": "https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html",
+      "license": "NVIDIA EULA，仅限开发用途，文档不可再分发",
+      "covers_concepts": [
+        "gpu-model",
+        "memory-optimization"
+      ],
+      "notes": "EULA明确限制文档再分发。仅记录官网链接。"
+    },
+    {
+      "id": "roofline-paper",
+      "title": "Roofline Model Paper (Williams et al., 2009)",
+      "source_url": "https://www.cs.berkeley.edu/~waterman/papers/roofline.pdf",
+      "license": "学术论文版权，通常仅个人使用",
+      "covers_concepts": [
+        "memory-optimization"
+      ],
+      "notes": "经典性能模型论文，建议通过学术渠道获取。"
+    },
+    {
+      "id": "hennessy-patterson-capp",
+      "title": "Computer Architecture: A Quantitative Approach (Hennessy & Patterson)",
+      "source_url": "https://www.elsevier.com/books/computer-architecture/hennessy/978-0-12-811905-1",
+      "license": "Elsevier 版权教材",
+      "covers_concepts": [
+        "hardware-hierarchy",
+        "scaling-laws",
+        "memory-optimization"
+      ],
+      "notes": "标准教材，无开放版本。"
+    }
+  ],
+  "uncovered_gaps": [
+    {
+      "concept": "hardware-hierarchy",
+      "missing": "现代CPU微架构细节(流水线/超标量/SIMD)、MESI缓存一致性、NUMA拓扑感知编程、硬件性能计数器(PMU)实战、perf/vtune完整工作流"
+    },
+    {
+      "concept": "scaling-laws",
+      "missing": "Gustafson定律推导、通信开销α-β-γ模型、负载不平衡量化、异构加速比模型、实测扩展性代码"
+    },
+    {
+      "concept": "benchmark-profiling",
+      "missing": "统计测量方法(置信区间/离群值)、微基准陷阱、火焰图分析、内存带宽/计算利用率量化、自动化回归基准框架"
+    },
+    {
+      "concept": "openmp-parallel",
+      "missing": "任务并行(task/taskloop/depend)、SIMD指令、线程亲和性(proc_bind/OMP_PLACES)、嵌套并行、目标卸载(target)、数据映射(map/to/from/alloc)、真实应用移植案例"
+    },
+    {
+      "concept": "races-synchronization",
+      "missing": "原子/临界区/锁/屏障完整对比、TSAN/Helgrind竞争检测、无锁编程基础、任务图构建、NUMA感知数据放置"
+    },
+    {
+      "concept": "mpi-distributed",
+      "missing": "非阻塞通信重叠计算、通信子/拓扑、单侧通信(RMA)、MPI-IO并行文件、进程映射/绑定、大规模通信优化、容错基础"
+    },
+    {
+      "concept": "gpu-model",
+      "missing": "SIMT执行模型/warp、共享内存/寄存器/张量核、CUDA流/事件、统一内存、多GPU(NCCL/P2P)、内核融合、PTX/SASS分析、Nsight Compute实战"
+    },
+    {
+      "concept": "memory-optimization",
+      "missing": "分块参数自动搜索、向量化指令(AVX/SVE/NEON)、银行冲突避免、多级缓存阻塞、预取策略、压缩/稀疏优化、性能模型驱动优化闭环"
+    }
+  ]
+}

@@ -280,8 +280,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
             chunks = self.server.catalog.teaching_chunks(pack)
             if concept_id:
                 chunks = [item for item in chunks if concept_id in item["concept_ids"]]
-            if ai_mode:
-                chunks += self.server.catalog.external_chunks(pack, concept_id)
+            chunks += self.server.catalog.external_chunks(pack, concept_id)
             sources, retrieval_mode, notice = retrieve(
                 question.strip(), chunks, concept_id, self.server.model, self.server.storage,
                 use_vectors=ai_mode)

@@ -34,7 +34,7 @@ MindOS 希望帮助学习者明确当前薄弱点，获取有来源的学习材�
 - [Python 基础示例](course-packs/python-foundations/manifest.json)。
 - [Python 函数单元内容复核](docs/python-unit-review.md)。
 - [线性代数示例](course-packs/linear-algebra/manifest.json)。
-- [外部开放资料审核与知识点导读](external-resources/manifests/AUDIT_REPORT.md)：模型模式可引用四则带原始出处的导读；原始下载文件留在本地供审核，不随项目发布。
+- [外部开放资料复核更正](external-resources/manifests/VALIDATION_ADDENDUM.md)与[知识点导读](external-resources/curated/concept-guides.json)：资料问答可检索十二则带原始出处的 MindOS 导读；原始下载文件留在本地供审核，不随项目发布。
 - [开发路线](ROADMAP.md)、[贡献指南](CONTRIBUTING.md)与 [开源发布说明](docs/open-source.md)。
 - [本地原型运行说明](docs/prototype.md)：五门课程的讲解、练习、状态记录和资料助手。
 

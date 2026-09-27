@@ -141,6 +141,10 @@ class PrototypeTests(unittest.TestCase):
             ("python-foundations", "return-value", "return 和 print 有什么区别？", "python-return-official-guide"),
             ("linear-algebra", "vectors", "二维向量的分量是什么意思？", "linear-vectors-hefferon-guide"),
             ("linear-algebra", "dot-product", "点积为零为什么说明垂直？", "linear-dot-hefferon-guide"),
+            ("machine-learning", "data-splits", "为什么时间序列不能用普通交叉验证？", "ml-splits-guide"),
+            ("machine-learning", "features-preprocessing", "缺失值填补如何避免数据泄漏？", "ml-preprocessing-guide"),
+            ("machine-learning", "evaluation", "类别不平衡时准确率为什么不够？", "ml-evaluation-guide"),
+            ("ascend-c-operators", "programming-model", "Ascend C 自定义算子怎样编译注册和调用？", "ascend-mindspore-guide"),
         ]
         for course_id, concept_id, question, guide_id in questions:
             with self.subTest(course=course_id, concept=concept_id):
@@ -152,6 +156,18 @@ class PrototypeTests(unittest.TestCase):
                                          self.server.storage, use_vectors=False)
                 self.assertIn(guide_id, [source["id"] for source in sources])
                 self.assertTrue(all(concept_id in source["concept_ids"] for source in sources))
+
+    def test_materials_mode_question_shows_attributed_main_course_reference(self) -> None:
+        self.call("/api/mode", {"mode": "materials"})
+        status, result = self.call("/api/ask", {
+            "course_id": "machine-learning", "concept_id": "data-splits",
+            "question": "为什么时间序列不能用普通交叉验证？"})
+        self.assertEqual(status, 200)
+        self.assertFalse(result["generated"])
+        self.assertIn("ml-splits-guide", [source["id"] for source in result["sources"]])
+        source = next(source for source in result["sources"] if source["id"] == "ml-splits-guide")
+        self.assertIn("scikit-learn.org", source["url"])
+        self.assertIn("待教师审核", source["provenance"])
 
     def test_new_course_diagnoses_only_target_and_direct_prerequisite(self) -> None:
         self.call("/api/mode", {"mode": "materials"})
@@ -231,7 +247,8 @@ class PrototypeTests(unittest.TestCase):
                                                    "concept_id": "vectors", "question": "二维向量的分量是什么？", "mode": "practice"})
         self.assertEqual(status, 200)
         self.assertTrue(answer["sources"])
-        self.assertTrue(all("linear-algebra" in item["url"] for item in answer["sources"]))
+        self.assertTrue(all("linear-algebra" in item["url"] or "jheffero.w3.uvm.edu" in item["url"]
+                            for item in answer["sources"]))
         status, response = self.call("/api/submit", {"course_id": "linear-algebra", "task_id": "vector-component",
                                                      "answer": "b", "mode": "independent"})
         self.assertEqual(status, 200)
@@ -384,7 +401,8 @@ class PrototypeTests(unittest.TestCase):
             self.assertEqual(status, 200)
             self.assertFalse(offline["generated"])
             self.assertEqual(offline["retrieval_mode"], "关键词")
-            self.assertTrue(all(not source["id"].endswith("-official-guide") for source in offline["sources"]))
+            self.assertTrue(any(source["id"] == "python-return-official-guide"
+                                for source in offline["sources"]))
         finally:
             self.server.model = previous_model
             for key, value in old.items():

@@ -39,7 +39,7 @@ class Catalog:
         pack = self.get(course_id)
         return {
             key: pack[key]
-            for key in ("id", "version", "title", "audience", "learning_goals", "review_status", "dimensions", "concepts", "relations")
+            for key in ("id", "version", "title", "audience", "learning_goals", "review_status", "dimensions", "concepts", "chapters", "relations")
         } | {
             "tasks": [
                 {key: task[key] for key in PUBLIC_TASK_FIELDS if key in task}

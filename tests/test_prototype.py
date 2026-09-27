@@ -27,8 +27,18 @@ class FakeModelHandler(BaseHTTPRequestHandler):
                 for index, text in enumerate(payload["input"])
             ]}
         elif self.path == "/v1/chat/completions":
-            assert "参考答案" not in payload["messages"][1]["content"]
-            result = {"choices": [{"message": {"content": "根据课程资料，return 会交回值。[1]"}}]}
+            system = payload["messages"][0]["content"]
+            if "课程目标匹配助手" in system:
+                content = json.dumps({"concept_id": "return-value", "rationale": "目标涉及函数返回值。"}, ensure_ascii=False)
+            elif "课程练习出题助手" in system:
+                content = json.dumps({"prompt": "调用一个只执行 print(3) 的函数时，调用结果是什么？",
+                                      "choices": [{"id": "a", "text": "3"}, {"id": "b", "text": "None"},
+                                                  {"id": "c", "text": "字符串 3"}], "answer": "b",
+                                      "explanation": "print 显示内容，但函数没有 return，调用结果为 None。"}, ensure_ascii=False)
+            else:
+                assert "参考答案" not in payload["messages"][1]["content"]
+                content = "根据课程资料，return 会交回值。[1]"
+            result = {"choices": [{"message": {"content": content}}]}
         else:
             self.send_error(404)
             return
@@ -157,6 +167,23 @@ class PrototypeTests(unittest.TestCase):
         self.assertIsNone(dashboard["recommendation"])
         self.assertEqual(dashboard["plan"][0]["status"], "已复测")
 
+    def test_mode_and_chapter_target_validation(self) -> None:
+        status, result = self.call("/api/mode", {"mode": "ai"})
+        self.assertEqual(status, 400)
+        self.assertIn("配置", result["error"])
+        status, result = self.call("/api/mode", {"mode": "materials"})
+        self.assertEqual(status, 200)
+        status, result = self.call("/api/target", {"course_id": "python-foundations",
+                                                   "chapter_id": "function-basics", "concept_id": "return-value"})
+        self.assertEqual(status, 400)
+        status, result = self.call("/api/target", {"course_id": "python-foundations",
+                                                   "chapter_id": "function-results", "concept_id": "return-value"})
+        self.assertEqual(status, 200)
+        self.assertEqual([item["concept_id"] for item in result["dashboard"]["plan"]],
+                         ["functions", "return-value"])
+        status, result = self.call("/api/quiz", {"course_id": "python-foundations", "concept_id": "return-value"})
+        self.assertEqual(status, 400)
+
     def test_numeric_grading_and_no_answer_query(self) -> None:
         status, invalid = self.call("/api/submit", {"course_id": "linear-algebra", "task_id": "calculate-dot-product",
                                                   "answer": "NaN", "mode": "independent"})
@@ -183,12 +210,33 @@ class PrototypeTests(unittest.TestCase):
                                "MINDOS_CHAT_MODEL": "fake-chat", "MINDOS_EMBEDDING_MODEL": "fake-embedding",
                                "MINDOS_MODEL_API_KEY": ""})
             self.server.model = ModelGateway()
+            status, result = self.call("/api/mode", {"mode": "ai"})
+            self.assertEqual(status, 200)
+            status, analysis = self.call("/api/analyze-goal", {"course_id": "python-foundations",
+                                                                  "custom_text": "我想理解 print 和 return 的区别"})
+            self.assertEqual(status, 200)
+            self.assertEqual(analysis["concept_id"], "return-value")
+            status, quiz = self.call("/api/quiz", {"course_id": "python-foundations", "concept_id": "return-value"})
+            self.assertEqual(status, 200)
+            self.assertNotIn("answer", quiz)
+            self.assertIn("返回", quiz["source_title"])
+            status, scored = self.call("/api/quiz-answer", {"course_id": "python-foundations",
+                                                            "quiz_id": quiz["id"], "answer": "b"})
+            self.assertEqual(status, 200)
+            self.assertTrue(scored["correct"])
+            self.assertFalse(scored["counts_for_state"])
             status, response = self.call("/api/ask", {"course_id": "python-foundations", "question": "return 和 print 有什么区别？",
                                                        "concept_id": "return-value"})
             self.assertEqual(status, 200)
             self.assertTrue(response["generated"])
             self.assertEqual(response["retrieval_mode"], "关键词＋向量")
             self.assertTrue(response["sources"])
+            self.call("/api/mode", {"mode": "materials"})
+            status, offline = self.call("/api/ask", {"course_id": "python-foundations", "question": "return 和 print 有什么区别？",
+                                                      "concept_id": "return-value"})
+            self.assertEqual(status, 200)
+            self.assertFalse(offline["generated"])
+            self.assertEqual(offline["retrieval_mode"], "关键词")
         finally:
             self.server.model = previous_model
             for key, value in old.items():

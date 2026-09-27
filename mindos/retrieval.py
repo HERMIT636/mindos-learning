@@ -35,7 +35,7 @@ def cosine(left: list[float], right: list[float]) -> float:
 
 
 def retrieve(question: str, chunks: list[dict], concept_id: str | None,
-             model: ModelGateway, storage: Storage) -> tuple[list[dict], str, str | None]:
+             model: ModelGateway, storage: Storage, use_vectors: bool = True) -> tuple[list[dict], str, str | None]:
     query = terms(question)
     lexical = []
     for chunk in chunks:
@@ -45,7 +45,7 @@ def retrieve(question: str, chunks: list[dict], concept_id: str | None,
     semantic = [0.0] * len(chunks)
     notice = None
     mode = "关键词"
-    if model.embedding_ready and chunks:
+    if use_vectors and model.embedding_ready and chunks:
         try:
             keys = [hashlib.sha256((model.base_url + "\0" + model.embedding_model + "\0" +
                     chunk["course_id"] + "\0" + chunk["course_version"] + "\0" +

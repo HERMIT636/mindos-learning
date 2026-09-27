@@ -2,12 +2,28 @@ const ui = {
   courses: document.querySelector('#course-list'),
   breadcrumb: document.querySelector('#breadcrumb'),
   modelStatus: document.querySelector('#model-status'),
+  changeMode: document.querySelector('#change-mode'),
+  modeGate: document.querySelector('#mode-gate'),
+  chooseMaterials: document.querySelector('#choose-materials'),
+  chooseAi: document.querySelector('#choose-ai'),
+  modeHelp: document.querySelector('#mode-help'),
+  coursePicker: document.querySelector('#course-picker'),
+  courseSelect: document.querySelector('#course-select'),
+  courseConfirm: document.querySelector('#course-confirm'),
+  courseHero: document.querySelector('#course-hero'),
+  flowSteps: document.querySelector('#flow-steps'),
+  setup: document.querySelector('#setup'),
   title: document.querySelector('#course-title'),
   audience: document.querySelector('#course-audience'),
   goals: document.querySelector('#course-goals'),
-  goalSelect: document.querySelector('#goal-select'),
+  chapterSelect: document.querySelector('#chapter-select'),
+  conceptSelect: document.querySelector('#concept-select'),
   goalButton: document.querySelector('#goal-button'),
   goalCurrent: document.querySelector('#goal-current'),
+  customGoalBox: document.querySelector('#custom-goal-box'),
+  customGoal: document.querySelector('#custom-goal'),
+  analyzeGoal: document.querySelector('#analyze-goal'),
+  goalAnalysis: document.querySelector('#goal-analysis'),
   diagnosticBox: document.querySelector('#diagnostic-box'),
   diagnosticCount: document.querySelector('#diagnostic-count'),
   diagnosticPrompt: document.querySelector('#diagnostic-prompt'),
@@ -41,10 +57,14 @@ const ui = {
   askInput: document.querySelector('#ask-input'),
   askButton: document.querySelector('#ask-button'),
   askResult: document.querySelector('#ask-result'),
+  aiQuizBox: document.querySelector('#ai-quiz-box'),
+  quizGenerate: document.querySelector('#quiz-generate'),
+  quizContent: document.querySelector('#quiz-content'),
   history: document.querySelector('#history-list'),
 };
 
-const state = { courses: [], dashboard: null, courseId: '', taskId: '', mode: 'practice', busy: false };
+const state = { courses: [], dashboard: null, courseId: '', taskId: '', mode: 'practice',
+  learningMode: null, chatReady: false, analysis: null, quiz: null, busy: false };
 const typeNames = { single_choice: '单选题', numeric: '数值题', short_answer: '简答题', code: '代码题' };
 
 function element(tag, className, text) {
@@ -72,6 +92,25 @@ function showFeedback(message, needs = false) {
   ui.feedback.hidden = false;
   ui.feedback.className = needs ? 'feedback needs' : 'feedback';
   ui.feedback.textContent = message;
+}
+
+function showEntry(showGate = false) {
+  const gate = showGate || !state.learningMode;
+  const active = !gate && Boolean(state.courseId);
+  ui.modeGate.hidden = !gate;
+  ui.coursePicker.hidden = gate || Boolean(state.courseId);
+  ui.courses.hidden = gate;
+  ui.changeMode.hidden = gate;
+  ui.courseHero.hidden = !active;
+  ui.flowSteps.hidden = !active;
+  ui.setup.hidden = !active;
+  if (!active) {
+    ui.pathPanel.hidden = true;
+    ui.metrics.hidden = true;
+    ui.learningColumns.hidden = true;
+  }
+  ui.modelStatus.textContent = state.learningMode === 'ai' && !gate ? '大模型模式' :
+    state.learningMode === 'materials' && !gate ? '资料模式' : '选择学习方式';
 }
 
 function renderCourses() {
@@ -174,25 +213,46 @@ function renderMode() {
     ? '请独立完成本题。不同题目的正确作答才能形成复测证据；已练习或求助的同题不会计入。'
     : '可以查看资料并试答；练习结果不会计入独立掌握证据。';
   ui.askForm.hidden = independent;
+  ui.aiQuizBox.hidden = independent || state.learningMode !== 'ai';
+  ui.askButton.firstChild.textContent = state.learningMode === 'ai' ? '向 AI 提问 / 获取提示 ' : '查看固定课程资料 ';
   ui.askDescription.textContent = independent
     ? '独立作答期间暂停资料助手。切换回辅助练习即可继续查阅。'
-    : '从当前课程的公开资料寻找相关段落，并显示出处。查过资料的同题不再计入独立证据。';
+    : state.learningMode === 'ai'
+      ? 'AI 会结合当前诊断和作答状态，依据课程资料即时回复问题；下方可按需生成练习小测验。'
+      : '只展示资料库中的固定讲解和原文片段，不会生成新的解释或题目。查过资料的同题不再计入独立证据。';
   if (independent) ui.askResult.replaceChildren();
 }
 
-function renderFlow() {
-  const { course, goal, diagnostic, plan } = state.dashboard;
-  ui.goalSelect.replaceChildren(...course.learning_goals.map(item => {
-    const option = element('option', '', item);
-    option.value = item;
+function renderConceptOptions(preferred = '') {
+  const course = state.dashboard.course;
+  const chapter = course.chapters.find(item => item.id === ui.chapterSelect.value) || course.chapters[0];
+  ui.conceptSelect.replaceChildren(...chapter.concept_ids.map(id => {
+    const concept = course.concepts.find(item => item.id === id);
+    const option = element('option', '', concept.title);
+    option.value = id;
     return option;
   }));
-  ui.goalSelect.value = goal || course.learning_goals[0];
-  ui.goalCurrent.textContent = goal ? `当前目标：${goal}` : '请选择一个目标，再完成两道短诊断题。';
+  if (chapter.concept_ids.includes(preferred)) ui.conceptSelect.value = preferred;
+}
+
+function renderFlow() {
+  const { course, target, diagnostic, plan } = state.dashboard;
+  ui.chapterSelect.replaceChildren(...course.chapters.map(item => {
+    const option = element('option', '', item.title);
+    option.value = item.id;
+    return option;
+  }));
+  ui.chapterSelect.value = target?.chapter_id || course.chapters[0].id;
+  renderConceptOptions(target?.concept_id);
+  ui.customGoalBox.hidden = state.learningMode !== 'ai';
+  const targetConcept = course.concepts.find(item => item.id === target?.concept_id);
+  ui.goalCurrent.textContent = target
+    ? `当前目标：${targetConcept?.title || target.concept_id}${target.custom_text ? `（你的描述：${target.custom_text}）` : ''}`
+    : '请按章节选择目标知识点，再完成两道短诊断题。';
   const pending = diagnostic.find(item => item.result === null);
-  const complete = Boolean(goal) && !pending;
-  ui.diagnosticBox.hidden = !goal || !pending;
-  if (goal && pending) {
+  const complete = Boolean(target) && !pending;
+  ui.diagnosticBox.hidden = !target || !pending;
+  if (target && pending) {
     ui.diagnosticCount.textContent = `第 ${diagnostic.length - diagnostic.filter(item => item.result === null).length + 1} / ${diagnostic.length} 题`;
     ui.diagnosticPrompt.textContent = pending.prompt;
     ui.diagnosticChoices.replaceChildren(...pending.choices.map(choice => {
@@ -248,16 +308,22 @@ function renderDashboard() {
   renderTask();
   renderMode();
   renderCourses();
+  showEntry();
 }
 
 async function selectCourse(courseId) {
-  if (!state.courses.some(course => course.id === courseId)) return;
+  if (!state.learningMode || !state.courses.some(course => course.id === courseId)) return;
   state.courseId = courseId;
   state.taskId = '';
   state.mode = 'practice';
   ui.diagnosticFeedback.textContent = '';
   ui.askResult.replaceChildren();
   ui.askInput.value = '';
+  ui.customGoal.value = '';
+  ui.goalAnalysis.textContent = '';
+  ui.quizContent.replaceChildren();
+  state.analysis = null;
+  state.quiz = null;
   try {
     state.dashboard = await api(`/api/dashboard?course_id=${encodeURIComponent(courseId)}`);
     renderDashboard();
@@ -269,6 +335,55 @@ async function selectCourse(courseId) {
   }
 }
 
+async function chooseLearningMode(mode) {
+  if (state.busy) return;
+  state.busy = true;
+  try {
+    const result = await api('/api/mode', { method: 'POST', body: JSON.stringify({ mode }) });
+    state.learningMode = result.mode;
+    showEntry();
+    if (state.dashboard) renderDashboard();
+  } catch (error) { ui.modeHelp.textContent = error.message; }
+  finally { state.busy = false; }
+}
+
+ui.chooseMaterials.addEventListener('click', () => chooseLearningMode('materials'));
+ui.chooseAi.addEventListener('click', () => chooseLearningMode('ai'));
+ui.changeMode.addEventListener('click', () => showEntry(true));
+ui.courseConfirm.addEventListener('click', () => selectCourse(ui.courseSelect.value));
+ui.chapterSelect.addEventListener('change', () => {
+  renderConceptOptions();
+  state.analysis = null;
+  ui.goalAnalysis.textContent = '';
+});
+ui.conceptSelect.addEventListener('change', () => { state.analysis = null; });
+ui.customGoal.addEventListener('input', () => {
+  state.analysis = null;
+  ui.goalAnalysis.textContent = '';
+});
+ui.analyzeGoal.addEventListener('click', async () => {
+  if (state.busy) return;
+  const text = ui.customGoal.value.trim();
+  if (text.length < 4) { ui.goalAnalysis.textContent = '请具体描述想达到的目标。'; return; }
+  state.busy = true;
+  ui.goalAnalysis.textContent = '正在对照课程目录分析…';
+  try {
+    const result = await api('/api/analyze-goal', {
+      method: 'POST', body: JSON.stringify({ course_id: state.courseId, custom_text: text }),
+    });
+    if (!result.concept_id) {
+      state.analysis = null;
+      ui.goalAnalysis.textContent = `当前课程尚不覆盖这个目标：${result.rationale}`;
+    } else {
+      ui.chapterSelect.value = result.chapter_id;
+      renderConceptOptions(result.concept_id);
+      state.analysis = { text, conceptId: result.concept_id };
+      ui.goalAnalysis.textContent = `建议定位到「${ui.conceptSelect.selectedOptions[0]?.textContent}」。${result.rationale}确认后再开始诊断。`;
+    }
+  } catch (error) { ui.goalAnalysis.textContent = error.message; }
+  finally { state.busy = false; }
+});
+
 ui.taskSelect.addEventListener('change', () => {
   state.taskId = ui.taskSelect.value;
   ui.askResult.replaceChildren();
@@ -276,9 +391,18 @@ ui.taskSelect.addEventListener('change', () => {
 });
 ui.goalButton.addEventListener('click', async () => {
   if (state.busy) return;
+  const customText = ui.customGoal.value.trim();
+  if (customText && (state.learningMode !== 'ai' || state.analysis?.text !== customText ||
+      state.analysis?.conceptId !== ui.conceptSelect.value)) {
+    ui.goalAnalysis.textContent = '请先让 AI 分析当前自定义目标，再确认它定位的知识点；或清空描述后手动选择。';
+    return;
+  }
   state.busy = true;
   try {
-    const response = await api('/api/goal', { method: 'POST', body: JSON.stringify({ course_id: state.courseId, goal: ui.goalSelect.value }) });
+    const response = await api('/api/target', { method: 'POST', body: JSON.stringify({
+      course_id: state.courseId, chapter_id: ui.chapterSelect.value, concept_id: ui.conceptSelect.value,
+      custom_text: customText,
+    }) });
     state.dashboard = response.dashboard;
     renderDashboard();
     ui.diagnosticFeedback.textContent = '目标已保存。请完成短诊断。';
@@ -353,7 +477,9 @@ ui.askForm.addEventListener('submit', async event => {
     const task = currentTask();
     const result = await api('/api/ask', {
       method: 'POST',
-      body: JSON.stringify({ course_id: state.courseId, task_id: task?.id, concept_id: task?.concept_ids[0], question, hint_level: Number(document.querySelector('input[name="hint-level"]:checked')?.value || 1), mode: state.mode }),
+      body: JSON.stringify({ course_id: state.courseId, task_id: task?.id,
+        concept_id: state.dashboard.target?.concept_id || task?.concept_ids[0], question,
+        hint_level: Number(document.querySelector('input[name="hint-level"]:checked')?.value || 1), mode: state.mode }),
     });
     const wrapper = element('div');
     wrapper.append(element('p', '', result.answer));
@@ -379,17 +505,73 @@ ui.askForm.addEventListener('submit', async event => {
   }
 });
 
+ui.quizGenerate.addEventListener('click', async () => {
+  if (state.busy || state.mode === 'independent') return;
+  const conceptId = state.dashboard?.target?.concept_id;
+  if (!conceptId) { ui.quizContent.textContent = '请先确认目标知识点。'; return; }
+  state.busy = true;
+  ui.quizGenerate.disabled = true;
+  ui.quizContent.textContent = '正在依据课程资料生成练习题…';
+  try {
+    const quiz = await api('/api/quiz', {
+      method: 'POST', body: JSON.stringify({ course_id: state.courseId, concept_id: conceptId }),
+    });
+    state.quiz = quiz;
+    const question = element('div', 'question-box');
+    question.append(element('h3', '', quiz.prompt));
+    const choices = element('div', 'choice-list');
+    quiz.choices.forEach(choice => {
+      const label = element('label', 'choice');
+      const input = document.createElement('input');
+      input.type = 'radio'; input.name = 'quiz-choice'; input.value = choice.id;
+      label.append(input, element('span', '', choice.text));
+      choices.append(label);
+    });
+    question.append(choices);
+    const submit = element('button', 'button button-secondary', '提交小测验');
+    submit.type = 'button';
+    const feedback = element('p', 'panel-intro');
+    submit.addEventListener('click', async () => {
+      const answer = document.querySelector('input[name="quiz-choice"]:checked')?.value;
+      if (!answer) { feedback.textContent = '请先选一个答案。'; return; }
+      submit.disabled = true;
+      try {
+        const result = await api('/api/quiz-answer', { method: 'POST', body: JSON.stringify({
+          course_id: state.courseId, quiz_id: quiz.id, answer,
+        }) });
+        feedback.textContent = `${result.correct ? '本题答对了。' : '本题未答对。'}${result.explanation}（AI 练习题不计入掌握证据。）`;
+      } catch (error) { feedback.textContent = error.message; submit.disabled = false; }
+    });
+    const source = element('a', '', `出题依据：${quiz.source_title} ↗`);
+    source.href = quiz.source_url; source.target = '_blank'; source.rel = 'noopener noreferrer';
+    ui.quizContent.replaceChildren(question, source, submit, feedback);
+  } catch (error) { ui.quizContent.textContent = error.message; }
+  finally { state.busy = false; ui.quizGenerate.disabled = false; }
+});
+
 async function initialize() {
   try {
     const response = await api('/api/courses');
     state.courses = response.courses.sort((left, right) =>
       Number(right.id === 'python-foundations') - Number(left.id === 'python-foundations'));
-    ui.modelStatus.textContent = response.chat_ready ? '模型讲解已接通' : '本地课程资料可用';
+    state.chatReady = response.chat_ready;
+    state.learningMode = response.learning_mode === 'ai' && !response.chat_ready
+      ? null : response.learning_mode;
+    ui.chooseAi.disabled = !response.chat_ready;
+    ui.modeHelp.textContent = response.chat_ready
+      ? '服务端已配置大模型。你可以任选一种方式，之后仍可切换。'
+      : '服务端尚未配置大模型。可直接进入资料模式；若要使用 AI，请在本机 .env 填写模型配置并重启服务。不要在网页输入密钥。';
+    ui.courseSelect.replaceChildren(...state.courses.map(course => {
+      const option = element('option', '', course.title);
+      option.value = course.id;
+      return option;
+    }));
+    showEntry();
     const requested = new URL(window.location.href).searchParams.get('course');
-    await selectCourse(state.courses.some(course => course.id === requested) ? requested : state.courses[0].id);
+    if (state.learningMode && state.courses.some(course => course.id === requested)) await selectCourse(requested);
   } catch (error) {
     ui.modelStatus.textContent = '本地服务未就绪';
-    ui.nextReason.textContent = error.message;
+    ui.modeHelp.textContent = error.message;
   }
 }
 

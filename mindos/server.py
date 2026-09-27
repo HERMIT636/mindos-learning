@@ -18,7 +18,7 @@ from .catalog import Catalog, ROOT
 from .flow import DIAGNOSTICS, learning_plan, public_diagnostics
 from .learning import progress, recommendation, submit
 from .model import ModelGateway, ModelUnavailable
-from .retrieval import retrieve
+from .retrieval import retrieve, terms
 from .storage import Storage
 
 LOGGER = logging.getLogger("mindos")
@@ -105,15 +105,18 @@ class MindOSHandler(BaseHTTPRequestHandler):
                       for task in DIAGNOSTICS.get(course_id, []) if task["id"] in answers}
         states = progress(pack, rows, by_concept)
         goal = self.server.storage.goal(self._session(), pack)
-        plan = learning_plan(pack, states, answers, goal) if goal else []
+        target = self.server.storage.target(self._session(), pack)
+        plan = learning_plan(pack, states, answers, goal, target["concept_id"] if target else None) if goal or target else []
         return {
             "course": self.server.catalog.public_course(course_id),
             "goal": goal,
+            "target": target,
+            "learning_mode": self.server.storage.mode(self._session()),
             "diagnostic": public_diagnostics(pack, answers),
             "progress": states,
             "plan": plan,
             "recommendation": recommendation(pack, states, rows, self.server.storage.helped_tasks(self._session(), pack),
-                                             {item["concept_id"] for item in plan} if goal else None),
+                                             {item["concept_id"] for item in plan} if goal or target else None),
             "valid_evidence_count": sum(row["counts_for_state"] for row in rows),
             "recent": list(reversed(rows[-8:])),
         }
@@ -131,6 +134,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
                 "courses": self.server.catalog.courses(),
                 "chat_ready": self.server.model.chat_ready,
                 "embedding_ready": self.server.model.embedding_ready,
+                "learning_mode": self.server.storage.mode(self._session()),
             })
         elif parsed.path == "/api/dashboard":
             course_id = parse_qs(parsed.query).get("course_id", [""])[0]
@@ -150,6 +154,49 @@ class MindOSHandler(BaseHTTPRequestHandler):
             result = submit(self.server.storage, self._session(), pack, task,
                             payload.get("answer"), payload.get("mode", "practice"))
             self._json(HTTPStatus.OK, {"result": result, "dashboard": self._dashboard(course_id)})
+        elif parsed.path == "/api/mode":
+            mode = payload.get("mode")
+            if not isinstance(mode, str) or mode not in {"materials", "ai"}:
+                raise ValueError("请选择资料模式或大模型模式")
+            if mode == "ai" and not self.server.model.chat_ready:
+                raise ValueError("服务端尚未配置大模型；请先在本机 .env 中配置并重启，或选择资料模式")
+            self.server.storage.set_mode(self._session(), mode)
+            self._json(HTTPStatus.OK, {"mode": mode})
+        elif parsed.path == "/api/target":
+            pack = self.server.catalog.get(payload.get("course_id", ""))
+            if not self.server.storage.mode(self._session()):
+                raise ValueError("请先选择学习方式")
+            chapter_id, concept_id = payload.get("chapter_id"), payload.get("concept_id")
+            chapter = next((item for item in pack["chapters"] if item["id"] == chapter_id), None)
+            if chapter is None or concept_id not in chapter["concept_ids"]:
+                raise ValueError("请选择当前课程章节内的知识点")
+            custom = payload.get("custom_text", "")
+            if not isinstance(custom, str) or len(custom) > 200:
+                raise ValueError("自定义目标不能超过 200 字")
+            if custom and self.server.storage.mode(self._session()) != "ai":
+                raise ValueError("自定义目标分析需要大模型模式")
+            self.server.storage.set_target(self._session(), pack, chapter_id, concept_id, custom.strip())
+            self._json(HTTPStatus.OK, {"dashboard": self._dashboard(pack["id"])})
+        elif parsed.path == "/api/analyze-goal":
+            pack = self.server.catalog.get(payload.get("course_id", ""))
+            if self.server.storage.mode(self._session()) != "ai" or not self.server.model.chat_ready:
+                raise ValueError("请先启用已配置的大模型模式")
+            custom = payload.get("custom_text")
+            if not isinstance(custom, str) or not 4 <= len(custom.strip()) <= 200:
+                raise ValueError("请用 4 至 200 字描述想达到的学习目标")
+            states = self._dashboard(pack["id"])["progress"]
+            learner_hint = "；".join(f"{item['concept_title']}·{item['dimension_label']}：{item['state_label']}" for item in states)
+            analysis = self.server.model.analyze_goal(pack, custom.strip(), learner_hint)
+            concept_id = analysis.get("concept_id")
+            rationale = analysis.get("rationale")
+            if concept_id is not None and concept_id not in {item["id"] for item in pack["concepts"]}:
+                raise ModelUnavailable("模型返回了课程之外的知识点，请重试")
+            if not isinstance(rationale, str) or not rationale.strip():
+                raise ModelUnavailable("模型没有给出目标分析理由，请重试")
+            chapter = next((item for item in pack["chapters"] if concept_id in item["concept_ids"]), None)
+            self._json(HTTPStatus.OK, {"concept_id": concept_id,
+                                       "chapter_id": chapter["id"] if chapter else None,
+                                       "rationale": rationale.strip()[:300]})
         elif parsed.path == "/api/goal":
             pack = self.server.catalog.get(payload.get("course_id", ""))
             goal = payload.get("goal")
@@ -159,7 +206,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.OK, {"dashboard": self._dashboard(pack["id"])})
         elif parsed.path == "/api/diagnose":
             pack = self.server.catalog.get(payload.get("course_id", ""))
-            if not self.server.storage.goal(self._session(), pack):
+            if not self.server.storage.goal(self._session(), pack) and not self.server.storage.target(self._session(), pack):
                 raise ValueError("请先选择学习目标")
             task = next((item for item in DIAGNOSTICS.get(pack["id"], [])
                          if item["id"] == payload.get("task_id")), None)
@@ -168,7 +215,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
             if task["id"] in self.server.storage.diagnostics(self._session(), pack):
                 raise ValueError("这道诊断题已完成")
             answer = payload.get("answer")
-            if answer not in {item["id"] for item in task["choices"]}:
+            if not isinstance(answer, str) or answer not in {item["id"] for item in task["choices"]}:
                 raise ValueError("请选择诊断题提供的选项")
             correct = answer == task["answer"]
             self.server.storage.add_diagnostic(self._session(), pack, task["id"], answer, correct)
@@ -192,12 +239,14 @@ class MindOSHandler(BaseHTTPRequestHandler):
                 self.server.catalog.task(pack, task_id)
                 self.server.storage.mark_help(self._session(), pack, task_id)
             chunks = self.server.catalog.teaching_chunks(pack)
+            ai_mode = self.server.storage.mode(self._session()) == "ai"
             sources, retrieval_mode, notice = retrieve(
-                question.strip(), chunks, concept_id, self.server.model, self.server.storage)
+                question.strip(), chunks, concept_id, self.server.model, self.server.storage,
+                use_vectors=ai_mode)
             generated = False
             if not sources:
                 answer = "当前课程资料中未找到足够相关的内容。请补充更具体的术语或问题。"
-            elif self.server.model.chat_ready:
+            elif ai_mode and self.server.model.chat_ready:
                 states = self._dashboard(course_id)["progress"]
                 relevant = [item for item in states if item["concept_id"] == concept_id]
                 hint = "；".join(f"{item['dimension_label']}：{item['state_label']}" for item in relevant) or "暂无独立测评证据"
@@ -221,6 +270,60 @@ class MindOSHandler(BaseHTTPRequestHandler):
                 "notice": notice,
                 "generated": generated,
             })
+        elif parsed.path == "/api/quiz":
+            pack = self.server.catalog.get(payload.get("course_id", ""))
+            if self.server.storage.mode(self._session()) != "ai" or not self.server.model.chat_ready:
+                raise ValueError("按需生成小测验需要已配置的大模型模式")
+            concept_id = payload.get("concept_id")
+            concept = next((item for item in pack["concepts"] if item["id"] == concept_id), None)
+            if concept is None:
+                raise ValueError("请选择当前课程知识点")
+            chunks = [item for item in self.server.catalog.teaching_chunks(pack)
+                      if concept_id in item["concept_ids"]]
+            if not chunks:
+                raise ValueError("该知识点暂无课程资料")
+            sections = [item for item in chunks if " · " in item["title"]] or chunks
+            concept_terms = terms(concept["title"])
+            source = max(sections, key=lambda item: (
+                sum(min(weight, terms(item["title"].split(" · ")[-1])[token])
+                    for token, weight in concept_terms.items()),
+                len(item["content"])))
+            states = [item for item in self._dashboard(pack["id"])["progress"] if item["concept_id"] == concept_id]
+            learner_hint = "；".join(f"{item['dimension_label']}：{item['state_label']}" for item in states)
+            generated = self.server.model.generate_quiz(concept["title"], source, learner_hint)
+            prompt, choices, answer, explanation = (generated.get(key) for key in
+                                                     ("prompt", "choices", "answer", "explanation"))
+            if (not isinstance(prompt, str) or not 10 <= len(prompt.strip()) <= 400
+                    or not isinstance(choices, list) or len(choices) != 3
+                    or not all(isinstance(item, dict) and item.get("id") in ("a", "b", "c")
+                               and isinstance(item.get("text"), str) and 1 <= len(item["text"]) <= 200
+                               for item in choices)
+                    or [item["id"] for item in choices] != ["a", "b", "c"]
+                    or answer not in ("a", "b", "c")
+                    or not isinstance(explanation, str) or not 5 <= len(explanation.strip()) <= 800
+                    or prompt in {task["prompt"] for task in pack["tasks"]}):
+                raise ModelUnavailable("模型生成的小测验格式不合格，请重试")
+            quiz = {"id": secrets.token_urlsafe(16), "concept_id": concept_id,
+                    "prompt": prompt.strip(), "choices": choices, "answer": answer,
+                    "explanation": explanation.strip(), "source_title": source["title"],
+                    "source_url": source["url"]}
+            self.server.storage.save_quiz(self._session(), pack, quiz)
+            self._json(HTTPStatus.OK, {key: quiz[key] for key in
+                                       ("id", "concept_id", "prompt", "choices", "source_title", "source_url")})
+        elif parsed.path == "/api/quiz-answer":
+            pack = self.server.catalog.get(payload.get("course_id", ""))
+            quiz_id = payload.get("quiz_id", "")
+            if not isinstance(quiz_id, str) or len(quiz_id) > 100:
+                raise ValueError("小测验编号无效")
+            quiz = self.server.storage.quiz(self._session(), pack, quiz_id)
+            if quiz is None:
+                raise ValueError("小测验不存在或不属于当前会话")
+            answer = payload.get("answer")
+            if answer not in ("a", "b", "c"):
+                raise ValueError("请选择一个选项")
+            self._json(HTTPStatus.OK, {"correct": answer == quiz["answer"],
+                                       "answer": quiz["answer"], "explanation": quiz["explanation"],
+                                       "counts_for_state": False})
         else:
             self._json(HTTPStatus.NOT_FOUND, {"error": "接口不存在"})
 
@@ -246,6 +349,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.NOT_FOUND, {"error": str(exc.args[0])})
         except ValueError as exc:
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+        except ModelUnavailable as exc:
+            self._json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
         except Exception:
             LOGGER.exception("请求处理失败")
             self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "服务暂不可用，请查看终端日志"})

@@ -44,6 +44,10 @@
       ]
     }
   ],
+  "chapters": [
+    {"id": "function-basics", "title": "函数定义与调用", "concept_ids": ["functions"]},
+    {"id": "function-results", "title": "返回值与屏幕输出", "concept_ids": ["return-value"]}
+  ],
   "relations": [
     {
       "from": "functions",

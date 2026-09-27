@@ -29,7 +29,8 @@ def public_diagnostics(pack: dict, answers: dict[str, bool]) -> list[dict]:
     ]
 
 
-def learning_plan(pack: dict, states: list[dict], answers: dict[str, bool], goal: str | None) -> list[dict]:
+def learning_plan(pack: dict, states: list[dict], answers: dict[str, bool], goal: str | None,
+                  target_concept_id: str | None = None) -> list[dict]:
     prerequisites = {item["id"]: set() for item in pack["concepts"]}
     for relation in pack["relations"]:
         if relation["type"] == "prerequisite":
@@ -38,7 +39,7 @@ def learning_plan(pack: dict, states: list[dict], answers: dict[str, bool], goal
     concept_by_id = {item["id"]: item for item in pack["concepts"]}
     diagnosed = {task["concept_id"]: answers[task["id"]]
                  for task in DIAGNOSTICS.get(pack["id"], []) if task["id"] in answers}
-    target = pack["concepts"][0]["id"] if goal == pack["learning_goals"][0] else pack["concepts"][-1]["id"]
+    target = target_concept_id or (pack["concepts"][0]["id"] if goal == pack["learning_goals"][0] else pack["concepts"][-1]["id"])
     included = {target}
     while any(prerequisites[item] - included for item in included):
         included.update(*(prerequisites[item] for item in tuple(included)))

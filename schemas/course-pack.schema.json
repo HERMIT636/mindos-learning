@@ -32,6 +32,14 @@
         "properties": {"id": {"$ref": "#/$defs/id"}, "title": {"$ref": "#/$defs/text"}, "dimension_ids": {"$ref": "#/$defs/ids"}}
       }
     },
+    "chapters": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "title", "concept_ids"],
+        "properties": {"id": {"$ref": "#/$defs/id"}, "title": {"$ref": "#/$defs/text"}, "concept_ids": {"$ref": "#/$defs/ids"}}
+      }
+    },
     "relations": {
       "type": "array", "uniqueItems": true,
       "items": {

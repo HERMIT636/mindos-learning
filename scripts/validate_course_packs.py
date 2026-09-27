@@ -40,6 +40,18 @@ def validate_pack(path: Path, validator: Draft202012Validator) -> list[str]:
     dimension_ids = {item["id"] for item in pack["dimensions"]}
     concepts = {item["id"]: item for item in pack["concepts"]}
     concept_ids = set(concepts)
+    if "chapters" in pack:
+        chapter_ids = [item["id"] for item in pack["chapters"]]
+        if len(chapter_ids) != len(set(chapter_ids)):
+            errors.append("chapters 存在重复编号")
+        covered = []
+        for chapter in pack["chapters"]:
+            covered.extend(chapter["concept_ids"])
+            missing = set(chapter["concept_ids"]) - concept_ids
+            if missing:
+                errors.append(f"chapter {chapter['id']} 引用了未定义知识点：{', '.join(sorted(missing))}")
+        if set(covered) != concept_ids or len(covered) != len(set(covered)):
+            errors.append("chapters 必须将每个知识点恰好归入一个章节")
 
     def check_refs(values: list[str], allowed: set[str], location: str) -> None:
         missing = set(values) - allowed

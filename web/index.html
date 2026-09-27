@@ -14,24 +14,33 @@
     <aside class="sidebar" aria-label="课程导航">
       <div class="brand"><span class="brand-mark">M</span><span><strong>MindOS</strong><small>学习路径实验室</small></span></div>
       <div class="sidebar-copy"><span class="eyebrow">你的学习空间</span><h2>从目标出发，<br>一步步学会。</h2><p>短诊断定位起点，再按知识关系补强、练习和复测。</p></div>
-      <div class="sidebar-section"><span class="sidebar-label">选择课程</span><nav id="course-list" class="course-list" aria-label="课程列表"></nav></div>
+      <div class="sidebar-section"><span class="sidebar-label">选择课程</span><nav id="course-list" class="course-list" aria-label="课程列表" hidden></nav></div>
       <div class="sidebar-foot"><span class="foot-dot"></span> 本地演示 · 草稿课程内容</div>
     </aside>
 
     <main class="main">
-      <header class="topbar"><span class="topbar-location">学习工作台 <span>/</span> <b id="breadcrumb">课程</b></span><span class="status-pill" id="model-status">正在连接本地服务</span></header>
+      <header class="topbar"><span class="topbar-location">学习工作台 <span>/</span> <b id="breadcrumb">课程</b></span><span><button id="change-mode" class="text-button" type="button" hidden>切换模式</button> <span class="status-pill" id="model-status">正在连接本地服务</span></span></header>
       <div class="content">
-        <section class="hero" aria-labelledby="course-title">
+        <section class="panel mode-gate" id="mode-gate" aria-labelledby="mode-gate-title">
+          <span class="eyebrow">先选择学习方式</span><h1 id="mode-gate-title">这次如何学习？</h1><p>两种方式都可以完成目标、诊断、练习与复测；讲解能力不同。</p>
+          <div class="mode-cards"><button id="choose-materials" class="mode-card" type="button"><strong>资料模式</strong><span>无需接入大模型。只能检索并列出资料库里的固定讲解与原文片段；无法针对新问题生成解释或新题。</span></button><button id="choose-ai" class="mode-card" type="button"><strong>大模型模式</strong><span>使用服务端已配置的模型，结合诊断与作答状态讲解，及时回复疑问，并按需生成知识小测验。</span></button></div>
+          <p id="mode-help" class="panel-intro">模型服务状态正在检查……</p>
+        </section>
+
+        <section class="panel course-picker" id="course-picker" aria-labelledby="course-picker-title" hidden><span class="eyebrow">下一步 · 选择课程</span><h2 id="course-picker-title">你想学习哪门课程？</h2><p class="panel-intro">先选课程，再按章节选目标知识点。</p><div class="goal-row"><label for="course-select">目标课程</label><select id="course-select"></select><button id="course-confirm" class="button button-primary" type="button">进入课程</button></div></section>
+
+        <section class="hero" id="course-hero" aria-labelledby="course-title" hidden>
           <div class="hero-text"><span class="eyebrow warm">MINDOS · 课程概览</span><h1 id="course-title">正在加载课程</h1><p id="course-audience">请稍候。</p><div class="hero-tags" id="course-goals"></div></div>
           <div class="hero-figure" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="core-dot"></div><span class="orbit-label label-one">学习</span><span class="orbit-label label-two">练习</span><span class="orbit-label label-three">复测</span></div>
         </section>
 
-        <nav class="flow-steps" aria-label="学习流程"><span>① 目标与短诊断</span><span>② 状态与薄弱点</span><span>③ 任务与先修</span><span>④ 资料与分级提示</span><span>⑤ 练习与变式复测</span><span>⑥ 证据与后续计划</span></nav>
+        <nav class="flow-steps" id="flow-steps" aria-label="学习流程" hidden><span>① 章节目标与短诊断</span><span>② 状态与薄弱点</span><span>③ 任务与先修</span><span>④ 资料与分级提示</span><span>⑤ 练习与变式复测</span><span>⑥ 证据与后续计划</span></nav>
 
-        <section class="panel setup-panel" id="setup" aria-labelledby="setup-title">
-          <div class="panel-head"><div><span class="eyebrow">STEP 01</span><h2 id="setup-title">确定目标，完成短诊断</h2></div><span class="small-badge">每门课程 2 题</span></div>
-          <p class="panel-intro">先选这次想达到的目标。短诊断只用于定位起点，不算作独立复测成绩。</p>
-          <div class="goal-row"><label for="goal-select">本次学习目标</label><select id="goal-select"></select><button id="goal-button" class="button button-primary" type="button">确认目标</button></div>
+        <section class="panel setup-panel" id="setup" aria-labelledby="setup-title" hidden>
+          <div class="panel-head"><div><span class="eyebrow">STEP 01</span><h2 id="setup-title">按章节确定知识点，完成短诊断</h2></div><span class="small-badge">每门课程 2 题</span></div>
+          <p class="panel-intro">先选章节，再选本次目标知识点。短诊断只用于定位起点，不算作独立复测成绩。</p>
+          <div class="goal-row"><label for="chapter-select">目标章节</label><select id="chapter-select"></select><label for="concept-select">目标知识点</label><select id="concept-select"></select><button id="goal-button" class="button button-primary" type="button">确认目标</button></div>
+          <div id="custom-goal-box" class="custom-goal" hidden><label for="custom-goal">也可以描述自己的目标，让 AI 对照当前课程目录分析</label><textarea id="custom-goal" rows="2" maxlength="200" placeholder="例如：我会写函数，但总分不清打印和返回值，想学会把结果交给后续代码使用。"></textarea><button id="analyze-goal" class="button button-secondary" type="button">分析并定位知识点</button><p id="goal-analysis" class="panel-intro" role="status"></p></div>
           <p id="goal-current" class="goal-current"></p>
           <div id="diagnostic-box" class="diagnostic-box" hidden><span class="eyebrow">短诊断</span><p id="diagnostic-count"></p><h3 id="diagnostic-prompt"></h3><div id="diagnostic-choices" class="choice-list"></div><button id="diagnostic-submit" class="button button-secondary" type="button">提交诊断</button><p id="diagnostic-feedback" class="panel-intro" role="status"></p></div>
         </section>
@@ -65,7 +74,7 @@
           <div class="secondary-column">
             <section class="panel progress-panel" aria-labelledby="progress-title"><div class="panel-head"><div><span class="eyebrow">STEP 02 · LEARNING MAP</span><h2 id="progress-title">知识状态</h2></div></div><p class="panel-intro">诊断给出起点，独立变式作答继续更新证据；二者分别标记。</p><div id="progress-list" class="progress-list"></div></section>
 
-            <section class="panel ask-panel" aria-labelledby="ask-title"><div class="panel-head"><div><span class="eyebrow">STEP 04 · RAG & HINTS</span><h2 id="ask-title">资料讲解与分级提示</h2></div></div><p class="panel-intro" id="ask-description">从当前课程的公开资料寻找相关段落，并显示出处。</p><form id="ask-form"><label for="ask-input" class="visually-hidden">输入课程问题</label><textarea id="ask-input" rows="3" maxlength="500" placeholder="例如：return 和 print 有什么区别？"></textarea><div class="hint-levels" role="group" aria-label="提示级别"><label><input type="radio" name="hint-level" value="1" checked>一级：方向</label><label><input type="radio" name="hint-level" value="2">二级：线索</label><label><input type="radio" name="hint-level" value="3">三级：讲解</label></div><button class="button button-secondary" id="ask-button" type="submit">查看课程提示 <span aria-hidden="true">↗</span></button></form><div id="ask-result" class="ask-result" aria-live="polite"></div></section>
+            <section class="panel ask-panel" aria-labelledby="ask-title"><div class="panel-head"><div><span class="eyebrow">STEP 04 · MATERIALS & HINTS</span><h2 id="ask-title">资料讲解与分级提示</h2></div></div><p class="panel-intro" id="ask-description">从当前课程的公开资料寻找相关段落，并显示出处。</p><form id="ask-form"><label for="ask-input" class="visually-hidden">输入课程问题</label><textarea id="ask-input" rows="3" maxlength="500" placeholder="例如：return 和 print 有什么区别？"></textarea><div class="hint-levels" role="group" aria-label="提示级别"><label><input type="radio" name="hint-level" value="1" checked>一级：方向</label><label><input type="radio" name="hint-level" value="2">二级：线索</label><label><input type="radio" name="hint-level" value="3">三级：讲解</label></div><button class="button button-secondary" id="ask-button" type="submit">查看课程提示 <span aria-hidden="true">↗</span></button></form><div id="ask-result" class="ask-result" aria-live="polite"></div><div id="ai-quiz-box" class="ai-quiz" hidden><h3>按需知识小测验</h3><p class="panel-intro">AI 会依据当前课程资料出一道练习题。题目未经教师审核，不计入掌握状态。</p><button id="quiz-generate" class="button button-secondary" type="button">生成一道小测验</button><div id="quiz-content" aria-live="polite"></div></div></section>
 
             <section class="panel history-panel" aria-labelledby="history-title"><div class="panel-head"><div><span class="eyebrow">STEP 06 · EVIDENCE</span><h2 id="history-title">证据与后续计划</h2></div></div><div id="history-list" class="history-list"><p class="empty">尚无作答记录。</p></div></section>
           </div>

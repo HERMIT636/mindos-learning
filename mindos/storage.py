@@ -49,6 +49,20 @@ class Storage:
                   task_id TEXT NOT NULL, answer TEXT NOT NULL, correct INTEGER NOT NULL,
                   PRIMARY KEY(session_id,course_id,course_version,task_id)
                 );
+                CREATE TABLE IF NOT EXISTS learning_preferences (
+                  session_id TEXT PRIMARY KEY, mode TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS learning_targets (
+                  session_id TEXT NOT NULL, course_id TEXT NOT NULL, course_version TEXT NOT NULL,
+                  chapter_id TEXT NOT NULL, concept_id TEXT NOT NULL, custom_text TEXT NOT NULL,
+                  PRIMARY KEY(session_id,course_id,course_version)
+                );
+                CREATE TABLE IF NOT EXISTS generated_quizzes (
+                  quiz_id TEXT PRIMARY KEY, session_id TEXT NOT NULL, course_id TEXT NOT NULL,
+                  course_version TEXT NOT NULL, concept_id TEXT NOT NULL, prompt TEXT NOT NULL,
+                  choices TEXT NOT NULL, answer TEXT NOT NULL, explanation TEXT NOT NULL,
+                  source_title TEXT NOT NULL, source_url TEXT NOT NULL
+                );
             """)
 
     @contextmanager
@@ -123,3 +137,43 @@ class Storage:
         with self.connect() as db:
             db.execute("INSERT INTO diagnostic_answers VALUES(?,?,?,?,?,?)",
                        (session_id, pack["id"], pack["version"], task_id, answer, int(correct)))
+
+    def mode(self, session_id: str) -> str | None:
+        with self.connect() as db:
+            row = db.execute("SELECT mode FROM learning_preferences WHERE session_id=?", (session_id,)).fetchone()
+        return row["mode"] if row else None
+
+    def set_mode(self, session_id: str, mode: str) -> None:
+        with self.connect() as db:
+            db.execute("INSERT OR REPLACE INTO learning_preferences VALUES(?,?)", (session_id, mode))
+
+    def target(self, session_id: str, pack: dict) -> dict | None:
+        with self.connect() as db:
+            row = db.execute("SELECT chapter_id,concept_id,custom_text FROM learning_targets "
+                             "WHERE session_id=? AND course_id=? AND course_version=?",
+                             (session_id, pack["id"], pack["version"])).fetchone()
+        return dict(row) if row else None
+
+    def set_target(self, session_id: str, pack: dict, chapter_id: str,
+                   concept_id: str, custom_text: str) -> None:
+        with self.connect() as db:
+            db.execute("INSERT OR REPLACE INTO learning_targets VALUES(?,?,?,?,?,?)",
+                       (session_id, pack["id"], pack["version"], chapter_id, concept_id, custom_text))
+
+    def save_quiz(self, session_id: str, pack: dict, quiz: dict) -> None:
+        with self.connect() as db:
+            db.execute("INSERT INTO generated_quizzes VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                       (quiz["id"], session_id, pack["id"], pack["version"], quiz["concept_id"],
+                        quiz["prompt"], json.dumps(quiz["choices"], ensure_ascii=False), quiz["answer"],
+                        quiz["explanation"], quiz["source_title"], quiz["source_url"]))
+
+    def quiz(self, session_id: str, pack: dict, quiz_id: str) -> dict | None:
+        with self.connect() as db:
+            row = db.execute("SELECT * FROM generated_quizzes WHERE quiz_id=? AND session_id=? "
+                             "AND course_id=? AND course_version=?",
+                             (quiz_id, session_id, pack["id"], pack["version"])).fetchone()
+        if row is None:
+            return None
+        result = dict(row)
+        result["choices"] = json.loads(result["choices"])
+        return result

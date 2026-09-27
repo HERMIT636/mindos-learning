@@ -42,6 +42,10 @@
       ]
     }
   ],
+  "chapters": [
+    {"id": "vector-basics", "title": "二维向量基础", "concept_ids": ["vectors"]},
+    {"id": "dot-product-basics", "title": "标准点积", "concept_ids": ["dot-product"]}
+  ],
   "relations": [
     {
       "from": "vectors",

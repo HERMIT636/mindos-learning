@@ -29,6 +29,7 @@ course-packs/
 | learning_goals | 可由任务检查的学习目标 |
 | dimensions | 该课程自己的能力维度，包含 id、label、description |
 | concepts | 知识点及其适用维度 |
+| chapters | 可选章节分组；每个知识点恰好归入一个章节，供用户按章节选择目标 |
 | relations | 知识关系，使用 from、to、type |
 | resources | 原文位置、知识点关联、许可和来源说明 |
 | tasks | 公开练习及知识点、维度、评分标准和参考答案 |

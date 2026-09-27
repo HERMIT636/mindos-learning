@@ -4,7 +4,7 @@
 
 An open-source adaptive learning platform built around course packs, retrieval-augmented generation, and evidence-based learner states.
 
-> 当前阶段：本地可运行的学习原型。首次进入先选资料模式或大模型模式，再选课程、章节与目标知识点，按“基础测试 → 自动进入知识点讲解 → 练习和公开变式复测 → 状态与后续计划”逐页演示学习闭环；每页可用步骤导航跳转已解锁的功能。资料模式展示当前知识点的完整分层讲义；服务端配置模型后，可选择结合诊断状态和多个课程片段的 AI 讲解、疑问回复、自定义目标匹配和按需小测验。课程内容和评分方式尚待教师审核；正式用户认证、隔离代码测试和真实学习效果验证仍待建设。
+> 当前阶段：本地可运行的学习原型。首次进入先选资料模式或大模型模式，再选课程、章节与目标知识点；学前小测可跳过，然后从路线第一讲逐步学习、练习和查看后续计划。资料模式显示已有讲义；服务端配置模型后，可获得结合学习状态的补充讲解和疑问回复。主课程讲义仍不够深入，尚待教师审核；正式用户认证、隔离代码测试和真实学习效果验证仍待建设。
 
 ## 项目解决什么问题
 
@@ -19,7 +19,7 @@ MindOS 希望帮助学习者明确当前薄弱点，获取有来源的学习材�
 | 部分 | 作用 |
 | --- | --- |
 | 课程包 | 配置知识点、能力维度、资料、任务和评分依据 |
-| RAG 知识库 | 检索课程证据并提供可追溯的解释 |
+| 课程检索 | 当前按知识点和关键词检索；配置 Embedding 后可选向量排序，尚无完整教材向量库 |
 | 知识关系 | 表达先修与关联，约束任务顺序 |
 | 学习者状态 | 根据作答证据记录各维度的当前判断 |
 | 任务规划 | 结合目标、缺口和时间安排下一步 |
@@ -28,6 +28,7 @@ MindOS 希望帮助学习者明确当前薄弱点，获取有来源的学习材�
 
 - [完整设计大纲](MindOS_最终设计大纲.md)：产品范围、架构、评估与落地路线。
 - [主课程学习路线](docs/learning-paths.md)：三门优先课程的章节、知识点与当前内容边界。
+- [讲解稿与检索策略](docs/teaching-content-strategy.md)：当前 RAG 的真实范围，以及如何将学习对话整理成可用讲稿。
 - [课程包约定](docs/course-packs.md)与 [JSON Schema](schemas/course-pack.schema.json)。
 - [机器学习](course-packs/machine-learning/manifest.json)、[HPC](course-packs/hpc-foundations/manifest.json)、[昇腾 Ascend C](course-packs/ascend-c-operators/manifest.json)课程包。
 - [Python 基础示例](course-packs/python-foundations/manifest.json)。

@@ -13,6 +13,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from mindos.catalog import Catalog
 from mindos.model import ModelGateway
 from mindos.server import MindOSServer
 
@@ -37,6 +38,12 @@ class FakeModelHandler(BaseHTTPRequestHandler):
                                       "explanation": "print 显示内容，但函数没有 return，调用结果为 None。"}, ensure_ascii=False)
             else:
                 assert "参考答案" not in payload["messages"][1]["content"]
+                assert "不是你讲解时唯一能用的知识" in system
+                assert "扩展说明" in system
+                if "请深入讲解知识点" in payload["messages"][1]["content"]:
+                    assert "不要只给定义或简短摘要" in system
+                    assert "函数定义与调用" in payload["messages"][1]["content"]
+                    assert "独立作答证据" in payload["messages"][1]["content"]
                 content = "根据课程资料，return 会交回值。[1]"
             result = {"choices": [{"message": {"content": content}}]}
         else:
@@ -107,6 +114,18 @@ class PrototypeTests(unittest.TestCase):
         self.assertEqual(other["valid_evidence_count"], 0)
         self.assertTrue(all(row["state"] == "unassessed" for row in other["progress"]))
 
+    def test_every_demo_concept_has_complete_authored_lesson(self) -> None:
+        catalog = Catalog()
+        for pack in catalog.packs.values():
+            for concept in pack["concepts"]:
+                with self.subTest(course=pack["id"], concept=concept["id"]):
+                    materials = catalog.lesson_materials(pack, concept["id"])
+                    self.assertEqual(len(materials), 1)
+                    lesson = materials[0]["content"]
+                    self.assertGreater(len(lesson), 1500)
+                    self.assertIn("## 常见", lesson)
+                    self.assertNotIn("reference_answer", lesson)
+
     def test_help_and_practice_never_count_as_independent(self) -> None:
         self.call("/api/dashboard?course_id=linear-algebra")
         status, answer = self.call("/api/ask", {"course_id": "linear-algebra", "task_id": "vector-component",
@@ -153,6 +172,11 @@ class PrototypeTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertFalse(lesson["generated"])
         self.assertIn("返回与显示", lesson["source"]["title"])
+        self.assertIn("## return 还会结束本次调用", lesson["answer"])
+        self.assertIn("## 常见误区与自查方法", lesson["answer"])
+        self.assertGreater(len(lesson["answer"]), 1500)
+        self.assertEqual(lesson["answer"], lesson["base_lesson"])
+        self.assertNotIn("reference_answer", json.dumps(lesson))
         for level in (1, 2, 3):
             status, hint = self.call("/api/ask", {"course_id": "python-foundations", "question": "return 和 print 有什么区别？", "hint_level": level})
             self.assertEqual(status, 200)
@@ -233,6 +257,12 @@ class PrototypeTests(unittest.TestCase):
             status, lesson = self.call("/api/lesson", {"course_id": "python-foundations"})
             self.assertEqual(status, 200)
             self.assertTrue(lesson["generated"])
+            self.assertGreater(len(lesson["base_lesson"]), 1500)
+            self.assertGreater(len(lesson["sources"]), 1)
+            self.assertTrue(any(source["id"] == "python-return-official-guide"
+                                and source["url"] == "https://docs.python.org/3/library/functions.html#print"
+                                for source in lesson["sources"]))
+            self.assertIn("课程资料", lesson["answer"])
             status, quiz = self.call("/api/quiz", {"course_id": "python-foundations", "concept_id": "return-value"})
             self.assertEqual(status, 200)
             self.assertNotIn("answer", quiz)
@@ -248,12 +278,14 @@ class PrototypeTests(unittest.TestCase):
             self.assertTrue(response["generated"])
             self.assertEqual(response["retrieval_mode"], "关键词＋向量")
             self.assertTrue(response["sources"])
+            self.assertTrue(any(source["id"] == "python-return-official-guide" for source in response["sources"]))
             self.call("/api/mode", {"mode": "materials"})
             status, offline = self.call("/api/ask", {"course_id": "python-foundations", "question": "return 和 print 有什么区别？",
                                                       "concept_id": "return-value"})
             self.assertEqual(status, 200)
             self.assertFalse(offline["generated"])
             self.assertEqual(offline["retrieval_mode"], "关键词")
+            self.assertTrue(all(not source["id"].endswith("-official-guide") for source in offline["sources"]))
         finally:
             self.server.model = previous_model
             for key, value in old.items():

@@ -1,0 +1,130 @@
+{
+  "course_pack_id": "python-foundations",
+  "resources": [
+    {
+      "id": "python-official-tutorial-defining-functions",
+      "title": "Python Official Tutorial: 4.7. Defining Functions",
+      "source_url": "https://docs.python.org/3/tutorial/controlflow.html#defining-functions",
+      "local_path": "python-foundations/python-tutorial-defining-functions.html",
+      "sha256": "5DC439D560D7EE1376619F554E3E7EDCCD476539BB386CB8466C1BE2C79D1CCF",
+      "license": "PSF-2.0 (Python Software Foundation License Version 2)",
+      "license_url": "https://docs.python.org/3/license.html#python-software-foundation-license-version-2",
+      "author": "Python Software Foundation",
+      "version": "Python 3.14.7 documentation (accessed 2026-09-27)",
+      "permissions": {
+        "commercial_use": true,
+        "redistribution": true,
+        "derivative_works": true,
+        "attribution_required": true,
+        "attribution_text": "Copyright © 2001 Python Software Foundation; All Rights Reserved",
+        "model_training_permission": "not_assessed"
+      },
+      "covers_concepts": [
+        "functions",
+        "return-value"
+      ],
+      "content_scope": "函数定义语法、形参/实参、函数调用、返回值、默认参数值、关键字参数、可变参数、文档字符串、函数注解",
+      "notes": "下载的是完整控制流页面，仅在教师选定并核对函数小节后用于检索。需保留原始出处和许可声明；本次未评估模型训练用途。",
+      "rag_index_status": "candidate_after_teacher_review"
+    },
+    {
+      "id": "python-official-tutorial-print-function",
+      "title": "Python Official Documentation: Built-in Functions - print()",
+      "source_url": "https://docs.python.org/3/library/functions.html#print",
+      "local_path": "python-foundations/python-tutorial-print-function.html",
+      "sha256": "6803D02A4BF28EAA42A1753A55AD08B9117FD5D33DD910DFC406D4B2E4CB24C7",
+      "license": "PSF-2.0 (Python Software Foundation License Version 2)",
+      "license_url": "https://docs.python.org/3/license.html#python-software-foundation-license-version-2",
+      "author": "Python Software Foundation",
+      "version": "Python 3.14.7 documentation (accessed 2026-09-27)",
+      "permissions": {
+        "commercial_use": true,
+        "redistribution": true,
+        "derivative_works": true,
+        "attribution_required": true,
+        "attribution_text": "Copyright © 2001 Python Software Foundation; All Rights Reserved",
+        "model_training_permission": "not_assessed"
+      },
+      "covers_concepts": [
+        "return-value"
+      ],
+      "content_scope": "print() 函数完整签名、参数说明、sep/end/file/flush 参数、输出重定向",
+      "notes": "下载的是完整内置函数页面，须只提取 print() 对应小节。本次未评估模型训练用途。",
+      "rag_index_status": "candidate_after_teacher_review"
+    },
+    {
+      "id": "google-python-class-index",
+      "title": "Google's Python Class - Course Index",
+      "source_url": "https://developers.google.com/edu/python",
+      "local_path": "python-foundations/google-python-class-index.html",
+      "sha256": "D5F467C678FAD9CABE3D128C9E724D398A1FDF04685DBFA5C253F4DF48295B6E",
+      "license": "Creative Commons Attribution 4.0 International (CC BY 4.0) for content; Apache 2.0 for code samples",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "author": "Nick Parlante (Google engEDU)",
+      "version": "Accessed 2026-09-27; last updated 2024-07-23",
+      "permissions": {
+        "commercial_use": true,
+        "redistribution": true,
+        "derivative_works": true,
+        "attribution_required": true,
+        "attribution_text": "© Google, licensed under CC BY 4.0",
+        "model_training_permission": "not_assessed"
+      },
+      "covers_concepts": [],
+      "content_scope": "Python 环境搭建、字符串、列表、排序、字典、文件 I/O、正则表达式、工具模块、练习题",
+      "notes": "课程导航或字符串/列表练习页，不能直接补足当前函数与返回值知识点；仅作选材参考。原文与代码仍须分别按页面许可署名。",
+      "rag_index_status": "reference_only"
+    },
+    {
+      "id": "google-python-class-introduction",
+      "title": "Google's Python Class - Introduction",
+      "source_url": "https://developers.google.com/edu/python/introduction",
+      "local_path": "python-foundations/google-python-class-introduction.html",
+      "sha256": "4EBBF68D0A65E6C35F1E854317E54755A8B5AF562AA8742E15DED1B6F0B5C17B",
+      "license": "Creative Commons Attribution 4.0 International (CC BY 4.0) for content; Apache 2.0 for code samples",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "author": "Nick Parlante (Google engEDU)",
+      "version": "Accessed 2026-09-27",
+      "permissions": {
+        "commercial_use": true,
+        "redistribution": true,
+        "derivative_works": true,
+        "attribution_required": true,
+        "attribution_text": "© Google, licensed under CC BY 4.0",
+        "model_training_permission": "not_assessed"
+      },
+      "covers_concepts": [
+        "functions",
+        "return-value"
+      ],
+      "content_scope": "Python 简介、变量、字符串基础、函数定义与 return 示例、列表基础、for 循环、排序、元组赋值、字典、文件读取",
+      "notes": "只将函数和 return 的对应片段列为候选；网页文字与代码示例需分别保留出处和许可信息。",
+      "rag_index_status": "candidate_after_teacher_review"
+    },
+    {
+      "id": "google-python-class-exercises-basic",
+      "title": "Google's Python Class - Basic Exercises",
+      "source_url": "https://developers.google.com/edu/python/exercises/basic",
+      "local_path": "python-foundations/google-python-class-exercises-basic.html",
+      "sha256": "520B3B6A4CF77942EC3942D38DE47AF5E937066848EAEA5A500C2DAA74E41B12",
+      "license": "Creative Commons Attribution 4.0 International (CC BY 4.0) for content; Apache 2.0 for code samples",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "author": "Nick Parlante (Google engEDU)",
+      "version": "Accessed 2026-09-27",
+      "permissions": {
+        "commercial_use": true,
+        "redistribution": true,
+        "derivative_works": true,
+        "attribution_required": true,
+        "attribution_text": "© Google, licensed under CC BY 4.0",
+        "model_training_permission": "not_assessed"
+      },
+      "covers_concepts": [],
+      "content_scope": "string1.py (字符串练习)、list1.py (列表练习)、wordcount.py (单词计数)、mimic.py (模仿文本生成)",
+      "notes": "课程导航或字符串/列表练习页，不能直接补足当前函数与返回值知识点；仅作选材参考。原文与代码仍须分别按页面许可署名。",
+      "rag_index_status": "reference_only"
+    }
+  ],
+  "generated_at": "2026-09-27",
+  "generator": "MindOS RAG Resource Audit"
+}

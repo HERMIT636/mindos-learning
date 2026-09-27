@@ -136,6 +136,22 @@ class MindOSHandler(BaseHTTPRequestHandler):
 
         return max(sections, key=score)
 
+    def _learner_hint(self, pack: dict, concept_id: str | None) -> str:
+        if not concept_id:
+            return "尚未指定当前知识点；不要推断学习者水平"
+        prerequisite_ids = {edge["from"] for edge in pack["relations"]
+                            if edge["type"] == "prerequisite" and edge["to"] == concept_id}
+        rows = [item for item in self._dashboard(pack["id"])["progress"]
+                if item["concept_id"] in prerequisite_ids | {concept_id}]
+        if not rows:
+            return "当前知识点暂无学习证据"
+        return "；".join(
+            f"{item['concept_title']}／{item['dimension_label']}：{item['state_label']}，"
+            f"短诊断{'未做' if item['diagnostic_result'] is None else '通过' if item['diagnostic_result'] else '待补强'}，"
+            f"独立作答证据{item['evidence_count']}份"
+            for item in rows
+        )
+
     def _get(self) -> None:
         self._check_local_request()
         parsed = urlsplit(self.path)
@@ -253,8 +269,10 @@ class MindOSHandler(BaseHTTPRequestHandler):
             if task_id:
                 self.server.catalog.task(pack, task_id)
                 self.server.storage.mark_help(self._session(), pack, task_id)
-            chunks = self.server.catalog.teaching_chunks(pack)
             ai_mode = self.server.storage.mode(self._session()) == "ai"
+            chunks = self.server.catalog.teaching_chunks(pack)
+            if ai_mode:
+                chunks += self.server.catalog.external_chunks(pack, concept_id)
             sources, retrieval_mode, notice = retrieve(
                 question.strip(), chunks, concept_id, self.server.model, self.server.storage,
                 use_vectors=ai_mode)
@@ -262,9 +280,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
             if not sources:
                 answer = "当前课程资料中未找到足够相关的内容。请补充更具体的术语或问题。"
             elif ai_mode and self.server.model.chat_ready:
-                states = self._dashboard(course_id)["progress"]
-                relevant = [item for item in states if item["concept_id"] == concept_id]
-                hint = "；".join(f"{item['dimension_label']}：{item['state_label']}" for item in relevant) or "暂无独立测评证据"
+                hint = self._learner_hint(pack, concept_id)
                 try:
                     answer = self.server.model.explain(question.strip(), sources, hint, level)
                     generated = True
@@ -294,26 +310,38 @@ class MindOSHandler(BaseHTTPRequestHandler):
             if any(task["id"] not in answers for task in DIAGNOSTICS.get(pack["id"], [])):
                 raise ValueError("请先完成基础测试")
             concept = next(item for item in pack["concepts"] if item["id"] == target["concept_id"])
-            source = self._concept_source(pack, concept)
-            related = [item for item in self._dashboard(pack["id"])["progress"]
-                       if item["concept_id"] == concept["id"]]
-            learner_hint = "；".join(f"{item['dimension_label']}：{item['state_label']}" for item in related)
+            materials = self.server.catalog.lesson_materials(pack, concept["id"])
+            if not materials:
+                raise ValueError("该知识点暂无课程资料")
+            sources = [item for item in self.server.catalog.teaching_chunks(pack)
+                       if concept["id"] in item["concept_ids"]]
+            if self.server.storage.mode(self._session()) == "ai":
+                sources += self.server.catalog.external_chunks(pack, concept["id"])
+            learner_hint = self._learner_hint(pack, concept["id"])
             generated, notice = False, None
+            authored_lesson = "\n\n".join(item["content"] for item in materials)
             if self.server.storage.mode(self._session()) == "ai" and self.server.model.chat_ready:
                 try:
                     answer = self.server.model.explain(
-                        f"请讲解知识点「{concept['title']}」，先点出关键概念，再给一个与课程资料一致的例子；"
-                        "根据学习者状态调整难度，但不要解答当前独立题。", [source], learner_hint, 3)
+                        f"请深入讲解知识点「{concept['title']}」，结合课程资料逐层展开，"
+                        "根据学习者状态调整起点和难度，但不要解答当前独立题。",
+                        sources, learner_hint, 3, deep_lesson=True)
                     generated = True
+                    citations = {int(number) for number in re.findall(r"\[(\d+)\]", answer)}
+                    if citations - set(range(1, len(sources) + 1)):
+                        answer = re.sub(r"\[(\d+)\]", lambda match: match.group(0)
+                                        if int(match.group(1)) <= len(sources) else "", answer)
+                        notice = "模型引用了本次课程资料之外的编号，已移除无效编号；请核对原文。"
                 except ModelUnavailable:
-                    answer = source["content"]
-                    notice = "模型暂不可用，已展示课程原文。"
+                    answer = authored_lesson
+                    notice = "模型暂不可用，已展示完整课程讲义。"
             else:
-                answer = source["content"]
+                answer = authored_lesson
             self._json(HTTPStatus.OK, {"title": concept["title"], "answer": answer,
                                        "generated": generated, "notice": notice,
-                                       "source": {key: source[key] for key in
-                                                  ("title", "content", "url", "provenance")}})
+                                       "base_lesson": authored_lesson,
+                                       "sources": sources if generated else materials,
+                                       "source": materials[0]})
         elif parsed.path == "/api/quiz":
             pack = self.server.catalog.get(payload.get("course_id", ""))
             if self.server.storage.mode(self._session()) != "ai" or not self.server.model.chat_ready:

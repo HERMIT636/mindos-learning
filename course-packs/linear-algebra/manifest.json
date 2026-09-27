@@ -2,7 +2,7 @@
   "$schema": "../../schemas/course-pack.schema.json",
   "schema_version": "0.1.0",
   "id": "linear-algebra",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "title": "线性代数基础：二维向量与点积",
   "language": "zh-CN",
   "level": "beginner",
@@ -56,12 +56,17 @@
   "resources": [
     {
       "id": "dot-product-note",
-      "title": "二维向量与点积入门",
+      "title": "标准点积深入讲义",
       "path": "materials/dot-product.md",
-      "concept_ids": [
-        "vectors",
-        "dot-product"
-      ],
+      "concept_ids": ["dot-product"],
+      "license": "MIT",
+      "provenance": "MindOS 原创公开示例，待教学审核"
+    },
+    {
+      "id": "vectors-note",
+      "title": "二维实向量深入讲义",
+      "path": "materials/vectors.md",
+      "concept_ids": ["vectors"],
       "license": "MIT",
       "provenance": "MindOS 原创公开示例，待教学审核"
     }

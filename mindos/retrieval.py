@@ -10,7 +10,7 @@ from collections import Counter
 from .model import ModelGateway, ModelUnavailable
 from .storage import Storage
 
-STOP_TERMS = {"什么", "怎么", "如何", "请问", "一下", "是否", "哪个", "哪些", "问题", "解释"}
+STOP_TERMS = {"什么", "为什", "怎么", "如何", "请问", "一下", "是否", "哪个", "哪些", "问题", "解释"}
 
 
 def terms(text: str) -> Counter[str]:

@@ -1,0 +1,137 @@
+{
+  "course_pack_id": "linear-algebra",
+  "resources": [
+    {
+      "id": "hefferon-linear-algebra-textbook",
+      "title": "Linear Algebra (4th Edition) - Complete Textbook",
+      "source_url": "https://jheffero.w3.uvm.edu/linearalgebra/book.pdf",
+      "local_path": "linear-algebra/hefferon-linear-algebra.pdf",
+      "sha256": "5240F2782E645BC6351AD9EBA69D8C19500142A5CCA9C90450C17B3765A1A400",
+      "license": "Dual license: GNU Free Documentation License (GFDL) 1.2+ (no invariant sections) OR Creative Commons Attribution-ShareAlike 3.0 United States (CC BY-SA 3.0 US)",
+      "license_url": "https://hefferon.net/source.html",
+      "author": "Jim Hefferon (Saint Michael's College / University of Vermont)",
+      "version": "Fourth edition PDF dated 2020-04-26; verified 525 pages",
+      "permissions": {
+        "commercial_use": true,
+        "redistribution": true,
+        "derivative_works": true,
+        "attribution_required": true,
+        "attribution_text": "Hefferon, Jim. Linear Algebra. Open textbook. https://hefferon.net/linearalgebra",
+        "model_training_permission": "not_assessed"
+      },
+      "covers_concepts": [
+        "vectors",
+        "dot-product"
+      ],
+      "content_scope": "当前课程相关内容：Chapter One II.1 Vectors in Space、II.2 Length and Angle Measures；Chapter Three VI Projection 可作进阶参考。全书其余章节不应自动映射到这两个知识点。",
+      "notes": "已从作者站点重新下载，检查 PDF 头、startxref 和 %%EOF。作者网站说明可选 GFDL 或 CC BY-SA 3.0 US；公开再分发和改编需保留许可与署名。RAG 入库仍待教师选定章节、清理习题与审阅提取文本。",
+      "rag_index_status": "candidate_after_teacher_review"
+    },
+    {
+      "id": "hefferon-linear-algebra-source",
+      "title": "Linear Algebra (4th Edition) - LaTeX Source Code",
+      "source_url": "https://gitlab.com/jim.hefferon/linear-algebra/-/archive/master/linear-algebra-master.tar.gz?ref_type=heads",
+      "local_path": "linear-algebra/hefferon-linear-algebra-source.tar.gz",
+      "sha256": "267BB061C9A8A6D5284C639DB5C94856E083CFCDBE1763616E8877143047C4D2",
+      "license": "NEEDS_REVIEW: author website says GFDL or CC BY-SA 3.0 US; archive root LICENSE says GFDL or CC BY-SA 2.5",
+      "license_url": "https://hefferon.net/source.html",
+      "author": "Jim Hefferon",
+      "version": "GitLab master archive downloaded 2026-09-27; SHA256 locks this snapshot",
+      "permissions": {
+        "commercial_use": null,
+        "redistribution": null,
+        "derivative_works": null,
+        "attribution_required": true,
+        "attribution_text": "Hefferon, Jim. Linear Algebra. Open textbook. https://hefferon.net/linearalgebra",
+        "model_training_permission": "not_assessed"
+      },
+      "covers_concepts": [
+        "vectors",
+        "dot-product"
+      ],
+      "content_scope": "完整源码仓库，包含讲义源码、图片、问卷与题库等多种文件；不能整体视为同一教学片段或直接整体入库。",
+      "notes": "压缩包已重新下载并通过 gzip/tar 完整性检查。仓库地址：https://gitlab.com/jim.hefferon/linear-algebra 。内部 LICENSE 与作者网站所列 CC 版本不一致，且含其他来源文件；在逐项审查前不要公开分发或纳入 RAG。",
+      "rag_index_status": "license_review_required"
+    },
+    {
+      "id": "hefferon-linear-algebra-solutions",
+      "title": "Linear Algebra - Complete Solutions Manual",
+      "source_url": "https://jheffero.w3.uvm.edu/linearalgebra/jhanswer.pdf",
+      "local_path": "NOT_DOWNLOADED",
+      "sha256": "NOT_DOWNLOADED",
+      "license": "NOT_VERIFIED_FOR_THIS_FILE",
+      "license_url": "https://hefferon.net/source.html",
+      "author": "Jim Hefferon",
+      "version": "4th Edition",
+      "permissions": {
+        "commercial_use": null,
+        "redistribution": null,
+        "derivative_works": null,
+        "attribution_required": true,
+        "attribution_text": "Hefferon, Jim. Linear Algebra. Open textbook. https://hefferon.net/linearalgebra",
+        "model_training_permission": "not_assessed"
+      },
+      "covers_concepts": [
+        "vectors",
+        "dot-product"
+      ],
+      "content_scope": "全书所有习题的完整详解答案，含证明题步骤。",
+      "notes": "未下载（仅记录链接），文件本身及其许可未核实；答案库不得进入独立测评题库。",
+      "rag_index_status": "not_downloaded"
+    },
+    {
+      "id": "hefferon-linear-algebra-slides",
+      "title": "Linear Algebra - Beamer Slides for Classroom",
+      "source_url": "https://jheffero.w3.uvm.edu/linearalgebra/slides.zip",
+      "local_path": "NOT_DOWNLOADED",
+      "sha256": "NOT_DOWNLOADED",
+      "license": "NOT_VERIFIED_FOR_THIS_FILE",
+      "license_url": "https://hefferon.net/source.html",
+      "author": "Jim Hefferon",
+      "version": "4th Edition",
+      "permissions": {
+        "commercial_use": null,
+        "redistribution": null,
+        "derivative_works": null,
+        "attribution_required": true,
+        "attribution_text": "Hefferon, Jim. Linear Algebra. Open textbook. https://hefferon.net/linearalgebra",
+        "model_training_permission": "not_assessed"
+      },
+      "covers_concepts": [
+        "vectors",
+        "dot-product"
+      ],
+      "content_scope": "Beamer (LaTeX) 幻灯片源码，覆盖全书章节，可直接用于课堂教学。",
+      "notes": "未下载（仅记录链接），文件本身及其许可未核实。",
+      "rag_index_status": "not_downloaded"
+    },
+    {
+      "id": "hefferon-linear-algebra-lab",
+      "title": "Linear Algebra - Sage Lab Manual",
+      "source_url": "https://jheffero.w3.uvm.edu/linearalgebra/lab.pdf",
+      "local_path": "NOT_DOWNLOADED",
+      "sha256": "NOT_DOWNLOADED",
+      "license": "NOT_VERIFIED_FOR_THIS_FILE",
+      "license_url": "https://hefferon.net/source.html",
+      "author": "Jim Hefferon",
+      "version": "4th Edition",
+      "permissions": {
+        "commercial_use": null,
+        "redistribution": null,
+        "derivative_works": null,
+        "attribution_required": true,
+        "attribution_text": "Hefferon, Jim. Linear Algebra. Open textbook. https://hefferon.net/linearalgebra",
+        "model_training_permission": "not_assessed"
+      },
+      "covers_concepts": [
+        "vectors",
+        "dot-product"
+      ],
+      "content_scope": "基于 SageMath (Python) 的计算机实验手册，含向量运算、矩阵运算、特征值计算等编程练习。",
+      "notes": "未下载（仅记录链接），文件本身及其许可未核实；内容相关性有待教师判断。",
+      "rag_index_status": "not_downloaded"
+    }
+  ],
+  "generated_at": "2026-09-27",
+  "generator": "MindOS RAG Resource Audit"
+}

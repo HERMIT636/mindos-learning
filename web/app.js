@@ -181,17 +181,88 @@ function showStage(stage) {
   ui.flowSteps.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function lessonBody(markdown) {
+  const body = element('div', 'lesson-body');
+  const lines = markdown.split('\n');
+  let paragraph = [];
+  let list = null;
+  let code = null;
+  function inline(node, value) {
+    const pattern = /\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\((https:\/\/[^\s)]+)\)/g;
+    let offset = 0;
+    for (const match of value.matchAll(pattern)) {
+      node.append(document.createTextNode(value.slice(offset, match.index)));
+      if (match[1]) node.append(element('strong', '', match[1]));
+      else if (match[2]) node.append(element('code', 'inline-code', match[2]));
+      else {
+        const link = element('a', '', match[3]);
+        link.href = match[4]; link.target = '_blank'; link.rel = 'noopener noreferrer';
+        node.append(link);
+      }
+      offset = match.index + match[0].length;
+    }
+    node.append(document.createTextNode(value.slice(offset)));
+  }
+  function flushParagraph() {
+    if (paragraph.length) {
+      const p = element('p');
+      inline(p, paragraph.join(' '));
+      body.append(p);
+    }
+    paragraph = [];
+  }
+  for (const line of lines) {
+    if (line.startsWith('```')) {
+      flushParagraph(); list = null;
+      if (code) { body.append(element('pre', 'lesson-code', code.join('\n'))); code = null; }
+      else code = [];
+    } else if (code) {
+      code.push(line);
+    } else if (/^#{1,3} /.test(line)) {
+      flushParagraph(); list = null;
+      const level = line.match(/^#+/)[0].length;
+      const heading = element(level === 1 ? 'h3' : 'h4');
+      inline(heading, line.slice(level + 1));
+      body.append(heading);
+    } else if (/^(?:- |\d+\. )/.test(line)) {
+      flushParagraph();
+      const ordered = /^\d+\. /.test(line);
+      if (!list || list.tagName !== (ordered ? 'OL' : 'UL')) {
+        list = element(ordered ? 'ol' : 'ul'); body.append(list);
+      }
+      const item = element('li');
+      inline(item, line.replace(/^(?:- |\d+\. )/, ''));
+      list.append(item);
+    } else if (!line.trim()) {
+      flushParagraph(); list = null;
+    } else {
+      list = null;
+      paragraph.push(line.trim());
+    }
+  }
+  flushParagraph();
+  if (code) body.append(element('pre', 'lesson-code', code.join('\n')));
+  return body;
+}
+
 function renderLesson(result) {
   ui.lessonTitle.textContent = `${result.title} · 知识点讲解`;
   ui.lessonContext.textContent = result.generated
-    ? 'AI 已结合当前诊断与作答状态，并依据下方课程资料组织讲解。'
-    : '以下是资料库中的固定讲解；当前未生成新的解释。';
+    ? 'AI 参考课程资料和当前学习证据组织讲解；来源之外的重要补充会标为扩展说明。下方保留完整课程讲义供核对。'
+    : '以下是该知识点的完整课程讲义；你可以按自己的节奏阅读和练习。';
   const wrapper = element('div');
-  wrapper.append(element('p', '', result.answer));
+  if (result.generated) wrapper.append(element('h3', 'lesson-subtitle', '针对你的讲解'));
+  wrapper.append(lessonBody(result.answer));
+  if (result.generated) {
+    wrapper.append(element('h3', 'lesson-subtitle', '完整课程讲义'));
+    wrapper.append(lessonBody(result.base_lesson));
+  }
   if (result.notice) wrapper.append(element('small', '', result.notice));
-  const source = element('a', '', `查看课程原文：${result.source.title} ↗`);
-  source.href = result.source.url; source.target = '_blank'; source.rel = 'noopener noreferrer';
-  wrapper.append(source);
+  (result.sources || [result.source]).forEach((source, index) => {
+    const link = element('a', '', `${result.generated ? `[${index + 1}] ` : ''}查看课程原文：${source.title} ↗`);
+    link.href = source.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    wrapper.append(link);
+  });
   ui.lessonResult.replaceChildren(wrapper);
 }
 
@@ -599,7 +670,7 @@ ui.askForm.addEventListener('submit', async event => {
         hint_level: Number(document.querySelector('input[name="hint-level"]:checked')?.value || 1), mode: state.mode }),
     });
     const wrapper = element('div');
-    wrapper.append(element('p', '', result.answer));
+    wrapper.append(lessonBody(result.answer));
     wrapper.append(element('small', '', `检索方式：${result.retrieval_mode}${result.notice ? ` · ${result.notice}` : ''}`));
     result.sources.forEach((source, index) => {
       const card = element('div', 'source-card');

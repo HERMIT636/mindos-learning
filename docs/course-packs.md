@@ -10,9 +10,11 @@ course-packs/
     manifest.json
     materials/
       functions.md
+      return-value.md
   linear-algebra/
     manifest.json
     materials/
+      vectors.md
       dot-product.md
 ```
 
@@ -46,7 +48,7 @@ course-packs/
 
 ## 资源
 
-v0.1.0 的资源为课程目录内 UTF-8 Markdown 文件。`path` 使用以课程目录为起点的相对路径。保留标题和完整语义单元，后续导入时再由索引流程切分。
+v0.1.0 的资源为课程目录内 UTF-8 Markdown 文件。`path` 使用以课程目录为起点的相对路径。两个示例课程按知识点分别保存完整讲义；讲解页读取整篇，答疑检索按二级标题切分。新增讲义应包含学习动机、直观解释、准确规则、逐步例题、常见误区和自查方法，并避免照搬独立测评题。
 
 `provenance` 说明原创情况或准确来源，`license` 标明资源自己的许可。新增第三方内容需具备分发权限，并保留要求的声明；只具备阅读权限的资料不能直接复制进公开包。
 

@@ -1,35 +1,63 @@
-# 函数与返回值入门
+# 函数定义与调用：把一段过程变成可重复使用的工具
 
-原创公开教学示例，MIT 许可；已完成项目内容复核，仍待教师／助教审核。
+本讲义为 MindOS 原创公开教学材料，内容状态：待教师／助教审核。适合已了解变量和基本算术的初学者。
 
-## 把一个过程定义为函数
+## 为什么需要函数
 
-函数可以接收输入，并在调用时执行一段操作。例如，把一个数增加一：
+假设你要反复计算“输入一个数，再加 1”。每次都重新写计算过程，不仅重复，还容易在某一次漏改。函数把这个过程起一个名字：以后只需提供输入并调用这个名字，就能执行同一套步骤。函数还有一个更重要的作用：把“做什么”与“什么时候做”分开。定义时描述步骤，调用时才真正执行。
+
+## 先看完整例子
 
 ```python
 def increment(number):
-    return number + 1
+    next_number = number + 1
+    return next_number
 
-result = increment(4)
+first = increment(4)
+second = increment(9)
 ```
 
-这里 `number` 是函数定义中的**形参**，调用中的 `4` 是传入的**实参**。写下 `def` 语句会定义函数；写下 `increment(4)` 才会调用它。函数返回 `5`，因此 `result` 的值是 `5`。
+逐行读：`def` 开始定义函数；`increment` 是函数名；括号中的 `number` 是形参，代表将来传入的数。缩进的两行是函数体。读到 `def` 时，Python 创建了这个函数，但不会马上计算 `number + 1`。执行到 `increment(4)` 时才发生第一次调用：这次调用把 `4` 交给 `number`，计算得到 `5`，并把 `5` 交回调用处，所以 `first` 是 `5`。第二次调用是新的一次执行：`number` 接收 `9`，`second` 得到 `10`，不受第一次调用影响。
 
-## 返回与显示
+## 定义、调用、形参和实参
 
-`return` 将值交给调用者，并结束本次函数调用；`print` 把内容写到输出中，通常用于显示信息。**输出给人看**与**返回给调用者继续使用**是两件事。
+定义像“写菜谱”，调用像“按菜谱做菜”。`def increment(number):` 中的 `number` 是形参，是定义过程使用的名字；`increment(4)` 中的 `4` 是实参，是这一次调用提供的具体值。`increment` 只表示这个函数对象；`increment(4)` 才表示调用它并传入 `4`。
+
+参数不是“自动填上的”。如果定义需要一个位置参数，却写成 `increment()`，这次调用缺少输入，会报错。传入两个位置实参 `increment(4, 9)` 也不符合这里的定义。初学时先检查三件事：函数叫什么、括号里需要几个输入、调用时给了什么。
+
+## 函数体如何一步步执行
 
 ```python
-def show_increment(number):
-    print(number + 1)
+def total_with_fee(price, fee):
+    subtotal = price + fee
+    return subtotal
 
-result = show_increment(4)
+bill = total_with_fee(20, 3)
 ```
 
-第二个例子会显示 `5`，但函数执行到末尾时没有执行 `return`，所以 `result` 的值为 `None`。`print(...)` 自身也不会把显示的内容当作所在函数的返回值；需要继续计算时，应明确返回所需的值。执行 `return` 而不写返回表达式时，也会返回 `None`。
+调用时，`price` 对应 `20`，`fee` 对应 `3`；先得到 `subtotal = 23`，然后把 `23` 返回给调用位置，最终 `bill` 是 `23`。函数体的缩进有意义：缩进内的语句属于函数；取消缩进后，代码不再属于函数体。`subtotal` 是这个调用内部使用的局部名字，外部不能直接用它代替 `bill`。
 
-## 自查
+## 常见误解与反例
 
-阅读函数时依次检查：接收哪些输入、执行哪些操作、返回什么值。看到屏幕输出并不能说明调用者取得了同样的返回值。
+- “写了 `def` 就已经运行函数”：不对。定义只创建函数；需要写调用表达式才执行函数体。
+- “形参是固定值”：不对。每次调用可以提供不同实参，函数体用这次收到的值执行。
+- “看到函数名就一定调用了”：不对。`increment` 和 `increment(4)` 有区别，关键在调用括号。
+- “函数只能做数学计算”：不对。函数也能处理文本、组织多个步骤；这里使用算术只是为了看清执行过程。
 
-本材料与仓库中的公开练习配套，不用于正式学习效果评估。语言行为已对照 [Python 官方教程：定义函数](https://docs.python.org/3/tutorial/controlflow.html#defining-functions) 与 [Python 内置函数：print](https://docs.python.org/3/library/functions.html#print) 核对。
+## 自己追踪一次调用
+
+```python
+def double_then_add(value, extra):
+    doubled = value * 2
+    return doubled + extra
+
+result = double_then_add(3, 4)
+```
+
+先不要运行：把 `value` 写成 `3`、`extra` 写成 `4`；`doubled` 得到 `6`；最后返回 `6 + 4`，因此 `result` 是 `10`。如果你算出了 `10`，再解释**为什么直到调用时才得到它**，就真正分清了定义与执行。
+
+## 学完之后怎么继续
+
+本节重点是函数何时执行、输入如何进入函数。下一节会进一步区分“函数把值返回给调用者”和“函数只在屏幕上显示内容”。两者直接决定后续代码能不能接着使用计算结果。
+
+语法事实可对照 [Python 官方教程：定义函数](https://docs.python.org/zh-cn/3/tutorial/controlflow.html#defining-functions)。本材料与公开练习配套，不用于正式学习效果评估。

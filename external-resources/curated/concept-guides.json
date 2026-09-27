@@ -1,0 +1,46 @@
+{
+  "schema_version": "0.1.0",
+  "review_status": "prototype_draft_pending_teacher_review",
+  "guides": [
+    {
+      "id": "python-functions-official-guide",
+      "course_id": "python-foundations",
+      "concept_ids": ["functions"],
+      "title": "Python 官方教程导读：函数定义与调用",
+      "content": "官方教程的 Defining Functions 小节从 def、函数名、形参和缩进函数体开始，说明定义语句创建函数对象；调用表达式才执行函数体。函数体每次调用获得本次参数，并在执行后把结果交回调用处。对初学者讲解时，先区分定义与调用，再用不同实参追踪两次执行；默认参数、可变参数等属于进阶内容，不应盖过当前目标。",
+      "url": "https://docs.python.org/3/tutorial/controlflow.html#defining-functions",
+      "provenance": "MindOS 根据 Python 官方教程撰写的中文导读；原文 PSF-2.0；待教师审核",
+      "source_resource_ids": ["python-official-tutorial-defining-functions"]
+    },
+    {
+      "id": "python-return-official-guide",
+      "course_id": "python-foundations",
+      "concept_ids": ["return-value"],
+      "title": "Python 官方文档导读：return 与 print 的区别",
+      "content": "Python 函数用 return 把一个值交回调用位置，并结束本次函数执行；没有明确返回值的函数调用结果为 None。官方内置函数文档中的 print() 负责把对象写到文本流，返回值是 None。讲解时应把屏幕上的输出与可供后续表达式使用的返回值分开，追踪赋值变量实际拿到的对象，不能把看见的文字当作函数返回值。",
+      "url": "https://docs.python.org/3/library/functions.html#print",
+      "provenance": "MindOS 根据 Python 官方文档撰写的中文导读；原文 PSF-2.0；待教师审核",
+      "source_resource_ids": ["python-official-tutorial-defining-functions", "python-official-tutorial-print-function"]
+    },
+    {
+      "id": "linear-vectors-hefferon-guide",
+      "course_id": "linear-algebra",
+      "concept_ids": ["vectors"],
+      "title": "Hefferon 教材导读：空间向量与分量",
+      "content": "Hefferon《Linear Algebra》第一章 Vectors in Space 小节把向量放在平面与空间的几何背景中讨论。当前入门课程只需先把二维向量表示为有序分量，区分向量与单个标量，再说明加法、数乘如何逐分量进行。书中三维和更抽象的向量空间内容可在学习者掌握二维例子后再扩展，不能当作本知识点的必会目标。",
+      "url": "https://jheffero.w3.uvm.edu/linearalgebra/book.pdf",
+      "provenance": "MindOS 根据 Hefferon《Linear Algebra》第 1 章 II.1 撰写的中文导读；作者站标注 GFDL 或 CC BY-SA 3.0 US；待教师审核",
+      "source_resource_ids": ["hefferon-linear-algebra-textbook"]
+    },
+    {
+      "id": "linear-dot-hefferon-guide",
+      "course_id": "linear-algebra",
+      "concept_ids": ["dot-product"],
+      "title": "Hefferon 教材导读：点积、长度与夹角",
+      "content": "Hefferon《Linear Algebra》第一章 Length and Angle Measures 小节将向量的长度、点积和夹角联系起来。二维标准点积按对应分量乘积求和，结果是标量；对非零向量，可用 a·b=|a||b|cosθ 解释正负号与垂直关系。判断点积为零是否意味着垂直时必须先排除零向量。教材第三章的投影部分可作为进阶延伸，不是当前点积计算的起点。",
+      "url": "https://jheffero.w3.uvm.edu/linearalgebra/book.pdf",
+      "provenance": "MindOS 根据 Hefferon《Linear Algebra》第 1 章 II.2 撰写的中文导读；作者站标注 GFDL 或 CC BY-SA 3.0 US；待教师审核",
+      "source_resource_ids": ["hefferon-linear-algebra-textbook"]
+    }
+  ]
+}

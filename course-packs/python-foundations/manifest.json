@@ -2,7 +2,7 @@
   "$schema": "../../schemas/course-pack.schema.json",
   "schema_version": "0.1.0",
   "id": "python-foundations",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "title": "Python 基础：函数与返回值",
   "language": "zh-CN",
   "level": "beginner",
@@ -58,12 +58,19 @@
   "resources": [
     {
       "id": "functions-note",
-      "title": "函数与返回值入门",
+      "title": "函数定义与调用深入讲义",
       "path": "materials/functions.md",
       "concept_ids": [
-        "functions",
-        "return-value"
+        "functions"
       ],
+      "license": "MIT",
+      "provenance": "MindOS 原创公开示例，待教学审核"
+    },
+    {
+      "id": "return-value-note",
+      "title": "返回与显示深入讲义",
+      "path": "materials/return-value.md",
+      "concept_ids": ["return-value"],
       "license": "MIT",
       "provenance": "MindOS 原创公开示例，待教学审核"
     }

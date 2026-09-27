@@ -4,7 +4,7 @@
 
 An open-source adaptive learning platform built around course packs, retrieval-augmented generation, and evidence-based learner states.
 
-> 当前阶段：本地可运行的学习原型。首次进入先选资料模式或大模型模式，再选课程、章节与目标知识点，按“基础测试 → 自动进入知识点讲解 → 练习和公开变式复测 → 状态与后续计划”逐页演示学习闭环；每页可用步骤导航跳转已解锁的功能。资料模式只检索课程库中的固定讲解；服务端配置模型后，可选择 AI 讲解、疑问回复、自定义目标匹配和按需小测验。课程内容和评分方式尚待教师审核；正式用户认证、隔离代码测试和真实学习效果验证仍待建设。
+> 当前阶段：本地可运行的学习原型。首次进入先选资料模式或大模型模式，再选课程、章节与目标知识点，按“基础测试 → 自动进入知识点讲解 → 练习和公开变式复测 → 状态与后续计划”逐页演示学习闭环；每页可用步骤导航跳转已解锁的功能。资料模式展示当前知识点的完整分层讲义；服务端配置模型后，可选择结合诊断状态和多个课程片段的 AI 讲解、疑问回复、自定义目标匹配和按需小测验。课程内容和评分方式尚待教师审核；正式用户认证、隔离代码测试和真实学习效果验证仍待建设。
 
 ## 项目解决什么问题
 
@@ -31,6 +31,7 @@ MindOS 希望帮助学习者明确当前薄弱点，获取有来源的学习材�
 - [Python 基础示例](course-packs/python-foundations/manifest.json)。
 - [Python 函数单元内容复核](docs/python-unit-review.md)。
 - [线性代数示例](course-packs/linear-algebra/manifest.json)。
+- [外部开放资料审核与知识点导读](external-resources/manifests/AUDIT_REPORT.md)：模型模式可引用四则带原始出处的导读；原始下载文件留在本地供审核，不随项目发布。
 - [开发路线](ROADMAP.md)、[贡献指南](CONTRIBUTING.md)与 [开源发布说明](docs/open-source.md)。
 - [本地原型运行说明](docs/prototype.md)：两门课程的练习、状态记录和资料助手。
 

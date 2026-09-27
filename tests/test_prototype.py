@@ -37,6 +37,13 @@ class FakeModelHandler(BaseHTTPRequestHandler):
                                       "choices": [{"id": "a", "text": "3"}, {"id": "b", "text": "None"},
                                                   {"id": "c", "text": "字符串 3"}], "answer": "b",
                                       "explanation": "print 显示内容，但函数没有 return，调用结果为 None。"}, ensure_ascii=False)
+            elif "一对一教师" in system:
+                assert "完整课程讲义" not in json.dumps(payload["messages"], ensure_ascii=False)
+                if "现在开始一节深入讲解" in system:
+                    content = "先从函数执行说起。print 负责显示，return 负责把结果交回调用处。\n\n例：f() 只执行 print(3)，则调用结果是 None。你可以随时追问。"
+                else:
+                    assert any("print 负责显示" in message["content"] for message in payload["messages"])
+                    content = "接着刚才的例子：屏幕显示的 3 不等于调用表达式的结果。请试着区分两者。"
             else:
                 assert "参考答案" not in payload["messages"][1]["content"]
                 assert "不是你讲解时唯一能用的知识" in system
@@ -403,6 +410,32 @@ class PrototypeTests(unittest.TestCase):
             self.assertEqual(offline["retrieval_mode"], "关键词")
             self.assertTrue(any(source["id"] == "python-return-official-guide"
                                 for source in offline["sources"]))
+            self.call("/api/mode", {"mode": "ai"})
+            status, premature_quiz = self.call("/api/quiz", {"course_id": "python-foundations",
+                                                             "concept_id": "return-value", "tutor": True})
+            self.assertEqual(status, 400)
+            self.assertIn("先开始本节", premature_quiz["error"])
+            status, tutor = self.call("/api/tutor/start", {"course_id": "python-foundations",
+                                                          "concept_id": "return-value"})
+            self.assertEqual(status, 200)
+            self.assertIn("print 负责显示", tutor["answer"])
+            self.assertNotIn("base_lesson", tutor)
+            status, followup = self.call("/api/tutor/ask", {"course_id": "python-foundations",
+                                                            "concept_id": "return-value",
+                                                            "question": "为什么显示的 3 不是返回值？"})
+            self.assertEqual(status, 200)
+            self.assertIn("屏幕显示的 3", followup["answer"])
+            _, resumed = self.call("/api/tutor/start", {"course_id": "python-foundations",
+                                                     "concept_id": "return-value"})
+            self.assertEqual([turn["kind"] for turn in resumed["turns"]], ["question", "answer"])
+            status, lesson_quiz = self.call("/api/quiz", {"course_id": "python-foundations",
+                                                          "concept_id": "return-value", "tutor": True})
+            self.assertEqual(status, 200)
+            self.assertIn("本节 AI 讲解", lesson_quiz["source_title"])
+            status, lesson_result = self.call("/api/quiz-answer", {"course_id": "python-foundations",
+                                                                  "quiz_id": lesson_quiz["id"], "answer": "b"})
+            self.assertEqual(status, 200)
+            self.assertFalse(lesson_result["counts_for_state"])
         finally:
             self.server.model = previous_model
             for key, value in old.items():

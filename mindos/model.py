@@ -116,6 +116,51 @@ class ModelGateway:
         except (KeyError, IndexError, TypeError, ValueError) as exc:
             raise ModelUnavailable("讲解模型返回了无效数据") from exc
 
+    def tutor(self, course: str, concept: str, prerequisites: list[str],
+              learner_hint: str, request: str, history: list[dict],
+              new_lesson: bool = False) -> str:
+        """Teach from the syllabus and conversation, without weak draft lectures."""
+        if not self.chat_ready:
+            raise ModelUnavailable("讲解模型尚未配置")
+        system = (
+            "你是耐心严谨的中文一对一教师。课程目录和学习状态是教学范围与起点，不是现成讲稿；"
+            "不要声称已检索资料或已核实官网。默认学生零基础，沿当前知识点循序渐进。"
+            "每个新术语先用白话、具体情境和边界解释，再给准确表述；推导或代码逐步展示，每一步解释为什么。"
+            "公式优先用纯文本可读写法，逐项解释符号与维度；不要输出无法直接阅读的 LaTeX 定界符。"
+            "始终用同一个贯穿例子建立直觉，再给一个不同的例子检验迁移；遇到学生追问，先直接回答困惑，"
+            "必要时退回更基础的概念重新讲，再接回原路线。学生只说‘继续’时，从刚才停下的位置续讲，避免重复整节。"
+            "不展示当前独立测评题及答案；不知道的事实、版本接口或设备细节明确说不确定，提示核对官方文档。"
+            "不要根据一次回答断言学生已经掌握，也不要把 AI 练习当独立测评。"
+        )
+        if new_lesson:
+            system += (
+                "现在开始一节深入讲解，篇幅以讲透为准，别只给摘要。按‘本节要解决的问题→前置概念→"
+                "直观图景→逐步推导或可运行示例→常见误区→另一个变式→两道口头自查’组织；"
+                "公式逐项解释符号和维度，代码解释输入、关键行与输出。自查先给问题，暂不揭晓答案；"
+                "最后邀请学生随时追问，并提示可以做节后小测。"
+            )
+        else:
+            system += "现在回答学生的即时追问；与本节上下文衔接，解释充分但围绕问题，不机械重复整篇讲义。"
+        messages = [{"role": "system", "content": system}]
+        recent = history if len(history) <= 9 else history[:1] + history[-8:]
+        messages.extend({"role": turn["role"], "content": turn["content"][:6000]}
+                        for turn in recent if turn["role"] in {"user", "assistant"})
+        messages.append({"role": "user", "content": json.dumps({
+            "course": course, "concept": concept, "prerequisites": prerequisites,
+            "learner_state": learner_hint, "request": request,
+        }, ensure_ascii=False)})
+        result = self._post("/chat/completions", {
+            "model": self.chat_model, "max_tokens": 6000 if new_lesson else 3000,
+            "messages": messages,
+        }, timeout=90 if new_lesson else 45)
+        try:
+            answer = result["choices"][0]["message"]["content"]
+            if not isinstance(answer, str) or not answer.strip():
+                raise ValueError("empty answer")
+            return answer.strip()[:16000 if new_lesson else 8000]
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            raise ModelUnavailable("讲解模型返回了无效数据") from exc
+
     def _chat_json(self, system: str, user: str) -> dict:
         if not self.chat_ready:
             raise ModelUnavailable("讲解模型尚未配置")

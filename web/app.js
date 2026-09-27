@@ -134,8 +134,7 @@ function showEntry(showGate = false) {
   } else {
     renderStages();
   }
-  ui.modelStatus.textContent = state.learningMode === 'ai' && !gate ? '大模型模式' :
-    state.learningMode === 'materials' && !gate ? '资料模式' : '选择学习方式';
+  ui.modelStatus.textContent = state.learningMode === 'ai' && !gate ? 'AI 教师已连接' : '等待连接 AI';
 }
 
 function organizeStages() {
@@ -143,7 +142,9 @@ function organizeStages() {
   ui.stageDiagnostic.append(ui.diagnosticBox);
   ui.stageExplain.insertBefore(ui.askPanel, ui.stageExplain.querySelector('.stage-actions'));
   ui.stagePractice.insertBefore(ui.workspace, ui.stagePractice.querySelector('.stage-actions'));
-  ui.stagePractice.insertBefore(ui.aiQuizBox, ui.stagePractice.querySelector('.stage-actions'));
+  ui.askPanel.append(ui.aiQuizBox);
+  ui.stageExplain.insertBefore(ui.lessonPanel.querySelector('.lesson-navigation'),
+    ui.stageExplain.querySelector('.stage-actions'));
   ui.stageStatus.append(ui.pathPanel, ui.metrics, ui.progressPanel, ui.nextPanel, ui.historyPanel);
   ui.learningColumns.remove();
 }
@@ -165,7 +166,7 @@ function renderStages() {
   ui.diagnosticComplete.hidden = state.stage !== 'diagnostic' || pending;
   ui.pathPanel.hidden = state.stage !== 'status';
   ui.metrics.hidden = state.stage !== 'status';
-  ui.aiQuizBox.hidden = state.stage !== 'practice' || state.mode === 'independent' || state.learningMode !== 'ai';
+  ui.aiQuizBox.hidden = state.stage !== 'explain' || state.learningMode !== 'ai';
   ui.flowSteps.querySelectorAll('button[data-stage]').forEach(button => {
     const name = button.dataset.stage;
     button.disabled = name === 'diagnostic' ? !target :
@@ -204,6 +205,8 @@ function moveLesson(direction) {
   if (next < 0) return;
   state.lessonConceptId = route[next].concept_id;
   ui.askResult.replaceChildren();
+  ui.quizContent.replaceChildren();
+  state.quiz = null;
   renderLessonNavigation();
   loadLesson();
   ui.lessonPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -285,24 +288,17 @@ function lessonBody(markdown) {
 
 function renderLesson(result) {
   ui.lessonTitle.textContent = result.title;
-  ui.lessonContext.textContent = result.generated
-    ? 'AI 参考课程资料和当前学习证据组织讲解；来源之外的重要补充会标为扩展说明。下方保留完整课程讲义供核对。'
-    : '以下是该知识点的完整课程讲义；你可以按自己的节奏阅读和练习。';
+  ui.lessonContext.textContent = 'AI 按课程目标和当前学习状态组织这一节；有疑问可随时打断，回答会延续本节对话。';
   const wrapper = element('div');
-  if (result.generated) wrapper.append(element('h3', 'lesson-subtitle', '针对你的讲解'));
   wrapper.append(lessonBody(result.answer));
-  if (result.generated) {
-    wrapper.append(element('h3', 'lesson-subtitle', '完整课程讲义'));
-    wrapper.append(lessonBody(result.base_lesson));
-  }
-  if (result.notice) wrapper.append(element('small', '', result.notice));
-  (result.sources || [result.source]).forEach((source, index) => {
-    const link = element('a', '', `${result.generated ? `[${index + 1}] ` : ''}查看资料来源：${source.title} ↗`);
-    link.href = source.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
-    wrapper.append(link);
-    if (source.provenance) wrapper.append(element('small', '', source.provenance));
-  });
   ui.lessonResult.replaceChildren(wrapper);
+  ui.askResult.replaceChildren();
+  (result.turns || []).forEach(turn => {
+    const item = element('div', turn.role === 'user' ? 'tutor-question' : 'tutor-answer');
+    item.append(element('strong', '', turn.role === 'user' ? '你问：' : 'AI 回答：'));
+    item.append(turn.role === 'user' ? element('p', '', turn.content) : lessonBody(turn.content));
+    ui.askResult.append(item);
+  });
 }
 
 async function loadLesson(force = false) {
@@ -320,9 +316,10 @@ async function loadLesson(force = false) {
   if (!force && state.lessonLoadingKey === key) return;
   state.lessonLoadingKey = key;
   ui.lessonResult.textContent = '正在准备当前知识点的讲解…';
+  if (force) { ui.quizContent.replaceChildren(); state.quiz = null; }
   ui.lessonRefresh.disabled = true;
   try {
-    const result = await api('/api/lesson', { method: 'POST', body: JSON.stringify({ course_id: state.courseId, concept_id: conceptId }) });
+    const result = await api('/api/tutor/start', { method: 'POST', body: JSON.stringify({ course_id: state.courseId, concept_id: conceptId, reset: force }) });
     if (state.courseId !== dashboard.course.id || state.dashboard.target?.concept_id !== dashboard.target.concept_id || currentLessonId() !== conceptId) return;
     state.lessonCache = { key, result };
     renderLesson(result);
@@ -433,12 +430,10 @@ function renderMode() {
     : '可以查看资料并试答；练习结果不会计入独立掌握证据。';
   ui.askForm.hidden = independent;
   ui.aiQuizBox.hidden = independent || state.learningMode !== 'ai';
-  ui.askButton.firstChild.textContent = state.learningMode === 'ai' ? '向 AI 提问 / 获取提示 ' : '查看固定课程资料 ';
+  ui.askButton.firstChild.textContent = '向 AI 追问 ';
   ui.askDescription.textContent = independent
-    ? '独立作答期间暂停资料助手。切换回辅助练习即可继续查阅。'
-    : state.learningMode === 'ai'
-      ? 'AI 会结合当前诊断和作答状态，依据课程资料即时回复问题；下方可按需生成练习小测验。'
-      : '只展示资料库中的固定讲解和带出处的资料导读，不会生成新的解释或题目。查过资料的同题不再计入独立证据。';
+    ? '独立作答期间暂停 AI 追问。返回讲解页后可以继续对话。'
+    : '可以随时问不懂的步骤，AI 会接着本节对话解释。';
   if (independent) ui.askResult.replaceChildren();
 }
 
@@ -574,7 +569,6 @@ async function chooseLearningMode(mode) {
   finally { state.busy = false; }
 }
 
-ui.chooseMaterials.addEventListener('click', () => chooseLearningMode('materials'));
 ui.chooseAi.addEventListener('click', () => chooseLearningMode('ai'));
 ui.changeMode.addEventListener('click', () => showEntry(true));
 ui.courseConfirm.addEventListener('click', () => selectCourse(ui.courseSelect.value));
@@ -728,33 +722,23 @@ ui.askForm.addEventListener('submit', async event => {
   if (question.length < 2) { ui.askResult.textContent = '请写下更具体的问题。'; return; }
   state.busy = true;
   ui.askButton.disabled = true;
-  ui.askResult.textContent = '正在查找课程资料…';
+  const pending = element('p', 'panel-intro', 'AI 正在接着本节回答…');
+  ui.askResult.append(pending);
   try {
-    const task = currentTask();
-    const result = await api('/api/ask', {
+    const result = await api('/api/tutor/ask', {
       method: 'POST',
-      body: JSON.stringify({ course_id: state.courseId, task_id: state.stage === 'practice' ? task?.id : undefined,
-        concept_id: state.stage === 'explain' ? currentLessonId() : state.dashboard.target?.concept_id || task?.concept_ids[0],
-        question, mode: state.mode }),
+      body: JSON.stringify({ course_id: state.courseId, concept_id: currentLessonId(), question }),
     });
-    const wrapper = element('div');
-    wrapper.append(lessonBody(result.answer));
-    wrapper.append(element('small', '', `检索方式：${result.retrieval_mode}${result.notice ? ` · ${result.notice}` : ''}`));
-    result.sources.forEach((source, index) => {
-      const card = element('div', 'source-card');
-      const link = element('a', '', `[${index + 1}] ${source.title} ↗`);
-      link.href = source.url;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      card.append(link, element('small', '', source.provenance));
-      const details = element('details');
-      details.append(element('summary', '', '查看检索片段'), element('pre', '', source.content));
-      card.append(details);
-      wrapper.append(card);
-    });
-    ui.askResult.replaceChildren(wrapper);
+    pending.remove();
+    const asked = element('div', 'tutor-question');
+    asked.append(element('strong', '', '你问：'), element('p', '', question));
+    const replied = element('div', 'tutor-answer');
+    replied.append(element('strong', '', 'AI 回答：'), lessonBody(result.answer));
+    ui.askResult.append(asked, replied);
+    ui.askInput.value = '';
+    state.lessonCache = null;
   } catch (error) {
-    ui.askResult.textContent = error.message;
+    pending.textContent = error.message;
   } finally {
     state.busy = false;
     ui.askButton.disabled = false;
@@ -763,14 +747,14 @@ ui.askForm.addEventListener('submit', async event => {
 
 ui.quizGenerate.addEventListener('click', async () => {
   if (state.busy || state.mode === 'independent') return;
-  const conceptId = state.dashboard?.target?.concept_id;
+  const conceptId = currentLessonId();
   if (!conceptId) { ui.quizContent.textContent = '请先确认目标知识点。'; return; }
   state.busy = true;
   ui.quizGenerate.disabled = true;
-  ui.quizContent.textContent = '正在依据课程资料生成练习题…';
+  ui.quizContent.textContent = '正在根据本节讲解生成小测…';
   try {
     const quiz = await api('/api/quiz', {
-      method: 'POST', body: JSON.stringify({ course_id: state.courseId, concept_id: conceptId }),
+      method: 'POST', body: JSON.stringify({ course_id: state.courseId, concept_id: conceptId, tutor: true }),
     });
     state.quiz = quiz;
     const question = element('div', 'question-box');
@@ -798,9 +782,7 @@ ui.quizGenerate.addEventListener('click', async () => {
         feedback.textContent = `${result.correct ? '本题答对了。' : '本题未答对。'}${result.explanation}（AI 练习题不计入掌握证据。）`;
       } catch (error) { feedback.textContent = error.message; submit.disabled = false; }
     });
-    const source = element('a', '', `出题依据：${quiz.source_title} ↗`);
-    source.href = quiz.source_url; source.target = '_blank'; source.rel = 'noopener noreferrer';
-    ui.quizContent.replaceChildren(question, source, submit, feedback);
+    ui.quizContent.replaceChildren(question, submit, feedback);
   } catch (error) { ui.quizContent.textContent = error.message; }
   finally { state.busy = false; ui.quizGenerate.disabled = false; }
 });
@@ -810,12 +792,11 @@ async function initialize() {
     const response = await api('/api/courses');
     state.courses = response.courses;
     state.chatReady = response.chat_ready;
-    state.learningMode = response.learning_mode === 'ai' && !response.chat_ready
-      ? null : response.learning_mode;
+    state.learningMode = response.learning_mode === 'ai' && response.chat_ready ? 'ai' : null;
     ui.chooseAi.disabled = !response.chat_ready;
     ui.modeHelp.textContent = response.chat_ready
-      ? '服务端已配置大模型。你可以任选一种方式，之后仍可切换。'
-      : '服务端尚未配置大模型。可直接进入资料模式；若要使用 AI，请在本机 .env 填写模型配置并重启服务。不要在网页输入密钥。';
+      ? '模型已就绪。进入课程后可以逐节听讲、随时追问和做本节小测。'
+      : '尚未配置模型。请在项目 .env 中填写模型 API 地址和名称，重启本地服务后再开始；不要在网页输入密钥。';
     ui.courseSelect.replaceChildren(...state.courses.map(course => {
       const option = element('option', '', course.title);
       option.value = course.id;

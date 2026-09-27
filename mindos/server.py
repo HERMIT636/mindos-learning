@@ -154,6 +154,21 @@ class MindOSHandler(BaseHTTPRequestHandler):
             for item in rows
         )
 
+    def _tutor_concept(self, pack: dict, concept_id: str) -> dict:
+        if self.server.storage.mode(self._session()) != "ai" or not self.server.model.chat_ready:
+            raise ValueError("逐节讲解需要先配置并启用大模型")
+        target = self.server.storage.target(self._session(), pack)
+        if target is None:
+            raise ValueError("请先确认目标知识点")
+        answers = self.server.storage.diagnostics(self._session(), pack)
+        if (not self.server.storage.diagnostics_skipped(self._session(), pack, target["concept_id"])
+                and any(task["id"] not in answers for task in diagnostic_tasks(pack, target["concept_id"]))):
+            raise ValueError("请先完成或跳过学前小测")
+        route = {item["concept_id"] for item in self._dashboard(pack["id"])["plan"]}
+        if concept_id not in route:
+            raise ValueError("请选择当前目标路线中的知识点")
+        return next(item for item in pack["concepts"] if item["id"] == concept_id)
+
     def _get(self) -> None:
         self._check_local_request()
         parsed = urlsplit(self.path)
@@ -261,6 +276,46 @@ class MindOSHandler(BaseHTTPRequestHandler):
                 raise ValueError("请先确认目标知识点")
             self.server.storage.skip_diagnostics(self._session(), pack, target["concept_id"])
             self._json(HTTPStatus.OK, {"dashboard": self._dashboard(pack["id"])})
+        elif parsed.path == "/api/tutor/start":
+            pack = self.server.catalog.get(payload.get("course_id", ""))
+            concept = self._tutor_concept(pack, payload.get("concept_id", ""))
+            reset = payload.get("reset", False)
+            if not isinstance(reset, bool):
+                raise ValueError("重新讲解参数无效")
+            history = self.server.storage.tutor_turns(self._session(), pack, concept["id"])
+            if not history or reset:
+                prerequisites = [item["title"] for item in pack["concepts"]
+                                 if any(edge["type"] == "prerequisite" and edge["from"] == item["id"]
+                                        and edge["to"] == concept["id"] for edge in pack["relations"])]
+                answer = self.server.model.tutor(
+                    pack["title"], concept["title"], prerequisites,
+                    self._learner_hint(pack, concept["id"]),
+                    "请从零开始深入讲解这一节，像一对一教学那样逐步说明，并允许我随时打断提问。",
+                    [], new_lesson=True)
+                self.server.storage.save_tutor_turns(
+                    self._session(), pack, concept["id"], [("assistant", "lesson", answer)], reset=True)
+                history = [{"role": "assistant", "kind": "lesson", "content": answer}]
+            self._json(HTTPStatus.OK, {"title": concept["title"], "answer": history[0]["content"],
+                                       "turns": history[1:], "generated": True})
+        elif parsed.path == "/api/tutor/ask":
+            pack = self.server.catalog.get(payload.get("course_id", ""))
+            concept = self._tutor_concept(pack, payload.get("concept_id", ""))
+            question = payload.get("question", "")
+            if not isinstance(question, str) or not 2 <= len(question.strip()) <= 500:
+                raise ValueError("请输入 2 至 500 字的问题")
+            history = self.server.storage.tutor_turns(self._session(), pack, concept["id"])
+            if not history or history[0]["kind"] != "lesson":
+                raise ValueError("请先开始本节讲解")
+            prerequisites = [item["title"] for item in pack["concepts"]
+                             if any(edge["type"] == "prerequisite" and edge["from"] == item["id"]
+                                    and edge["to"] == concept["id"] for edge in pack["relations"])]
+            answer = self.server.model.tutor(
+                pack["title"], concept["title"], prerequisites,
+                self._learner_hint(pack, concept["id"]), question.strip(), history)
+            self.server.storage.save_tutor_turns(self._session(), pack, concept["id"],
+                                                 [("user", "question", question.strip()),
+                                                  ("assistant", "answer", answer)])
+            self._json(HTTPStatus.OK, {"answer": answer, "generated": True})
         elif parsed.path == "/api/ask":
             course_id = payload.get("course_id", "")
             pack = self.server.catalog.get(course_id)
@@ -364,7 +419,15 @@ class MindOSHandler(BaseHTTPRequestHandler):
             concept = next((item for item in pack["concepts"] if item["id"] == concept_id), None)
             if concept is None:
                 raise ValueError("请选择当前课程知识点")
-            source = self._concept_source(pack, concept)
+            if payload.get("tutor") is True:
+                self._tutor_concept(pack, concept_id)
+                history = self.server.storage.tutor_turns(self._session(), pack, concept_id)
+                if not history or history[0]["kind"] != "lesson":
+                    raise ValueError("请先开始本节讲解")
+                source = {"title": f"本节 AI 讲解：{concept['title']}",
+                          "content": history[0]["content"], "url": ""}
+            else:
+                source = self._concept_source(pack, concept)
             states = [item for item in self._dashboard(pack["id"])["progress"] if item["concept_id"] == concept_id]
             learner_hint = "；".join(f"{item['dimension_label']}：{item['state_label']}" for item in states)
             generated = self.server.model.generate_quiz(concept["title"], source, learner_hint)

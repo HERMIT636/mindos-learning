@@ -68,6 +68,13 @@ class Storage:
                   choices TEXT NOT NULL, answer TEXT NOT NULL, explanation TEXT NOT NULL,
                   source_title TEXT NOT NULL, source_url TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS tutor_turns (
+                  id INTEGER PRIMARY KEY, session_id TEXT NOT NULL, course_id TEXT NOT NULL,
+                  course_version TEXT NOT NULL, concept_id TEXT NOT NULL,
+                  role TEXT NOT NULL, kind TEXT NOT NULL, content TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS tutor_turns_scope ON tutor_turns
+                  (session_id, course_id, course_version, concept_id, id);
             """)
 
     @contextmanager
@@ -183,6 +190,28 @@ class Storage:
                        (quiz["id"], session_id, pack["id"], pack["version"], quiz["concept_id"],
                         quiz["prompt"], json.dumps(quiz["choices"], ensure_ascii=False), quiz["answer"],
                         quiz["explanation"], quiz["source_title"], quiz["source_url"]))
+
+    def tutor_turns(self, session_id: str, pack: dict, concept_id: str) -> list[dict]:
+        with self.connect() as db:
+            rows = db.execute(
+                "SELECT role,kind,content FROM tutor_turns WHERE session_id=? AND course_id=? "
+                "AND course_version=? AND concept_id=? ORDER BY id",
+                (session_id, pack["id"], pack["version"], concept_id),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def save_tutor_turns(self, session_id: str, pack: dict, concept_id: str,
+                         turns: list[tuple[str, str, str]], reset: bool = False) -> None:
+        with self.connect() as db:
+            scope = (session_id, pack["id"], pack["version"], concept_id)
+            if reset:
+                db.execute("DELETE FROM tutor_turns WHERE session_id=? AND course_id=? "
+                           "AND course_version=? AND concept_id=?", scope)
+            db.executemany(
+                "INSERT INTO tutor_turns(session_id,course_id,course_version,concept_id,role,kind,content) "
+                "VALUES(?,?,?,?,?,?,?)",
+                [(*scope, role, kind, content) for role, kind, content in turns],
+            )
 
     def quiz(self, session_id: str, pack: dict, quiz_id: str) -> dict | None:
         with self.connect() as db:

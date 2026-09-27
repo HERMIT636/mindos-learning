@@ -1,10 +1,10 @@
 # MindOS
 
-**面向多课程的开源自适应学习平台：课程知识库、动态知识状态与个性化学习规划。**
+**面向多课程的 AI 逐节教学原型：目标路线、随时追问、节后小测与学习状态。**
 
 An open-source adaptive learning platform built around course packs, retrieval-augmented generation, and evidence-based learner states.
 
-> 当前阶段：本地可运行的学习原型。首次进入先选资料模式或大模型模式，再选课程、章节与目标知识点；学前小测可跳过，然后从路线第一讲逐步学习、练习和查看后续计划。资料模式显示已有讲义；服务端配置模型后，可获得结合学习状态的补充讲解和疑问回复。主课程讲义仍不够深入，尚待教师审核；正式用户认证、隔离代码测试和真实学习效果验证仍待建设。
+> 当前阶段：本地可运行的学习原型。网页教学需要先在服务端配置对话模型；选定课程目标后，可跳过学前小测，沿先修路线逐节获得深入讲解、随时追问并做节后小测。AI 教学依据课程目录和学习证据生成，不展示旧的本地草稿讲义。课程内容与 AI 出题仍待教师审核；正式用户认证和真实学习效果验证仍待建设。
 
 ## 项目解决什么问题
 
@@ -14,12 +14,12 @@ MindOS 希望帮助学习者明确当前薄弱点，获取有来源的学习材�
 
 ## 设计中的学习流程
 
-选择课程与目标 → 可做或跳过学前小测 → 从路线第一讲逐步学习 → 练习与独立复测 → 更新状态和后续任务。
+连接 AI → 选择课程与目标 → 可做或跳过学前小测 → 逐节讲解、追问与节后小测 → 独立复测 → 更新状态和后续任务。
 
 | 部分 | 作用 |
 | --- | --- |
 | 课程包 | 配置知识点、能力维度、资料、任务和评分依据 |
-| 课程检索 | 当前按知识点和关键词检索；配置 Embedding 后可选向量排序，尚无完整教材向量库 |
+| 课程检索 | 教学主流程不依赖 RAG；旧检索接口保留供研究，尚无完整教材向量库 |
 | 知识关系 | 表达先修与关联，约束任务顺序 |
 | 学习者状态 | 根据作答证据记录各维度的当前判断 |
 | 任务规划 | 结合目标、缺口和时间安排下一步 |
@@ -28,7 +28,7 @@ MindOS 希望帮助学习者明确当前薄弱点，获取有来源的学习材�
 
 - [完整设计大纲](MindOS_最终设计大纲.md)：产品范围、架构、评估与落地路线。
 - [主课程学习路线](docs/learning-paths.md)：三门优先课程的章节、知识点与当前内容边界。
-- [讲解稿与检索策略](docs/teaching-content-strategy.md)：当前 RAG 的真实范围，以及如何将学习对话整理成可用讲稿。
+- [AI 教学与检索策略](docs/teaching-content-strategy.md)：逐节对话的分工、边界与旧 RAG 的真实范围。
 - [课程包约定](docs/course-packs.md)与 [JSON Schema](schemas/course-pack.schema.json)。
 - [机器学习](course-packs/machine-learning/manifest.json)、[HPC](course-packs/hpc-foundations/manifest.json)、[昇腾 Ascend C](course-packs/ascend-c-operators/manifest.json)课程包。
 - [Python 基础示例](course-packs/python-foundations/manifest.json)。

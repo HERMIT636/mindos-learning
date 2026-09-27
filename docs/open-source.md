@@ -1,6 +1,6 @@
 # GitHub 开源发布说明
 
-公开仓库：[HERMIT636/mindos-learning](https://github.com/HERMIT636/mindos-learning)。首批开源文件于 2026-09-27 发布，包含设计文档、课程包格式、原创示例及检查工具；项目目前处于设计与课程包示例阶段，完整应用尚未实现。
+公开仓库：[HERMIT636/mindos-learning](https://github.com/HERMIT636/mindos-learning)。首批设计与课程包文件于 2026-09-27 发布；目前已增加本地可运行的学习原型，供演示两门课程的学习闭环。课程内容仍待审核，真实学习效果未验证。
 
 ## 仓库信息
 

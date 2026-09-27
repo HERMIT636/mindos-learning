@@ -79,6 +79,12 @@ def validate_pack(path: Path, validator: Draft202012Validator) -> list[str]:
 
     for task in pack["tasks"]:
         label = f"task {task['id']}"
+        if task["task_type"] == "single_choice":
+            option_ids = [option["id"] for option in task["choices"]]
+            if len(option_ids) != len(set(option_ids)):
+                errors.append(f"{label} 选项编号重复")
+            if task["reference_answer"] not in option_ids:
+                errors.append(f"{label} 参考答案不在选项中")
         check_refs(task["concept_ids"], concept_ids, label)
         check_refs(task["dimension_ids"], dimension_ids, label)
         allowed_dimensions = {

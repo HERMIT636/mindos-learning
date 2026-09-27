@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#142b3e">
+  <meta name="description" content="MindOS 多课程自适应学习原型">
+  <title>MindOS · 把下一步学清楚</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="课程导航">
+      <div class="brand"><span class="brand-mark">M</span><span><strong>MindOS</strong><small>学习路径实验室</small></span></div>
+      <div class="sidebar-copy"><span class="eyebrow">你的学习空间</span><h2>从一个问题<br>走向下一步。</h2><p>选择课程，完成小题，再根据作答证据调整学习路线。</p></div>
+      <div class="sidebar-section"><span class="sidebar-label">选择课程</span><nav id="course-list" class="course-list" aria-label="课程列表"></nav></div>
+      <div class="sidebar-foot"><span class="foot-dot"></span> 本地演示 · 草稿课程内容</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar"><span class="topbar-location">学习工作台 <span>/</span> <b id="breadcrumb">课程</b></span><span class="status-pill" id="model-status">正在连接本地服务</span></header>
+      <div class="content">
+        <section class="hero" aria-labelledby="course-title">
+          <div class="hero-text"><span class="eyebrow warm">MINDOS · 课程概览</span><h1 id="course-title">正在加载课程</h1><p id="course-audience">请稍候。</p><div class="hero-tags" id="course-goals"></div></div>
+          <div class="hero-figure" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="core-dot"></div><span class="orbit-label label-one">学习</span><span class="orbit-label label-two">练习</span><span class="orbit-label label-three">复测</span></div>
+        </section>
+
+        <section class="metrics" aria-label="学习概况">
+          <div class="metric"><span>知识维度</span><strong id="metric-total">—</strong><small>按课程分别记录</small></div>
+          <div class="metric"><span>复测通过</span><strong id="metric-retested">—</strong><small>来自不同任务的证据</small></div>
+          <div class="metric"><span>待补强与复核</span><strong id="metric-needs">—</strong><small>值得优先关注</small></div>
+          <div class="metric"><span>独立作答</span><strong id="metric-evidence">—</strong><small>已记录的有效提交</small></div>
+        </section>
+
+        <div class="columns">
+          <div class="primary-column">
+            <section class="panel next-panel" aria-labelledby="next-title"><div class="panel-head"><div><span class="eyebrow">NEXT STEP</span><h2 id="next-title">建议下一步</h2></div><span class="small-badge">依据当前证据</span></div><p id="next-reason" class="next-reason">正在整理学习路线…</p><button id="next-button" class="button button-primary" type="button">开始推荐练习 <span aria-hidden="true">↗</span></button></section>
+
+            <section class="panel work-panel" id="workspace" aria-labelledby="work-title"><div class="panel-head"><div><span class="eyebrow">PRACTICE SPACE</span><h2 id="work-title">练习工作台</h2></div><span class="small-badge">公开示例题</span></div>
+              <div class="work-controls"><label for="task-select">选择练习</label><select id="task-select"></select></div>
+              <div class="mode-tabs" role="group" aria-label="作答模式"><button id="mode-practice" class="mode-tab active" type="button" aria-pressed="true">辅助练习</button><button id="mode-independent" class="mode-tab" type="button" aria-pressed="false">独立作答</button></div>
+              <div id="mode-note" class="mode-note">可以查看资料并试答；练习结果不会计入独立掌握证据。</div>
+              <div class="question-box"><div class="question-kicker"><span id="task-kind">题型</span><span id="task-concept">知识点</span></div><h3 id="task-prompt">请选择题目</h3><div id="answer-field"></div></div>
+              <div class="work-actions"><button id="submit-button" class="button button-primary" type="button">提交作答</button><span class="quiet">开放回答和代码题仅保存作答，暂不自动评分。</span></div>
+              <div id="feedback" class="feedback" role="status" aria-live="polite" hidden></div>
+            </section>
+          </div>
+
+          <div class="secondary-column">
+            <section class="panel progress-panel" aria-labelledby="progress-title"><div class="panel-head"><div><span class="eyebrow">LEARNING MAP</span><h2 id="progress-title">知识状态</h2></div></div><p class="panel-intro">每项状态都来自课程内的独立作答记录。</p><div id="progress-list" class="progress-list"></div></section>
+
+            <section class="panel ask-panel" aria-labelledby="ask-title"><div class="panel-head"><div><span class="eyebrow">COURSE MATERIALS</span><h2 id="ask-title">课程资料助手</h2></div></div><p class="panel-intro" id="ask-description">从当前课程的公开资料寻找相关段落，并显示出处。</p><form id="ask-form"><label for="ask-input" class="visually-hidden">输入课程问题</label><textarea id="ask-input" rows="3" maxlength="500" placeholder="例如：return 和 print 有什么区别？"></textarea><button class="button button-secondary" id="ask-button" type="submit">查找相关资料 <span aria-hidden="true">↗</span></button></form><div id="ask-result" class="ask-result" aria-live="polite"></div></section>
+
+            <section class="panel history-panel" aria-labelledby="history-title"><div class="panel-head"><div><span class="eyebrow">EVIDENCE</span><h2 id="history-title">近期作答</h2></div></div><div id="history-list" class="history-list"><p class="empty">尚无作答记录。</p></div></section>
+          </div>
+        </div>
+        <footer class="page-foot">MindOS 原型 · 课程内容尚待教师审核。掌握状态仅用于演示，不代表真实能力测评。</footer>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

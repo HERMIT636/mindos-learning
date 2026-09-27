@@ -1,2 +1,2 @@
-# Course-pack validation only; the application is not implemented yet.
+# Course-pack validation; the local prototype itself uses Python's standard library.
 jsonschema>=4.19.2,<5

@@ -2,31 +2,63 @@
   "$schema": "../../schemas/course-pack.schema.json",
   "schema_version": "0.1.0",
   "id": "python-foundations",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "title": "Python 基础：函数与返回值",
   "language": "zh-CN",
   "level": "beginner",
   "audience": "了解变量和基本算术运算的编程入门者",
   "license": "MIT",
   "review_status": "draft",
-  "learning_goals": ["说明函数调用与返回值的关系", "编写返回两个数之和的函数"],
+  "learning_goals": [
+    "说明函数调用与返回值的关系",
+    "编写返回两个数之和的函数"
+  ],
   "dimensions": [
-    {"id": "understanding", "label": "概念理解", "description": "能解释函数与返回值的作用"},
-    {"id": "implementation", "label": "代码实现", "description": "能根据明确要求编写函数"}
+    {
+      "id": "understanding",
+      "label": "概念理解",
+      "description": "能解释函数与返回值的作用"
+    },
+    {
+      "id": "implementation",
+      "label": "代码实现",
+      "description": "能根据明确要求编写函数"
+    }
   ],
   "concepts": [
-    {"id": "functions", "title": "函数定义与调用", "dimension_ids": ["understanding", "implementation"]},
-    {"id": "return-value", "title": "返回值", "dimension_ids": ["understanding", "implementation"]}
+    {
+      "id": "functions",
+      "title": "函数定义与调用",
+      "dimension_ids": [
+        "understanding",
+        "implementation"
+      ]
+    },
+    {
+      "id": "return-value",
+      "title": "返回值",
+      "dimension_ids": [
+        "understanding",
+        "implementation"
+      ]
+    }
   ],
   "relations": [
-    {"from": "functions", "to": "return-value", "type": "prerequisite"}
+    {
+      "from": "functions",
+      "to": "return-value",
+      "type": "prerequisite"
+    }
   ],
   "resources": [
     {
       "id": "functions-note",
       "title": "函数与返回值入门",
       "path": "materials/functions.md",
-      "concept_ids": ["functions", "return-value"],
+      "concept_ids": [
+        "functions",
+        "return-value"
+      ],
       "license": "MIT",
       "provenance": "MindOS 原创公开示例，待教学审核"
     }
@@ -37,11 +69,23 @@
       "task_type": "short_answer",
       "purpose": "practice",
       "prompt": "在函数中，return 和 print 的主要作用有什么不同？",
-      "concept_ids": ["return-value"],
-      "dimension_ids": ["understanding"],
+      "concept_ids": [
+        "return-value"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
       "rubric": [
-        {"dimension_id": "understanding", "criterion": "指出 return 将值交回调用者并结束本次函数执行", "max_score": 2},
-        {"dimension_id": "understanding", "criterion": "指出 print 的主要作用是输出显示内容，不会自动把显示内容作为所在函数的返回值", "max_score": 2}
+        {
+          "dimension_id": "understanding",
+          "criterion": "指出 return 将值交回调用者并结束本次函数执行",
+          "max_score": 2
+        },
+        {
+          "dimension_id": "understanding",
+          "criterion": "指出 print 的主要作用是输出显示内容，不会自动把显示内容作为所在函数的返回值",
+          "max_score": 2
+        }
       ],
       "reference_answer": "return 将值交给调用者并结束本次函数执行；print 用于显示内容。仅调用 print 且没有执行返回具体值语句的普通函数通常返回 None。"
     },
@@ -50,13 +94,162 @@
       "task_type": "code",
       "purpose": "practice",
       "prompt": "实现 add(a, b)，要求返回两个输入数的和，不需要打印。",
-      "concept_ids": ["functions", "return-value"],
-      "dimension_ids": ["implementation"],
+      "concept_ids": [
+        "functions",
+        "return-value"
+      ],
+      "dimension_ids": [
+        "implementation"
+      ],
       "rubric": [
-        {"dimension_id": "implementation", "criterion": "定义接受 a 和 b 两个参数的 add 函数", "max_score": 1},
-        {"dimension_id": "implementation", "criterion": "使用 return 返回 a + b，调用者可以取得结果", "max_score": 2}
+        {
+          "dimension_id": "implementation",
+          "criterion": "定义接受 a 和 b 两个参数的 add 函数",
+          "max_score": 1
+        },
+        {
+          "dimension_id": "implementation",
+          "criterion": "使用 return 返回 a + b，调用者可以取得结果",
+          "max_score": 2
+        }
       ],
       "reference_answer": "def add(a, b):\n    return a + b"
+    },
+    {
+      "id": "identify-call",
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "prompt": "已定义函数 greet。下列哪一项会调用它？",
+      "concept_ids": [
+        "functions"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "text": "def greet():"
+        },
+        {
+          "id": "b",
+          "text": "greet()"
+        },
+        {
+          "id": "c",
+          "text": "return greet"
+        }
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "选出唯一正确答案",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "b"
+    },
+    {
+      "id": "identify-parameter",
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "prompt": "在 def double(x): 中，x 是什么？",
+      "concept_ids": [
+        "functions"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "text": "函数名"
+        },
+        {
+          "id": "b",
+          "text": "形参"
+        },
+        {
+          "id": "c",
+          "text": "返回值"
+        }
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "选出唯一正确答案",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "b"
+    },
+    {
+      "id": "return-vs-print",
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "prompt": "哪句话准确描述 return 与 print 的区别？",
+      "concept_ids": [
+        "return-value"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "text": "print 会把显示的值自动返回给调用者"
+        },
+        {
+          "id": "b",
+          "text": "return 只负责把内容显示在屏幕上"
+        },
+        {
+          "id": "c",
+          "text": "return 将值交回调用者；print 主要显示内容"
+        }
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "选出唯一正确答案",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "c"
+    },
+    {
+      "id": "read-return-value",
+      "task_type": "single_choice",
+      "purpose": "practice",
+      "prompt": "执行 def add(a, b): return a + b，然后令 result = add(2, 4)。result 的值是什么？",
+      "concept_ids": [
+        "return-value"
+      ],
+      "dimension_ids": [
+        "understanding"
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "text": "6"
+        },
+        {
+          "id": "b",
+          "text": "None"
+        },
+        {
+          "id": "c",
+          "text": "字符串 \"2 + 4\""
+        }
+      ],
+      "rubric": [
+        {
+          "dimension_id": "understanding",
+          "criterion": "选出唯一正确答案",
+          "max_score": 1
+        }
+      ],
+      "reference_answer": "a"
     }
   ]
 }

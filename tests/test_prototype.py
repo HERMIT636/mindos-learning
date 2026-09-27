@@ -133,6 +133,9 @@ class PrototypeTests(unittest.TestCase):
         _, response = self.call("/api/goal", {"course_id": "python-foundations", "goal": goal})
         self.assertEqual(response["dashboard"]["goal"], goal)
         self.assertEqual(len(response["dashboard"]["plan"]), 2)
+        status, blocked = self.call("/api/lesson", {"course_id": "python-foundations"})
+        self.assertEqual(status, 400)
+        self.assertIn("目标", blocked["error"])
         for task_id, answer in (("diagnose-function", "a"), ("diagnose-return", "c")):
             status, response = self.call("/api/diagnose", {"course_id": "python-foundations", "task_id": task_id, "answer": answer})
             self.assertEqual(status, 200)
@@ -143,6 +146,13 @@ class PrototypeTests(unittest.TestCase):
         implementation = next(row for row in dashboard["progress"] if row["concept_id"] == "functions" and row["dimension_id"] == "implementation")
         self.assertEqual(understanding["state"], "needs_work")
         self.assertEqual(implementation["state"], "unassessed")
+        self.call("/api/mode", {"mode": "materials"})
+        self.call("/api/target", {"course_id": "python-foundations",
+                                  "chapter_id": "function-results", "concept_id": "return-value"})
+        status, lesson = self.call("/api/lesson", {"course_id": "python-foundations"})
+        self.assertEqual(status, 200)
+        self.assertFalse(lesson["generated"])
+        self.assertIn("返回与显示", lesson["source"]["title"])
         for level in (1, 2, 3):
             status, hint = self.call("/api/ask", {"course_id": "python-foundations", "question": "return 和 print 有什么区别？", "hint_level": level})
             self.assertEqual(status, 200)
@@ -216,6 +226,13 @@ class PrototypeTests(unittest.TestCase):
                                                                   "custom_text": "我想理解 print 和 return 的区别"})
             self.assertEqual(status, 200)
             self.assertEqual(analysis["concept_id"], "return-value")
+            self.call("/api/target", {"course_id": "python-foundations", "chapter_id": "function-results",
+                                      "concept_id": "return-value", "custom_text": "我想理解 print 和 return 的区别"})
+            for task_id, answer in (("diagnose-function", "b"), ("diagnose-return", "c")):
+                self.call("/api/diagnose", {"course_id": "python-foundations", "task_id": task_id, "answer": answer})
+            status, lesson = self.call("/api/lesson", {"course_id": "python-foundations"})
+            self.assertEqual(status, 200)
+            self.assertTrue(lesson["generated"])
             status, quiz = self.call("/api/quiz", {"course_id": "python-foundations", "concept_id": "return-value"})
             self.assertEqual(status, 200)
             self.assertNotIn("answer", quiz)

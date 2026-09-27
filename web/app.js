@@ -12,6 +12,20 @@ const ui = {
   courseConfirm: document.querySelector('#course-confirm'),
   courseHero: document.querySelector('#course-hero'),
   flowSteps: document.querySelector('#flow-steps'),
+  stageTarget: document.querySelector('#stage-target'),
+  stageDiagnostic: document.querySelector('#stage-diagnostic'),
+  stageExplain: document.querySelector('#stage-explain'),
+  stagePractice: document.querySelector('#stage-practice'),
+  stageStatus: document.querySelector('#stage-status'),
+  diagnosticComplete: document.querySelector('#diagnostic-complete'),
+  lessonPanel: document.querySelector('#lesson-panel'),
+  lessonTitle: document.querySelector('#lesson-title'),
+  lessonContext: document.querySelector('#lesson-context'),
+  lessonResult: document.querySelector('#lesson-result'),
+  lessonRefresh: document.querySelector('#lesson-refresh'),
+  goPractice: document.querySelector('#go-practice'),
+  goStatus: document.querySelector('#go-status'),
+  backExplain: document.querySelector('#back-explain'),
   setup: document.querySelector('#setup'),
   title: document.querySelector('#course-title'),
   audience: document.querySelector('#course-audience'),
@@ -35,6 +49,11 @@ const ui = {
   pathList: document.querySelector('#path-list'),
   metrics: document.querySelector('#metrics'),
   learningColumns: document.querySelector('#learning-columns'),
+  nextPanel: document.querySelector('#next-panel'),
+  workspace: document.querySelector('#workspace'),
+  progressPanel: document.querySelector('#progress-panel'),
+  askPanel: document.querySelector('#ask-panel'),
+  historyPanel: document.querySelector('#history-panel'),
   total: document.querySelector('#metric-total'),
   retested: document.querySelector('#metric-retested'),
   needs: document.querySelector('#metric-needs'),
@@ -64,7 +83,8 @@ const ui = {
 };
 
 const state = { courses: [], dashboard: null, courseId: '', taskId: '', mode: 'practice',
-  learningMode: null, chatReady: false, analysis: null, quiz: null, busy: false };
+  learningMode: null, chatReady: false, analysis: null, quiz: null, stage: 'target',
+  lessonCache: null, lessonLoadingKey: null, busy: false };
 const typeNames = { single_choice: '单选题', numeric: '数值题', short_answer: '简答题', code: '代码题' };
 
 function element(tag, className, text) {
@@ -105,12 +125,98 @@ function showEntry(showGate = false) {
   ui.flowSteps.hidden = !active;
   ui.setup.hidden = !active;
   if (!active) {
-    ui.pathPanel.hidden = true;
-    ui.metrics.hidden = true;
-    ui.learningColumns.hidden = true;
+    [ui.stageTarget, ui.stageDiagnostic, ui.stageExplain, ui.stagePractice, ui.stageStatus]
+      .forEach(page => { page.hidden = true; });
+  } else {
+    renderStages();
   }
   ui.modelStatus.textContent = state.learningMode === 'ai' && !gate ? '大模型模式' :
     state.learningMode === 'materials' && !gate ? '资料模式' : '选择学习方式';
+}
+
+function organizeStages() {
+  ui.stageTarget.append(ui.setup);
+  ui.stageDiagnostic.append(ui.diagnosticBox);
+  ui.stageExplain.insertBefore(ui.askPanel, ui.stageExplain.querySelector('.stage-actions'));
+  ui.stagePractice.insertBefore(ui.workspace, ui.stagePractice.querySelector('.stage-actions'));
+  ui.stagePractice.insertBefore(ui.aiQuizBox, ui.stagePractice.querySelector('.stage-actions'));
+  ui.stageStatus.append(ui.pathPanel, ui.metrics, ui.progressPanel, ui.nextPanel, ui.historyPanel);
+  ui.learningColumns.remove();
+}
+
+function renderStages() {
+  if (!state.dashboard) return;
+  const target = state.dashboard.target;
+  const pending = state.dashboard.diagnostic.some(item => item.result === null);
+  const complete = Boolean(target) && !pending;
+  if (state.stage === 'diagnostic' && !target) state.stage = 'target';
+  if (['explain', 'practice', 'status'].includes(state.stage) && !complete) {
+    state.stage = target ? 'diagnostic' : 'target';
+  }
+  const pages = { target: ui.stageTarget, diagnostic: ui.stageDiagnostic,
+    explain: ui.stageExplain, practice: ui.stagePractice, status: ui.stageStatus };
+  Object.entries(pages).forEach(([name, page]) => { page.hidden = state.stage !== name; });
+  ui.setup.hidden = state.stage !== 'target';
+  ui.diagnosticBox.hidden = state.stage !== 'diagnostic' || !pending;
+  ui.diagnosticComplete.hidden = state.stage !== 'diagnostic' || pending;
+  ui.pathPanel.hidden = state.stage !== 'status';
+  ui.metrics.hidden = state.stage !== 'status';
+  ui.aiQuizBox.hidden = state.stage !== 'practice' || state.mode === 'independent' || state.learningMode !== 'ai';
+  ui.flowSteps.querySelectorAll('button[data-stage]').forEach(button => {
+    const name = button.dataset.stage;
+    button.disabled = name === 'diagnostic' ? !target :
+      ['explain', 'practice', 'status'].includes(name) && !complete;
+    button.setAttribute('aria-current', state.stage === name ? 'step' : 'false');
+  });
+  if (state.stage === 'explain' && complete) loadLesson();
+}
+
+function showStage(stage) {
+  if (stage === 'explain') {
+    state.mode = 'practice';
+    renderMode();
+  }
+  state.stage = stage;
+  renderStages();
+  ui.flowSteps.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderLesson(result) {
+  ui.lessonTitle.textContent = `${result.title} · 知识点讲解`;
+  ui.lessonContext.textContent = result.generated
+    ? 'AI 已结合当前诊断与作答状态，并依据下方课程资料组织讲解。'
+    : '以下是资料库中的固定讲解；当前未生成新的解释。';
+  const wrapper = element('div');
+  wrapper.append(element('p', '', result.answer));
+  if (result.notice) wrapper.append(element('small', '', result.notice));
+  const source = element('a', '', `查看课程原文：${result.source.title} ↗`);
+  source.href = result.source.url; source.target = '_blank'; source.rel = 'noopener noreferrer';
+  wrapper.append(source);
+  ui.lessonResult.replaceChildren(wrapper);
+}
+
+async function loadLesson(force = false) {
+  const dashboard = state.dashboard;
+  if (!dashboard?.target) return;
+  const key = [state.courseId, dashboard.course.version, dashboard.target.concept_id,
+    state.learningMode, dashboard.valid_evidence_count,
+    dashboard.diagnostic.map(item => item.result).join(',')].join('|');
+  if (!force && state.lessonCache?.key === key) {
+    renderLesson(state.lessonCache.result);
+    return;
+  }
+  if (!force && state.lessonLoadingKey === key) return;
+  state.lessonLoadingKey = key;
+  ui.lessonResult.textContent = '正在准备当前知识点的讲解…';
+  ui.lessonRefresh.disabled = true;
+  try {
+    const result = await api('/api/lesson', { method: 'POST', body: JSON.stringify({ course_id: state.courseId }) });
+    if (state.courseId !== dashboard.course.id || state.dashboard.target?.concept_id !== dashboard.target.concept_id) return;
+    state.lessonCache = { key, result };
+    renderLesson(result);
+  } catch (error) { ui.lessonResult.textContent = error.message; }
+  finally { if (state.lessonLoadingKey === key) state.lessonLoadingKey = null;
+    ui.lessonRefresh.disabled = false; }
 }
 
 function renderCourses() {
@@ -265,14 +371,11 @@ function renderFlow() {
       return label;
     }));
   }
-  ui.pathPanel.hidden = !complete;
-  ui.metrics.hidden = !complete;
-  ui.learningColumns.hidden = !complete;
   if (complete) {
     const weak = plan.filter(item => item.status === '优先补强');
     ui.pathSummary.textContent = weak.length
-      ? `短诊断提示先补强：${weak.map(item => item.title).join('、')}。下方按先修顺序安排资料、练习和复测。`
-      : '短诊断暂未发现明显薄弱点；仍需独立变式题验证。下方按先修顺序继续。';
+      ? `当前证据提示先补强：${weak.map(item => item.title).join('、')}。下方按先修顺序安排资料、练习和复测。`
+      : '当前目标仍可通过独立变式题继续验证。下方按先修顺序安排。';
     ui.pathList.replaceChildren(...plan.map((item, index) => {
       const row = element('div', 'path-item');
       row.append(element('strong', '', `${index + 1}. ${item.title}`), element('span', '', item.status));
@@ -324,8 +427,11 @@ async function selectCourse(courseId) {
   ui.quizContent.replaceChildren();
   state.analysis = null;
   state.quiz = null;
+  state.lessonCache = null;
   try {
     state.dashboard = await api(`/api/dashboard?course_id=${encodeURIComponent(courseId)}`);
+    state.stage = !state.dashboard.target ? 'target' :
+      state.dashboard.diagnostic.some(item => item.result === null) ? 'diagnostic' : 'explain';
     renderDashboard();
     const url = new URL(window.location.href);
     url.searchParams.set('course', courseId);
@@ -341,6 +447,7 @@ async function chooseLearningMode(mode) {
   try {
     const result = await api('/api/mode', { method: 'POST', body: JSON.stringify({ mode }) });
     state.learningMode = result.mode;
+    state.lessonCache = null;
     showEntry();
     if (state.dashboard) renderDashboard();
   } catch (error) { ui.modeHelp.textContent = error.message; }
@@ -351,6 +458,13 @@ ui.chooseMaterials.addEventListener('click', () => chooseLearningMode('materials
 ui.chooseAi.addEventListener('click', () => chooseLearningMode('ai'));
 ui.changeMode.addEventListener('click', () => showEntry(true));
 ui.courseConfirm.addEventListener('click', () => selectCourse(ui.courseSelect.value));
+ui.flowSteps.querySelectorAll('button[data-stage]').forEach(button => {
+  button.addEventListener('click', () => showStage(button.dataset.stage));
+});
+ui.lessonRefresh.addEventListener('click', () => loadLesson(true));
+ui.goPractice.addEventListener('click', () => showStage('practice'));
+ui.goStatus.addEventListener('click', () => showStage('status'));
+ui.backExplain.addEventListener('click', () => showStage('explain'));
 ui.chapterSelect.addEventListener('change', () => {
   renderConceptOptions();
   state.analysis = null;
@@ -406,6 +520,8 @@ ui.goalButton.addEventListener('click', async () => {
     state.dashboard = response.dashboard;
     renderDashboard();
     ui.diagnosticFeedback.textContent = '目标已保存。请完成短诊断。';
+    state.lessonCache = null;
+    showStage(state.dashboard.diagnostic.some(item => item.result === null) ? 'diagnostic' : 'explain');
   } catch (error) { ui.diagnosticFeedback.textContent = error.message; }
   finally { state.busy = false; }
 });
@@ -421,7 +537,8 @@ ui.diagnosticSubmit.addEventListener('click', async () => {
     renderDashboard();
     ui.diagnosticFeedback.textContent = response.result.correct ? '已记录。继续下一题。' : '已记录。稍后会把这个知识点列入补强路线。';
     if (state.dashboard.diagnostic.every(item => item.result !== null)) {
-      ui.pathPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      state.lessonCache = null;
+      showStage('explain');
     }
   } catch (error) { ui.diagnosticFeedback.textContent = error.message; }
   finally { state.busy = false; }
@@ -436,7 +553,7 @@ ui.nextButton.addEventListener('click', () => {
   ui.taskSelect.value = state.taskId;
   renderTask();
   renderMode();
-  document.querySelector('#workspace').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showStage('practice');
 });
 
 ui.submit.addEventListener('click', async () => {
@@ -477,7 +594,7 @@ ui.askForm.addEventListener('submit', async event => {
     const task = currentTask();
     const result = await api('/api/ask', {
       method: 'POST',
-      body: JSON.stringify({ course_id: state.courseId, task_id: task?.id,
+      body: JSON.stringify({ course_id: state.courseId, task_id: state.stage === 'practice' ? task?.id : undefined,
         concept_id: state.dashboard.target?.concept_id || task?.concept_ids[0], question,
         hint_level: Number(document.querySelector('input[name="hint-level"]:checked')?.value || 1), mode: state.mode }),
     });
@@ -575,4 +692,5 @@ async function initialize() {
   }
 }
 
+organizeStages();
 initialize();

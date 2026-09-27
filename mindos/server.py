@@ -121,6 +121,21 @@ class MindOSHandler(BaseHTTPRequestHandler):
             "recent": list(reversed(rows[-8:])),
         }
 
+    def _concept_source(self, pack: dict, concept: dict) -> dict:
+        chunks = [item for item in self.server.catalog.teaching_chunks(pack)
+                  if concept["id"] in item["concept_ids"]]
+        if not chunks:
+            raise ValueError("该知识点暂无课程资料")
+        sections = [item for item in chunks if " · " in item["title"]] or chunks
+        concept_terms = terms(concept["title"])
+
+        def score(item: dict) -> tuple[int, int]:
+            section_terms = terms(item["title"].split(" · ")[-1])
+            return (sum(min(weight, section_terms[token]) for token, weight in concept_terms.items()),
+                    len(item["content"]))
+
+        return max(sections, key=score)
+
     def _get(self) -> None:
         self._check_local_request()
         parsed = urlsplit(self.path)
@@ -270,6 +285,35 @@ class MindOSHandler(BaseHTTPRequestHandler):
                 "notice": notice,
                 "generated": generated,
             })
+        elif parsed.path == "/api/lesson":
+            pack = self.server.catalog.get(payload.get("course_id", ""))
+            target = self.server.storage.target(self._session(), pack)
+            if target is None:
+                raise ValueError("请先确认目标知识点")
+            answers = self.server.storage.diagnostics(self._session(), pack)
+            if any(task["id"] not in answers for task in DIAGNOSTICS.get(pack["id"], [])):
+                raise ValueError("请先完成基础测试")
+            concept = next(item for item in pack["concepts"] if item["id"] == target["concept_id"])
+            source = self._concept_source(pack, concept)
+            related = [item for item in self._dashboard(pack["id"])["progress"]
+                       if item["concept_id"] == concept["id"]]
+            learner_hint = "；".join(f"{item['dimension_label']}：{item['state_label']}" for item in related)
+            generated, notice = False, None
+            if self.server.storage.mode(self._session()) == "ai" and self.server.model.chat_ready:
+                try:
+                    answer = self.server.model.explain(
+                        f"请讲解知识点「{concept['title']}」，先点出关键概念，再给一个与课程资料一致的例子；"
+                        "根据学习者状态调整难度，但不要解答当前独立题。", [source], learner_hint, 3)
+                    generated = True
+                except ModelUnavailable:
+                    answer = source["content"]
+                    notice = "模型暂不可用，已展示课程原文。"
+            else:
+                answer = source["content"]
+            self._json(HTTPStatus.OK, {"title": concept["title"], "answer": answer,
+                                       "generated": generated, "notice": notice,
+                                       "source": {key: source[key] for key in
+                                                  ("title", "content", "url", "provenance")}})
         elif parsed.path == "/api/quiz":
             pack = self.server.catalog.get(payload.get("course_id", ""))
             if self.server.storage.mode(self._session()) != "ai" or not self.server.model.chat_ready:
@@ -278,16 +322,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
             concept = next((item for item in pack["concepts"] if item["id"] == concept_id), None)
             if concept is None:
                 raise ValueError("请选择当前课程知识点")
-            chunks = [item for item in self.server.catalog.teaching_chunks(pack)
-                      if concept_id in item["concept_ids"]]
-            if not chunks:
-                raise ValueError("该知识点暂无课程资料")
-            sections = [item for item in chunks if " · " in item["title"]] or chunks
-            concept_terms = terms(concept["title"])
-            source = max(sections, key=lambda item: (
-                sum(min(weight, terms(item["title"].split(" · ")[-1])[token])
-                    for token, weight in concept_terms.items()),
-                len(item["content"])))
+            source = self._concept_source(pack, concept)
             states = [item for item in self._dashboard(pack["id"])["progress"] if item["concept_id"] == concept_id]
             learner_hint = "；".join(f"{item['dimension_label']}：{item['state_label']}" for item in states)
             generated = self.server.model.generate_quiz(concept["title"], source, learner_hint)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import tarfile
+import zipfile
 from pathlib import Path
 
 
@@ -45,6 +46,13 @@ def check_resource(resource: dict) -> str:
                         raise ValueError(f"unreadable archive member: {member.name}")
                     for _ in iter(lambda: extracted.read(1024 * 1024), b""):
                         pass
+    elif path.suffix == ".zip":
+        with zipfile.ZipFile(path) as archive:
+            if not archive.namelist():
+                raise ValueError(f"empty ZIP archive: {relative}")
+            damaged = archive.testzip()
+            if damaged:
+                raise ValueError(f"damaged ZIP member: {relative}: {damaged}")
     elif path.suffix == ".html":
         content = path.read_bytes().lower()
         if b"<html" not in content or b"</html>" not in content:
@@ -63,7 +71,7 @@ def main() -> None:
                     verified += 1
                 else:
                     skipped += 1
-            except (OSError, ValueError, tarfile.TarError) as exc:
+            except (OSError, ValueError, tarfile.TarError, zipfile.BadZipFile) as exc:
                 failed += 1
                 print(f"FAIL {resource['id']}: {exc}")
     print(f"External resources: {verified} verified, {skipped} not downloaded, {failed} failed")

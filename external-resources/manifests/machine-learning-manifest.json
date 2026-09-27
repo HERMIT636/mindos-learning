@@ -5,9 +5,9 @@
   "resources": [
     {
       "id": "sklearn-user-guide-zip",
-      "title": "scikit-learn 离线文档 ZIP（当前文件不完整）",
+      "title": "scikit-learn 离线文档 ZIP（损坏文件已删除）",
       "source_url": "https://github.com/scikit-learn/scikit-learn.github.io/raw/refs/heads/main/stable/_downloads/scikit-learn-docs.zip",
-      "local_path": "machine-learning/scikit-learn-1.9-user-guide.zip",
+      "local_path": "NOT_DOWNLOADED",
       "sha256": "339CFB9C5D6B6EB81895FEEF57B572F46F5028B6E80BBA7D9E1C70FAAB271275",
       "license": "BSD-3-Clause",
       "license_url": "https://github.com/scikit-learn/scikit-learn/blob/main/COPYING",
@@ -25,8 +25,8 @@
       "covers_concepts": [],
       "content_scope": "完整用户指南：监督/无监督学习、线性模型、树/集成、SVM、神经网络、模型评估、交叉验证、预处理流水线、模型持久化。含数学公式、代码示例、API参考。",
       "suitability": "deep_reference",
-      "notes": "本地文件虽与原清单SHA256一致，但ZIP缺少中央目录，无法打开；不能视为完整文档，也不得接入检索。官方版本页标称完整包约99.8 MB；当前文件约35.4 MB。保留原文件供排查。",
-      "integrity_status": "invalid_zip_missing_central_directory",
+      "notes": "2026-09-27 已删除损坏的本地 ZIP；原文件约35.4 MB，虽与历史 SHA256 一致但缺少中央目录。此 SHA256 仅作事故记录，不对应现存文件。不得接入检索；若以后重新下载，须重新核验完整性并更新清单。",
+      "integrity_status": "removed_invalid_zip_missing_central_directory",
       "rag_index_status": "blocked_integrity"
     },
     {

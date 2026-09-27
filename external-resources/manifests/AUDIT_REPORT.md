@@ -1,6 +1,6 @@
 # MindOS 外部开放资料审核与下载报告
 
-> **复核更正（2026-09-27）**：本报告下文的资源数量、完整 ZIP、SHA-256 全部通过及 MPI 4.0 许可结论存在错误。请先阅读 [VALIDATION_ADDENDUM.md](VALIDATION_ADDENDUM.md)。未完成复核的资料不得据本报告直接进入公开仓库或 RAG 索引。
+> **复核更正（2026-09-27）**：本报告下文的资源数量、完整 ZIP、SHA-256 全部通过及 MPI 4.0 许可结论存在错误；损坏的 ZIP 已于同日从本地删除。下文的 ZIP 文件列表仅是历史记录。请先阅读 [VALIDATION_ADDENDUM.md](VALIDATION_ADDENDUM.md)。未完成复核的资料不得据本报告直接进入公开仓库或 RAG 索引。
 
 **生成时间**：2026-09-27
 **项目目录**：`D:\MindOS基于大语言模型与动态知识状态建模的自适应学习系统\external-resources\`

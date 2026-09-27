@@ -5,6 +5,8 @@ from __future__ import annotations
 import http.cookiejar
 import json
 import os
+import sqlite3
+import stat
 import tempfile
 import threading
 import unittest
@@ -16,6 +18,7 @@ from pathlib import Path
 from mindos.catalog import Catalog
 from mindos.model import ModelGateway
 from mindos.retrieval import retrieve
+from mindos.secrets import SecretStore
 from mindos.server import MindOSServer
 
 
@@ -30,7 +33,9 @@ class FakeModelHandler(BaseHTTPRequestHandler):
             ]}
         elif self.path == "/v1/chat/completions":
             system = payload["messages"][0]["content"]
-            if "课程目标匹配助手" in system:
+            if len(payload["messages"]) == 1 and system == "请回复 OK":
+                content = "OK"
+            elif "课程目标匹配助手" in system:
                 content = json.dumps({"concept_id": "return-value", "rationale": "目标涉及函数返回值。"}, ensure_ascii=False)
             elif "课程练习出题助手" in system:
                 content = json.dumps({"prompt": "调用一个只执行 print(3) 的函数时，调用结果是什么？",
@@ -73,6 +78,7 @@ class PrototypeTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.directory = tempfile.TemporaryDirectory()
         cls.server = MindOSServer(0, Path(cls.directory.name) / "demo.sqlite3")
+        cls.server.secrets = SecretStore(Path(cls.directory.name) / "master.key")
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
         cls.url = f"http://127.0.0.1:{cls.server.server_port}"
@@ -123,6 +129,56 @@ class PrototypeTests(unittest.TestCase):
         _, other = self.call("/api/dashboard?course_id=linear-algebra")
         self.assertEqual(other["valid_evidence_count"], 0)
         self.assertTrue(all(row["state"] == "unassessed" for row in other["progress"]))
+
+    def test_model_profiles_encrypt_keys_and_never_return_them(self) -> None:
+        fake = ThreadingHTTPServer(("127.0.0.1", 0), FakeModelHandler)
+        thread = threading.Thread(target=fake.serve_forever, daemon=True)
+        thread.start()
+        marker = "test-secret-never-in-response-123"
+        try:
+            status, saved = self.call("/api/models/save", {"name": "学习模型",
+                "base_url": f"http://127.0.0.1:{fake.server_port}/v1",
+                "chat_model": "fake-chat", "embedding_model": "", "api_key": marker})
+            self.assertEqual(status, 200)
+            profile_id = saved["selected_id"]
+            self.assertTrue(saved["profiles"][0]["has_key"])
+            self.assertNotIn(marker, json.dumps(saved))
+            with sqlite3.connect(self.server.storage.path) as db:
+                encrypted = db.execute("SELECT encrypted_api_key FROM model_profiles WHERE id=?",
+                                       (profile_id,)).fetchone()[0]
+            self.assertNotIn(marker, encrypted)
+            self.assertEqual(self.server.secrets.decrypt(encrypted), marker)
+            status, models = self.call("/api/models")
+            self.assertEqual(status, 200)
+            self.assertNotIn("encrypted_api_key", json.dumps(models))
+            self.assertNotIn(marker, json.dumps(models))
+            other_client = urllib.request.build_opener(
+                urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+            with other_client.open(self.url + "/api/models", timeout=5) as response:
+                other_models = json.loads(response.read())
+            self.assertNotEqual(other_models["selected_id"], profile_id)
+            if os.name != "nt":
+                self.assertEqual(stat.S_IMODE(self.server.secrets.key_path.stat().st_mode), 0o600)
+            status, tested = self.call("/api/models/test", {})
+            self.assertEqual(status, 200)
+            self.assertTrue(tested["ok"])
+            status, updated = self.call("/api/models/save", {"id": profile_id, "name": "修改后",
+                "base_url": f"http://127.0.0.1:{fake.server_port}/v1",
+                "chat_model": "fake-chat", "embedding_model": "", "api_key": ""})
+            self.assertEqual(status, 200)
+            self.assertTrue(updated["profiles"][0]["has_key"])
+            status, invalid = self.call("/api/models/save", {"name": "不安全地址",
+                "base_url": "http://example.com/v1", "chat_model": "fake-chat",
+                "api_key": "placeholder"})
+            self.assertEqual(status, 400)
+            self.assertNotIn("placeholder", json.dumps(invalid))
+            status, removed = self.call("/api/models/delete", {"id": profile_id})
+            self.assertEqual(status, 200)
+            self.assertEqual(removed["profiles"], [])
+        finally:
+            fake.shutdown()
+            fake.server_close()
+            thread.join(timeout=2)
 
     def test_every_demo_concept_has_complete_authored_lesson(self) -> None:
         catalog = Catalog()

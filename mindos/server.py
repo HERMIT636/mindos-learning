@@ -19,6 +19,7 @@ from .flow import diagnostic_tasks, learning_plan, public_diagnostics
 from .learning import progress, recommendation, submit
 from .model import ModelGateway, ModelUnavailable
 from .retrieval import retrieve, terms
+from .secrets import SecretStore
 from .storage import Storage
 
 LOGGER = logging.getLogger("mindos")
@@ -38,6 +39,7 @@ class MindOSServer(ThreadingHTTPServer):
         self.catalog = Catalog()
         self.storage = Storage(data_path)
         self.model = ModelGateway()
+        self.secrets = SecretStore()
         super().__init__(("127.0.0.1", port), MindOSHandler)
 
 
@@ -55,6 +57,35 @@ class MindOSHandler(BaseHTTPRequestHandler):
             self._new_session = not bool(re.fullmatch(r"[0-9a-f]{32}", value))
             self._session_value = secrets.token_hex(16) if self._new_session else value
         return self._session_value
+
+    def _selected_profile(self) -> dict | None:
+        selected = self.server.storage.selected_model_profile(self._session())
+        return self.server.storage.model_profile(selected) if selected else None
+
+    def _model_ready(self) -> bool:
+        profile = self._selected_profile()
+        return bool(profile["base_url"] and profile["chat_model"]) if profile else self.server.model.chat_ready
+
+    def _embedding_ready(self) -> bool:
+        profile = self._selected_profile()
+        return bool(profile["base_url"] and profile["embedding_model"]) if profile else self.server.model.embedding_ready
+
+    def _model(self) -> ModelGateway:
+        profile = self._selected_profile()
+        if profile is None:
+            return self.server.model
+        return ModelGateway({"base_url": profile["base_url"], "chat_model": profile["chat_model"],
+                             "embedding_model": profile["embedding_model"],
+                             "api_key": self.server.secrets.decrypt(profile["encrypted_api_key"])})
+
+    def _models_public(self) -> dict:
+        selected = self.server.storage.selected_model_profile(self._session())
+        return {"profiles": [
+            {key: profile[key] for key in ("id", "name", "base_url", "chat_model", "embedding_model")}
+            | {"has_key": bool(profile["encrypted_api_key"])}
+            for profile in self.server.storage.model_profiles()
+        ], "selected_id": selected or ("env" if self.server.model.chat_ready else None),
+            "env_available": self.server.model.chat_ready}
 
     def _send(self, status: HTTPStatus, body: bytes, content_type: str) -> None:
         self.send_response(status)
@@ -155,7 +186,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
         )
 
     def _tutor_concept(self, pack: dict, concept_id: str) -> dict:
-        if self.server.storage.mode(self._session()) != "ai" or not self.server.model.chat_ready:
+        if self.server.storage.mode(self._session()) != "ai" or not self._model_ready():
             raise ValueError("逐节讲解需要先配置并启用大模型")
         target = self.server.storage.target(self._session(), pack)
         if target is None:
@@ -180,10 +211,12 @@ class MindOSHandler(BaseHTTPRequestHandler):
         elif parsed.path == "/api/courses":
             self._json(HTTPStatus.OK, {
                 "courses": self.server.catalog.courses(),
-                "chat_ready": self.server.model.chat_ready,
-                "embedding_ready": self.server.model.embedding_ready,
+                "chat_ready": self._model_ready(),
+                "embedding_ready": self._embedding_ready(),
                 "learning_mode": self.server.storage.mode(self._session()),
             })
+        elif parsed.path == "/api/models":
+            self._json(HTTPStatus.OK, self._models_public())
         elif parsed.path == "/api/dashboard":
             course_id = parse_qs(parsed.query).get("course_id", [""])[0]
             self._json(HTTPStatus.OK, self._dashboard(course_id))
@@ -206,10 +239,76 @@ class MindOSHandler(BaseHTTPRequestHandler):
             mode = payload.get("mode")
             if not isinstance(mode, str) or mode not in {"materials", "ai"}:
                 raise ValueError("请选择资料模式或大模型模式")
-            if mode == "ai" and not self.server.model.chat_ready:
+            if mode == "ai" and not self._model_ready():
                 raise ValueError("服务端尚未配置大模型；请先在本机 .env 中配置并重启，或选择资料模式")
             self.server.storage.set_mode(self._session(), mode)
             self._json(HTTPStatus.OK, {"mode": mode})
+        elif parsed.path == "/api/models/save":
+            profile_id = payload.get("id")
+            old = None
+            if profile_id is not None:
+                if not isinstance(profile_id, str) or len(profile_id) > 64:
+                    raise ValueError("模型配置编号无效")
+                old = self.server.storage.model_profile(profile_id)
+                if old is None:
+                    raise ValueError("模型配置不存在")
+            elif len(self.server.storage.model_profiles()) >= 20:
+                raise ValueError("最多保存 20 个模型配置")
+            fields = {}
+            for key, limit in (("name", 60), ("base_url", 500),
+                               ("chat_model", 120), ("embedding_model", 120)):
+                value = payload.get(key, "")
+                if not isinstance(value, str) or len(value) > limit or "\n" in value or "\r" in value:
+                    raise ValueError("模型名称或地址格式无效")
+                fields[key] = value.strip()
+            if not fields["name"] or not fields["base_url"] or not fields["chat_model"]:
+                raise ValueError("请填写配置名称、API 地址和对话模型名称")
+            api_key = payload.get("api_key", "")
+            clear_key = payload.get("clear_key", False)
+            if (not isinstance(api_key, str) or len(api_key) > 4096 or
+                    "\n" in api_key or "\r" in api_key or not isinstance(clear_key, bool) or
+                    (clear_key and api_key)):
+                raise ValueError("API 密钥格式无效")
+            key_for_validation = api_key or (self.server.secrets.decrypt(old["encrypted_api_key"])
+                                             if old and not clear_key else "")
+            ModelGateway({"base_url": fields["base_url"], "chat_model": fields["chat_model"],
+                          "embedding_model": fields["embedding_model"], "api_key": key_for_validation})
+            encrypted = (self.server.secrets.encrypt(api_key) if api_key else
+                         "" if clear_key else old["encrypted_api_key"] if old else "")
+            profile = {"id": profile_id or secrets.token_urlsafe(12), **fields,
+                       "encrypted_api_key": encrypted}
+            self.server.storage.save_model_profile(profile)
+            self.server.storage.select_model_profile(self._session(), profile["id"])
+            self._json(HTTPStatus.OK, self._models_public())
+        elif parsed.path == "/api/models/select":
+            profile_id = payload.get("id")
+            if profile_id == "env":
+                if not self.server.model.chat_ready:
+                    raise ValueError("没有可用的环境变量模型配置")
+                self.server.storage.select_model_profile(self._session(), None)
+            elif isinstance(profile_id, str) and self.server.storage.model_profile(profile_id):
+                self.server.storage.select_model_profile(self._session(), profile_id)
+            else:
+                raise ValueError("请选择已保存的模型配置")
+            self._json(HTTPStatus.OK, self._models_public())
+        elif parsed.path == "/api/models/delete":
+            profile_id = payload.get("id")
+            if not isinstance(profile_id, str) or not self.server.storage.model_profile(profile_id):
+                raise ValueError("模型配置不存在")
+            self.server.storage.delete_model_profile(profile_id)
+            self._json(HTTPStatus.OK, self._models_public())
+        elif parsed.path == "/api/models/test":
+            if not self._model_ready():
+                raise ValueError("请先选择模型配置")
+            result = self._model()._post("/chat/completions", {
+                "model": self._model().chat_model, "max_tokens": 12,
+                "messages": [{"role": "user", "content": "请回复 OK"}],
+            }, timeout=15)
+            if (not isinstance(result.get("choices"), list) or not result["choices"] or
+                    not isinstance(result["choices"][0].get("message", {}).get("content"), str) or
+                    not result["choices"][0]["message"]["content"].strip()):
+                raise ModelUnavailable("模型连接成功，但返回格式不符合预期")
+            self._json(HTTPStatus.OK, {"ok": True})
         elif parsed.path == "/api/target":
             pack = self.server.catalog.get(payload.get("course_id", ""))
             if not self.server.storage.mode(self._session()):
@@ -227,14 +326,14 @@ class MindOSHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.OK, {"dashboard": self._dashboard(pack["id"])})
         elif parsed.path == "/api/analyze-goal":
             pack = self.server.catalog.get(payload.get("course_id", ""))
-            if self.server.storage.mode(self._session()) != "ai" or not self.server.model.chat_ready:
+            if self.server.storage.mode(self._session()) != "ai" or not self._model_ready():
                 raise ValueError("请先启用已配置的大模型模式")
             custom = payload.get("custom_text")
             if not isinstance(custom, str) or not 4 <= len(custom.strip()) <= 200:
                 raise ValueError("请用 4 至 200 字描述想达到的学习目标")
             states = self._dashboard(pack["id"])["progress"]
             learner_hint = "；".join(f"{item['concept_title']}·{item['dimension_label']}：{item['state_label']}" for item in states)
-            analysis = self.server.model.analyze_goal(pack, custom.strip(), learner_hint)
+            analysis = self._model().analyze_goal(pack, custom.strip(), learner_hint)
             concept_id = analysis.get("concept_id")
             rationale = analysis.get("rationale")
             if concept_id is not None and concept_id not in {item["id"] for item in pack["concepts"]}:
@@ -287,7 +386,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
                 prerequisites = [item["title"] for item in pack["concepts"]
                                  if any(edge["type"] == "prerequisite" and edge["from"] == item["id"]
                                         and edge["to"] == concept["id"] for edge in pack["relations"])]
-                answer = self.server.model.tutor(
+                answer = self._model().tutor(
                     pack["title"], concept["title"], prerequisites,
                     self._learner_hint(pack, concept["id"]),
                     "请从零开始深入讲解这一节，像一对一教学那样逐步说明，并允许我随时打断提问。",
@@ -309,7 +408,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
             prerequisites = [item["title"] for item in pack["concepts"]
                              if any(edge["type"] == "prerequisite" and edge["from"] == item["id"]
                                     and edge["to"] == concept["id"] for edge in pack["relations"])]
-            answer = self.server.model.tutor(
+            answer = self._model().tutor(
                 pack["title"], concept["title"], prerequisites,
                 self._learner_hint(pack, concept["id"]), question.strip(), history)
             self.server.storage.save_tutor_turns(self._session(), pack, concept["id"],
@@ -337,15 +436,15 @@ class MindOSHandler(BaseHTTPRequestHandler):
                 chunks = [item for item in chunks if concept_id in item["concept_ids"]]
             chunks += self.server.catalog.external_chunks(pack, concept_id)
             sources, retrieval_mode, notice = retrieve(
-                question.strip(), chunks, concept_id, self.server.model, self.server.storage,
+                question.strip(), chunks, concept_id, self._model(), self.server.storage,
                 use_vectors=ai_mode)
             generated = False
             if not sources:
                 answer = "当前课程资料中未找到足够相关的内容。请补充更具体的术语或问题。"
-            elif ai_mode and self.server.model.chat_ready:
+            elif ai_mode and self._model_ready():
                 hint = self._learner_hint(pack, concept_id)
                 try:
-                    answer = self.server.model.explain(question.strip(), sources, hint)
+                    answer = self._model().explain(question.strip(), sources, hint)
                     generated = True
                     citations = {int(number) for number in re.findall(r"\[(\d+)\]", answer)}
                     if citations - set(range(1, len(sources) + 1)):
@@ -388,9 +487,9 @@ class MindOSHandler(BaseHTTPRequestHandler):
             learner_hint = self._learner_hint(pack, concept["id"])
             generated, notice = False, None
             authored_lesson = "\n\n".join(item["content"] for item in materials)
-            if self.server.storage.mode(self._session()) == "ai" and self.server.model.chat_ready:
+            if self.server.storage.mode(self._session()) == "ai" and self._model_ready():
                 try:
-                    answer = self.server.model.explain(
+                    answer = self._model().explain(
                         f"请从零基础逐步讲解知识点「{concept['title']}」，先解释术语和学习目的，"
                         "再分步骤展示例子，每一步说明为什么这样做，最后用一道不泄露独立测评的小检查帮助理解。"
                         "根据学习者状态调整起点和难度，但不要解答当前独立题。",
@@ -413,7 +512,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
                                        "source": materials[0]})
         elif parsed.path == "/api/quiz":
             pack = self.server.catalog.get(payload.get("course_id", ""))
-            if self.server.storage.mode(self._session()) != "ai" or not self.server.model.chat_ready:
+            if self.server.storage.mode(self._session()) != "ai" or not self._model_ready():
                 raise ValueError("按需生成小测验需要已配置的大模型模式")
             concept_id = payload.get("concept_id")
             concept = next((item for item in pack["concepts"] if item["id"] == concept_id), None)
@@ -430,7 +529,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
                 source = self._concept_source(pack, concept)
             states = [item for item in self._dashboard(pack["id"])["progress"] if item["concept_id"] == concept_id]
             learner_hint = "；".join(f"{item['dimension_label']}：{item['state_label']}" for item in states)
-            generated = self.server.model.generate_quiz(concept["title"], source, learner_hint)
+            generated = self._model().generate_quiz(concept["title"], source, learner_hint)
             prompt, choices, answer, explanation = (generated.get(key) for key in
                                                      ("prompt", "choices", "answer", "explanation"))
             if (not isinstance(prompt, str) or not 10 <= len(prompt.strip()) <= 400

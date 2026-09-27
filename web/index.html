@@ -19,12 +19,16 @@
     </aside>
 
     <main class="main">
-      <header class="topbar"><span class="topbar-location">学习工作台 <span>/</span> <b id="breadcrumb">课程</b></span><span><button id="change-mode" class="text-button" type="button" hidden>模型连接</button> <span class="status-pill" id="model-status">正在连接本地服务</span></span></header>
+      <header class="topbar"><span class="topbar-location">学习工作台 <span>/</span> <b id="breadcrumb">课程</b></span><span><button id="change-mode" class="text-button" type="button" hidden>管理模型与 API</button> <span class="status-pill" id="model-status">正在连接本地服务</span></span></header>
       <div class="content">
         <section class="panel mode-gate" id="mode-gate" aria-labelledby="mode-gate-title">
           <span class="eyebrow">开始一对一学习</span><h1 id="mode-gate-title">连接 AI 教师</h1><p>按课程路线逐节深入讲解；你可以随时打断提问，每节结束做一道小测。</p>
           <div class="mode-cards"><button id="choose-ai" class="mode-card" type="button"><strong>开始 AI 教学</strong><span>讲解会依据课程目标、先修关系和你的作答情况生成；本地草稿讲义不再作为主讲内容。</span></button></div>
           <p id="mode-help" class="panel-intro">模型服务状态正在检查……</p>
+          <section class="model-manager" aria-labelledby="model-manager-title"><h2 id="model-manager-title">管理模型与 API</h2><p class="panel-intro">配置保存在这台电脑上。密钥输入后只传给本机服务，不会在页面回显；远程服务须使用 HTTPS。</p>
+            <label for="profile-select">已保存的模型</label><div class="model-manager-row"><select id="profile-select"><option value="">暂无配置</option></select><button id="profile-use" class="button button-secondary" type="button">使用所选模型</button><button id="profile-test" class="button button-secondary" type="button">测试当前模型连接</button></div>
+            <form id="profile-form" autocomplete="off"><div class="model-manager-grid"><label>配置名称<input id="profile-name" maxlength="60" required placeholder="例如：我的学习模型"></label><label>API 地址<input id="profile-url" type="url" maxlength="500" required placeholder="https://服务商地址/v1"></label><label>对话模型名称<input id="profile-chat" maxlength="120" required placeholder="填写服务商给出的模型 ID"></label><label>向量模型名称（可选）<input id="profile-embedding" maxlength="120" placeholder="教学主流程不需要"></label><label>API 密钥<input id="profile-key" type="password" maxlength="4096" autocomplete="new-password" placeholder="新建时输入；修改时留空表示保留原密钥"></label><label class="model-manager-check"><input id="profile-clear-key" type="checkbox">清除已保存密钥</label></div><div class="model-manager-actions"><button id="profile-save" class="button button-primary" type="submit">保存并选用</button><button id="profile-new" class="button button-secondary" type="button">新建配置</button><button id="profile-delete" class="button button-secondary" type="button">删除当前配置</button></div></form><p id="profile-status" class="panel-intro" role="status"></p>
+          </section>
         </section>
 
         <section class="panel course-picker" id="course-picker" aria-labelledby="course-picker-title" hidden><span class="eyebrow">下一步 · 选择课程</span><h2 id="course-picker-title">你想学习哪门课程？</h2><p class="panel-intro">先选课程，再按章节选目标知识点。</p><div class="goal-row"><label for="course-select">目标课程</label><select id="course-select"></select><button id="course-confirm" class="button button-primary" type="button">进入课程</button></div></section>

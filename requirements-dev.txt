@@ -1,2 +1,3 @@
-# Course-pack validation; the local prototype itself uses Python's standard library.
+-r requirements.txt
+# Course-pack validation.
 jsonschema>=4.19.2,<5

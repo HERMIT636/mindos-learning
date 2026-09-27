@@ -42,15 +42,16 @@ MindOS 希望帮助学习者明确当前薄弱点，获取有来源的学习材�
 
 ## 运行本地原型
 
-需要 Python 3.10 或以上版本，运行原型不需要安装额外依赖：
+需要 Python 3.10 或以上版本。模型密钥加密存储使用 `cryptography`：
 
 ```bash
 git clone https://github.com/HERMIT636/mindos-learning.git
 cd mindos-learning
+python -m pip install -r requirements.txt
 python -m mindos.server
 ```
 
-然后在浏览器打开 <http://127.0.0.1:8765>。先选择学习模式；大模型模式仅在服务端已配置模型时开放，网页不接收 API 密钥。学习记录只保存在本机的 `data/mindos-demo.sqlite3`，请仅使用演示数据。公开课程的单选与数值题可确定性评分；AI 临时小测验只作练习，不计入掌握状态。简答与代码题只保存练习作答，不自动判分或执行代码。
+然后在浏览器打开 <http://127.0.0.1:8765>，在“管理模型与 API”中添加兼容服务的地址、对话模型名称和密钥，测试连接后开始学习。密钥仅提交给本机服务并加密存储，网页只显示“已设密钥”，不会回显原值。学习记录保存在本机的 `data/mindos-demo.sqlite3`，请仅使用演示数据。公开课程的单选与数值题可确定性评分；AI 临时小测验只作练习，不计入掌握状态。简答与代码题只保存练习作答，不自动判分或执行代码。
 
 要检查课程包格式，再安装开发依赖并运行：
 
@@ -63,7 +64,7 @@ python scripts/validate_course_packs.py
 
 ## 计划采用的技术
 
-当前演示版使用 Python 标准库与 SQLite，以便直接在本机运行；教学资料只从当前课程检索，可选通过兼容接口接入大模型与 Embedding 服务。面向真实用户的后续架构仍规划为 Next.js、FastAPI、PostgreSQL + pgvector，并加入隔离代码执行器。详见 [设计大纲](MindOS_最终设计大纲.md)。
+当前演示版使用 Python、SQLite 和 `cryptography`，通过兼容接口调用用户选用的模型。面向真实用户的后续架构仍规划为 Next.js、FastAPI、PostgreSQL + pgvector，并加入隔离代码执行器。详见 [设计大纲](MindOS_最终设计大纲.md)。
 
 ## 如何参与
 

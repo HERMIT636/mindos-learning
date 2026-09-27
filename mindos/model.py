@@ -20,17 +20,24 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class ModelGateway:
-    def __init__(self) -> None:
-        self.base_url = os.getenv("MINDOS_MODEL_BASE_URL", "").rstrip("/")
-        self.chat_model = os.getenv("MINDOS_CHAT_MODEL", "")
-        self.embedding_model = os.getenv("MINDOS_EMBEDDING_MODEL", "")
-        self.api_key = os.getenv("MINDOS_MODEL_API_KEY", "")
+    def __init__(self, config: dict | None = None) -> None:
+        config = config if config is not None else {
+            "base_url": os.getenv("MINDOS_MODEL_BASE_URL", ""),
+            "chat_model": os.getenv("MINDOS_CHAT_MODEL", ""),
+            "embedding_model": os.getenv("MINDOS_EMBEDDING_MODEL", ""),
+            "api_key": os.getenv("MINDOS_MODEL_API_KEY", ""),
+        }
+        self.base_url = config.get("base_url", "").rstrip("/")
+        self.chat_model = config.get("chat_model", "")
+        self.embedding_model = config.get("embedding_model", "")
+        self.api_key = config.get("api_key", "")
         if self.base_url:
             parsed = urllib.parse.urlsplit(self.base_url)
-            if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.query or parsed.fragment:
+            if (parsed.scheme not in {"http", "https"} or not parsed.netloc or
+                    parsed.query or parsed.fragment or parsed.username or parsed.password):
                 raise ValueError("MINDOS_MODEL_BASE_URL 必须是 HTTP(S) API 地址")
-            if self.api_key and parsed.scheme == "http" and parsed.hostname not in {"localhost", "127.0.0.1", "::1"}:
-                raise ValueError("使用 API 密钥连接远程模型时必须使用 HTTPS")
+            if parsed.scheme == "http" and parsed.hostname not in {"localhost", "127.0.0.1", "::1"}:
+                raise ValueError("远程模型地址必须使用 HTTPS")
 
     @property
     def chat_ready(self) -> bool:
@@ -57,6 +64,14 @@ class ModelGateway:
             if not isinstance(result, dict):
                 raise ValueError("unexpected response")
             return result
+        except urllib.error.HTTPError as exc:
+            if exc.code in (401, 403):
+                raise ModelUnavailable("模型服务拒绝访问，请检查 API 密钥和权限") from exc
+            if exc.code == 404:
+                raise ModelUnavailable("模型接口不存在，请检查 API 地址和模型名称") from exc
+            if exc.code == 429:
+                raise ModelUnavailable("模型服务限流或额度不足，请稍后再试") from exc
+            raise ModelUnavailable("模型服务请求失败，请检查连接配置") from exc
         except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
             raise ModelUnavailable("模型服务暂不可用，请查看本机配置") from exc
 

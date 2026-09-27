@@ -75,6 +75,14 @@ class Storage:
                 );
                 CREATE INDEX IF NOT EXISTS tutor_turns_scope ON tutor_turns
                   (session_id, course_id, course_version, concept_id, id);
+                CREATE TABLE IF NOT EXISTS model_profiles (
+                  id TEXT PRIMARY KEY, name TEXT NOT NULL, base_url TEXT NOT NULL,
+                  chat_model TEXT NOT NULL, embedding_model TEXT NOT NULL,
+                  encrypted_api_key TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS model_selection (
+                  session_id TEXT PRIMARY KEY, profile_id TEXT NOT NULL
+                );
             """)
 
     @contextmanager
@@ -166,6 +174,43 @@ class Storage:
         with self.connect() as db:
             row = db.execute("SELECT mode FROM learning_preferences WHERE session_id=?", (session_id,)).fetchone()
         return row["mode"] if row else None
+
+    def model_profiles(self) -> list[dict]:
+        with self.connect() as db:
+            rows = db.execute("SELECT id,name,base_url,chat_model,embedding_model,"
+                              "encrypted_api_key FROM model_profiles ORDER BY name,id").fetchall()
+        return [dict(row) for row in rows]
+
+    def model_profile(self, profile_id: str) -> dict | None:
+        with self.connect() as db:
+            row = db.execute("SELECT * FROM model_profiles WHERE id=?", (profile_id,)).fetchone()
+        return dict(row) if row else None
+
+    def save_model_profile(self, profile: dict) -> None:
+        with self.connect() as db:
+            db.execute("INSERT OR REPLACE INTO model_profiles VALUES(?,?,?,?,?,?)",
+                       (profile["id"], profile["name"], profile["base_url"],
+                        profile["chat_model"], profile["embedding_model"],
+                        profile["encrypted_api_key"]))
+
+    def selected_model_profile(self, session_id: str) -> str | None:
+        with self.connect() as db:
+            row = db.execute("SELECT profile_id FROM model_selection WHERE session_id=?",
+                             (session_id,)).fetchone()
+        return row["profile_id"] if row else None
+
+    def select_model_profile(self, session_id: str, profile_id: str | None) -> None:
+        with self.connect() as db:
+            if profile_id is None:
+                db.execute("DELETE FROM model_selection WHERE session_id=?", (session_id,))
+            else:
+                db.execute("INSERT OR REPLACE INTO model_selection VALUES(?,?)",
+                           (session_id, profile_id))
+
+    def delete_model_profile(self, profile_id: str) -> None:
+        with self.connect() as db:
+            db.execute("DELETE FROM model_profiles WHERE id=?", (profile_id,))
+            db.execute("DELETE FROM model_selection WHERE profile_id=?", (profile_id,))
 
     def set_mode(self, session_id: str, mode: str) -> None:
         with self.connect() as db:

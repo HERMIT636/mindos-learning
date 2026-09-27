@@ -7,6 +7,19 @@ const ui = {
   chooseMaterials: document.querySelector('#choose-materials'),
   chooseAi: document.querySelector('#choose-ai'),
   modeHelp: document.querySelector('#mode-help'),
+  profileSelect: document.querySelector('#profile-select'),
+  profileUse: document.querySelector('#profile-use'),
+  profileTest: document.querySelector('#profile-test'),
+  profileForm: document.querySelector('#profile-form'),
+  profileName: document.querySelector('#profile-name'),
+  profileUrl: document.querySelector('#profile-url'),
+  profileChat: document.querySelector('#profile-chat'),
+  profileEmbedding: document.querySelector('#profile-embedding'),
+  profileKey: document.querySelector('#profile-key'),
+  profileClearKey: document.querySelector('#profile-clear-key'),
+  profileNew: document.querySelector('#profile-new'),
+  profileDelete: document.querySelector('#profile-delete'),
+  profileStatus: document.querySelector('#profile-status'),
   coursePicker: document.querySelector('#course-picker'),
   courseSelect: document.querySelector('#course-select'),
   courseConfirm: document.querySelector('#course-confirm'),
@@ -88,7 +101,8 @@ const ui = {
 
 const state = { courses: [], dashboard: null, courseId: '', taskId: '', mode: 'practice',
   learningMode: null, chatReady: false, analysis: null, quiz: null, stage: 'target',
-  lessonCache: null, lessonLoadingKey: null, lessonConceptId: null, busy: false };
+  lessonCache: null, lessonLoadingKey: null, lessonConceptId: null, busy: false,
+  profiles: [], selectedProfileId: null, editingProfileId: null, envAvailable: false };
 const typeNames = { single_choice: '单选题', numeric: '数值题', short_answer: '简答题', code: '代码题' };
 
 function element(tag, className, text) {
@@ -106,6 +120,45 @@ async function api(path, options = {}) {
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || '请求失败，请稍后重试。');
   return data;
+}
+
+function fillModelForm(id) {
+  const profile = state.profiles.find(item => item.id === id);
+  state.editingProfileId = profile?.id || null;
+  ui.profileName.value = profile?.name || '';
+  ui.profileUrl.value = profile?.base_url || '';
+  ui.profileChat.value = profile?.chat_model || '';
+  ui.profileEmbedding.value = profile?.embedding_model || '';
+  ui.profileKey.value = '';
+  ui.profileKey.placeholder = profile?.has_key
+    ? '密钥已加密保存；留空表示保持原值' : '输入 API 密钥；本地模型可不填';
+  ui.profileClearKey.checked = false;
+  ui.profileDelete.disabled = !profile;
+}
+
+function renderModelProfiles(data) {
+  state.profiles = data.profiles;
+  state.selectedProfileId = data.selected_id;
+  state.envAvailable = data.env_available;
+  state.chatReady = Boolean(data.selected_id);
+  const options = [];
+  if (data.env_available) {
+    const option = element('option', '', '环境变量配置');
+    option.value = 'env'; options.push(option);
+  }
+  data.profiles.forEach(profile => {
+    const option = element('option', '', `${profile.name} · ${profile.chat_model}${profile.has_key ? ' · 已设密钥' : ''}`);
+    option.value = profile.id; options.push(option);
+  });
+  ui.profileSelect.replaceChildren(...options);
+  ui.profileSelect.value = data.selected_id || options[0]?.value || '';
+  ui.profileUse.disabled = !options.length;
+  ui.profileTest.disabled = !data.selected_id;
+  ui.chooseAi.disabled = !state.chatReady;
+  fillModelForm(ui.profileSelect.value);
+  ui.modeHelp.textContent = state.chatReady
+    ? '模型配置已就绪。可以开始 AI 教学；新配置建议先测试连接。'
+    : '先在下方添加模型 API 地址和名称。密钥只保存在本机服务端。';
 }
 
 function currentTask() {
@@ -571,6 +624,57 @@ async function chooseLearningMode(mode) {
 
 ui.chooseAi.addEventListener('click', () => chooseLearningMode('ai'));
 ui.changeMode.addEventListener('click', () => showEntry(true));
+ui.profileSelect.addEventListener('change', () => fillModelForm(ui.profileSelect.value));
+ui.profileNew.addEventListener('click', () => { fillModelForm(null); ui.profileStatus.textContent = '填写新模型配置后保存。'; });
+ui.profileForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  if (state.busy) return;
+  state.busy = true;
+  ui.profileStatus.textContent = '正在保存模型配置…';
+  try {
+    const result = await api('/api/models/save', { method: 'POST', body: JSON.stringify({
+      id: state.editingProfileId, name: ui.profileName.value, base_url: ui.profileUrl.value,
+      chat_model: ui.profileChat.value, embedding_model: ui.profileEmbedding.value,
+      api_key: ui.profileKey.value, clear_key: ui.profileClearKey.checked,
+    }) });
+    renderModelProfiles(result);
+    state.lessonCache = null;
+    ui.profileStatus.textContent = '已保存并选用。密钥不会回显；可先测试连接，再开始学习。';
+  } catch (error) { ui.profileStatus.textContent = error.message; }
+  finally { state.busy = false; }
+});
+ui.profileUse.addEventListener('click', async () => {
+  if (state.busy || !ui.profileSelect.value) return;
+  state.busy = true;
+  try {
+    renderModelProfiles(await api('/api/models/select', { method: 'POST',
+      body: JSON.stringify({ id: ui.profileSelect.value }) }));
+    state.lessonCache = null;
+    ui.profileStatus.textContent = '已切换模型。已有对话仍保留；可在讲解页点击“重新讲解本节”。';
+  } catch (error) { ui.profileStatus.textContent = error.message; }
+  finally { state.busy = false; }
+});
+ui.profileTest.addEventListener('click', async () => {
+  if (state.busy) return;
+  state.busy = true;
+  ui.profileStatus.textContent = '正在向当前选用的模型发送一条短测试消息…';
+  try {
+    await api('/api/models/test', { method: 'POST', body: '{}' });
+    ui.profileStatus.textContent = '连接成功，模型返回了有效响应。';
+  } catch (error) { ui.profileStatus.textContent = error.message; }
+  finally { state.busy = false; }
+});
+ui.profileDelete.addEventListener('click', async () => {
+  if (state.busy || !state.editingProfileId) return;
+  state.busy = true;
+  try {
+    renderModelProfiles(await api('/api/models/delete', { method: 'POST',
+      body: JSON.stringify({ id: state.editingProfileId }) }));
+    if (!state.chatReady) { state.learningMode = null; showEntry(true); }
+    ui.profileStatus.textContent = '配置已删除。';
+  } catch (error) { ui.profileStatus.textContent = error.message; }
+  finally { state.busy = false; }
+});
 ui.courseConfirm.addEventListener('click', () => selectCourse(ui.courseSelect.value));
 ui.flowSteps.querySelectorAll('button[data-stage]').forEach(button => {
   button.addEventListener('click', () => showStage(button.dataset.stage));
@@ -791,12 +895,8 @@ async function initialize() {
   try {
     const response = await api('/api/courses');
     state.courses = response.courses;
-    state.chatReady = response.chat_ready;
-    state.learningMode = response.learning_mode === 'ai' && response.chat_ready ? 'ai' : null;
-    ui.chooseAi.disabled = !response.chat_ready;
-    ui.modeHelp.textContent = response.chat_ready
-      ? '模型已就绪。进入课程后可以逐节听讲、随时追问和做本节小测。'
-      : '尚未配置模型。请在项目 .env 中填写模型 API 地址和名称，重启本地服务后再开始；不要在网页输入密钥。';
+    renderModelProfiles(await api('/api/models'));
+    state.learningMode = response.learning_mode === 'ai' && state.chatReady ? 'ai' : null;
     ui.courseSelect.replaceChildren(...state.courses.map(course => {
       const option = element('option', '', course.title);
       option.value = course.id;

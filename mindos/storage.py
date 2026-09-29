@@ -39,6 +39,16 @@ class Storage:
                 CREATE TABLE IF NOT EXISTS model_selection (
                   session_id TEXT PRIMARY KEY, profile_id TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS search_settings (
+                  session_id TEXT PRIMARY KEY, encrypted_api_key TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS course_drafts (
+                  id TEXT PRIMARY KEY, session_id TEXT NOT NULL, title TEXT NOT NULL,
+                  goal TEXT NOT NULL, feedback TEXT NOT NULL, revision INTEGER NOT NULL,
+                  plan_json TEXT NOT NULL, sources_json TEXT NOT NULL,
+                  confirmed_course_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS drafts_owner ON course_drafts(session_id, updated_at);
                 CREATE TABLE IF NOT EXISTS courses (
                   id TEXT PRIMARY KEY, session_id TEXT NOT NULL, title TEXT NOT NULL,
                   goal TEXT NOT NULL, current_ordinal INTEGER NOT NULL DEFAULT 1,
@@ -108,15 +118,86 @@ class Storage:
             db.execute("DELETE FROM model_profiles WHERE id=?", (profile_id,))
             db.execute("DELETE FROM model_selection WHERE profile_id=?", (profile_id,))
 
-    def create_course(self, session_id: str, title: str, goal: str, outline: list[dict]) -> dict:
-        course_id = secrets.token_urlsafe(16)
+    def search_key(self, session_id: str) -> str:
         with self.connect() as db:
-            db.execute("INSERT INTO courses VALUES(?,?,?,?,?,?)", (course_id, session_id, title, goal, 1, now()))
-            for ordinal, item in enumerate(outline, 1):
-                db.execute("INSERT INTO sections VALUES(?,?,?,?,?,?,?)",
-                           (secrets.token_urlsafe(16), course_id, ordinal,
-                            item["title"], item["objective"], None, now()))
+            row = db.execute("SELECT encrypted_api_key FROM search_settings WHERE session_id=?",
+                             (session_id,)).fetchone()
+        return row[0] if row else ""
+
+    def save_search_key(self, session_id: str, encrypted_api_key: str) -> None:
+        with self.connect() as db:
+            db.execute("INSERT OR REPLACE INTO search_settings VALUES(?,?)",
+                       (session_id, encrypted_api_key))
+
+    @staticmethod
+    def _draft_public(row: dict) -> dict:
+        return {key: row[key] for key in ("id", "title", "goal", "feedback", "revision",
+                                          "confirmed_course_id", "created_at", "updated_at")} | {
+            "plan": json.loads(row["plan_json"]), "sources": json.loads(row["sources_json"])}
+
+    def drafts(self, session_id: str) -> list[dict]:
+        with self.connect() as db:
+            rows = db.execute("SELECT * FROM course_drafts WHERE session_id=? "
+                              "AND confirmed_course_id IS NULL ORDER BY updated_at DESC,id DESC",
+                              (session_id,)).fetchall()
+        return [self._draft_public(dict(row)) for row in rows]
+
+    def draft(self, session_id: str, draft_id: str) -> dict | None:
+        with self.connect() as db:
+            row = db.execute("SELECT * FROM course_drafts WHERE id=? AND session_id=?",
+                             (draft_id, session_id)).fetchone()
+        return self._draft_public(dict(row)) if row else None
+
+    def save_draft(self, session_id: str, title: str, goal: str, feedback: str,
+                   plan: dict, sources: list[dict], draft_id: str | None = None,
+                   expected_revision: int | None = None) -> dict:
+        if draft_id is None:
+            draft_id = secrets.token_urlsafe(16)
+            with self.connect() as db:
+                db.execute("INSERT INTO course_drafts VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                           (draft_id, session_id, title, goal, feedback, 1,
+                            json.dumps(plan, ensure_ascii=False), json.dumps(sources, ensure_ascii=False),
+                            None, now(), now()))
+        else:
+            with self.connect() as db:
+                changed = db.execute("UPDATE course_drafts SET title=?,goal=?,feedback=?,revision=revision+1,"
+                                     "plan_json=?,sources_json=?,updated_at=? WHERE id=? AND session_id=? "
+                                     "AND revision=? AND confirmed_course_id IS NULL",
+                                     (title, goal, feedback, json.dumps(plan, ensure_ascii=False),
+                                      json.dumps(sources, ensure_ascii=False), now(), draft_id,
+                                      session_id, expected_revision)).rowcount
+                if not changed:
+                    raise ValueError("审查稿已经变化，请刷新后重新修改")
+        return self.draft(session_id, draft_id)
+
+    def confirm_draft(self, session_id: str, draft_id: str, expected_revision: int) -> dict:
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT * FROM course_drafts WHERE id=? AND session_id=?",
+                             (draft_id, session_id)).fetchone()
+            if not row:
+                raise ValueError("课程审查稿不存在")
+            if row["confirmed_course_id"]:
+                course_id = row["confirmed_course_id"]
+            else:
+                if row["revision"] != expected_revision:
+                    raise ValueError("审查稿已经变化，请先查看最新版再确认")
+                course_id = secrets.token_urlsafe(16)
+                db.execute("INSERT INTO courses VALUES(?,?,?,?,?,?)",
+                           (course_id, session_id, row["title"], row["goal"], 1, now()))
+                for ordinal, item in enumerate(json.loads(row["plan_json"])["sections"], 1):
+                    db.execute("INSERT INTO sections VALUES(?,?,?,?,?,?,?)",
+                               (secrets.token_urlsafe(16), course_id, ordinal,
+                                item["title"], item["objective"], None, now()))
+                db.execute("UPDATE course_drafts SET confirmed_course_id=?,updated_at=? WHERE id=?",
+                           (course_id, now(), draft_id))
         return self.course(session_id, course_id)
+
+    def confirmed_review(self, session_id: str, course_id: str) -> dict | None:
+        with self.connect() as db:
+            row = db.execute("SELECT * FROM course_drafts WHERE session_id=? AND confirmed_course_id=?",
+                             (session_id, course_id)).fetchone()
+        return self._draft_public(dict(row)) if row else None
 
     def courses(self, session_id: str) -> list[dict]:
         with self.connect() as db:

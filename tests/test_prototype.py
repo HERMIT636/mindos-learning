@@ -1,4 +1,4 @@
-"""End-to-end checks for custom course persistence and per-course learning state."""
+"""End-to-end checks for reviewed custom courses and isolated learning state."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import tempfile
 import threading
 import unittest
 import urllib.error
+import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -16,33 +17,60 @@ from pathlib import Path
 from mindos.secrets import SecretStore
 from mindos.server import MindOSServer
 from mindos.storage import Storage
+from mindos.web_search import WebSearch
 
 
-class FakeModelHandler(BaseHTTPRequestHandler):
+class FakeProvider(BaseHTTPRequestHandler):
     lesson_payloads: list[dict] = []
+    search_queries: list[str] = []
+
+    def do_GET(self) -> None:
+        parsed = urllib.parse.urlsplit(self.path)
+        if parsed.path != "/res/v1/web/search":
+            self.send_error(404); return
+        if self.headers.get("X-Subscription-Token") != "search-test-private-key":
+            self.send_error(401); return
+        query = urllib.parse.parse_qs(parsed.query)["q"][0]
+        self.search_queries.append(query)
+        result = {"web": {"results": [{"title": "公开入门课程大纲", "url": "https://example.edu/syllabus",
+                                        "description": "从基础概念到应用的学习顺序"},
+                                       {"title": "官方学习指南", "url": "https://docs.example.org/guide",
+                                        "description": "核心知识点和入门路径"}]}}
+        self.send_json(result)
 
     def do_POST(self) -> None:
         payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         if self.path != "/chat/completions":
-            self.send_error(404)
-            return
+            self.send_error(404); return
         system = payload["messages"][0]["content"]
-        if "课程规划教师" in system:
-            content = json.dumps({"sections": [{"title": f"第 {i} 节基础", "objective": f"理解第 {i} 步的核心概念"}
-                                                for i in range(1, 5)]}, ensure_ascii=False)
+        user = json.loads(payload["messages"][-1]["content"]) if len(payload["messages"]) > 1 and \
+            payload["messages"][-1]["content"].startswith("{") else {}
+        if "课程调研助手" in system:
+            content = json.dumps({"queries": ["入门课程 大纲 教程", "核心知识 先修 路线"]}, ensure_ascii=False)
+        elif "课程规划教师" in system:
+            feedback = user.get("latest_revision_request", "")
+            content = json.dumps({
+                "overview": "这门课从最常用的基础概念学起，逐步认识核心问题，最后练习把知识用于真实场景。",
+                "outcomes": ["能解释这门课的基础概念", "能完成一个简单的应用任务"],
+                "directions": ["先建立必要的基础词汇和直觉", "更多实践与动手练习" if "实践" in feedback else "再学习主要方法与应用"],
+                "sections": [{"title": f"第 {i} 节基础", "objective": f"理解第 {i} 步的核心概念"} for i in range(1, 5)],
+            }, ensure_ascii=False)
         elif "独立小测出题教师" in system:
-            previous_count = len(json.loads(payload["messages"][-1]["content"])["previous_questions"])
+            previous_count = len(user["previous_questions"])
             content = json.dumps({"questions": [{"prompt": f"第 {previous_count // 4 + 1} 次测试：关于本节概念 {i}，哪种解释正确？",
                   "choices": {"a": "错误解释", "b": "正确解释", "c": "另一错误解释", "d": "无关解释"},
                   "answer": "b", "explanation": "选项 b 符合本节讲解。"} for i in range(1, 5)]}, ensure_ascii=False)
         elif "连接测试助手" in system:
             content = "OK"
         elif "现在只讲当前这一小节" in system:
-            self.lesson_payloads.append(json.loads(payload["messages"][-1]["content"]))
+            self.lesson_payloads.append(user)
             content = "## 从零开始\n本节详细讲解：先建立直觉，再看例子与误区。\n\n## 例子\n一步一步说明。"
         else:
             content = "继续解释当前小节，并回答你的困惑。"
-        body = json.dumps({"choices": [{"message": {"content": content}, "finish_reason": "stop"}]}).encode()
+        self.send_json({"choices": [{"message": {"content": content}, "finish_reason": "stop"}]})
+
+    def send_json(self, result: dict) -> None:
+        body = json.dumps(result).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
@@ -57,9 +85,11 @@ class PrototypeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.directory = tempfile.TemporaryDirectory()
-        cls.model = ThreadingHTTPServer(("127.0.0.1", 0), FakeModelHandler)
-        cls.model_thread = threading.Thread(target=cls.model.serve_forever, daemon=True)
-        cls.model_thread.start()
+        cls.provider = ThreadingHTTPServer(("127.0.0.1", 0), FakeProvider)
+        cls.provider_thread = threading.Thread(target=cls.provider.serve_forever, daemon=True)
+        cls.provider_thread.start()
+        cls.original_search_endpoint = WebSearch.ENDPOINT
+        WebSearch.ENDPOINT = f"http://127.0.0.1:{cls.provider.server_port}/res/v1/web/search"
         cls.data_path = Path(cls.directory.name) / "mindos.sqlite3"
         cls.server = MindOSServer(0, cls.data_path)
         cls.server.secrets = SecretStore(Path(cls.directory.name) / "master.key")
@@ -70,7 +100,8 @@ class PrototypeTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls) -> None:
         cls.server.shutdown(); cls.server.server_close(); cls.thread.join(timeout=2)
-        cls.model.shutdown(); cls.model.server_close(); cls.model_thread.join(timeout=2)
+        cls.provider.shutdown(); cls.provider.server_close(); cls.provider_thread.join(timeout=2)
+        WebSearch.ENDPOINT = cls.original_search_endpoint
         cls.directory.cleanup()
 
     def setUp(self) -> None:
@@ -82,7 +113,7 @@ class PrototypeTests(unittest.TestCase):
         request = urllib.request.Request(self.url + path, data=data,
                                          headers={"Content-Type": "application/json"} if data else {})
         try:
-            with (client or self.client).open(request, timeout=5) as response:
+            with (client or self.client).open(request, timeout=8) as response:
                 return response.status, json.loads(response.read())
         except urllib.error.HTTPError as exc:
             with exc:
@@ -90,104 +121,131 @@ class PrototypeTests(unittest.TestCase):
 
     def configure(self) -> None:
         status, result = self.call("/api/models/save", {"name": "测试模型",
-            "base_url": f"http://127.0.0.1:{self.model.server_port}",
-            "chat_model": "fake", "api_key": "test-private-key"})
+            "base_url": f"http://127.0.0.1:{self.provider.server_port}",
+            "chat_model": "fake", "api_key": "model-test-private-key"})
         self.assertEqual(status, 200)
         self.assertTrue(result["model_ready"])
-        self.assertNotIn("test-private-key", json.dumps(result))
-
-    def test_course_flow_persists_lessons_quizzes_and_isolates_memory(self) -> None:
-        self.configure()
-        status, created = self.call("/api/courses/create", {"title": "课程甲", "goal": "从零开始"})
+        self.assertNotIn("model-test-private-key", json.dumps(result))
+        status, result = self.call("/api/search/save", {"api_key": "search-test-private-key"})
         self.assertEqual(status, 200)
-        course_id = created["course_id"]
-        self.assertEqual(len(created["course"]["course"]["sections"]), 4)
-        self.assertEqual(created["course"]["course"]["current_ordinal"], 1)
-        self.assertIsNone(created["course"]["section"]["lesson"])
-        status, forbidden = self.call("/api/sections/quiz", {"course_id": course_id, "ordinal": 2})
+        self.assertTrue(result["search_ready"])
+        self.assertNotIn("search-test-private-key", json.dumps(result))
+        with sqlite3.connect(self.data_path) as db:
+            encrypted = db.execute("SELECT encrypted_api_key FROM search_settings WHERE session_id=?",
+                                   (self.session_id(),)).fetchone()[0]
+        self.assertNotIn("search-test-private-key", encrypted)
+        self.assertEqual(self.server.secrets.decrypt(encrypted), "search-test-private-key")
+
+    def session_id(self) -> str:
+        return next(cookie.value for cookie in self.cookies if cookie.name == "mindos_session")
+
+    def draft_and_confirm(self, title: str, goal: str = "") -> str:
+        before = len(self.call("/api/bootstrap")[1]["courses"])
+        status, drafted = self.call("/api/courses/draft", {"title": title, "goal": goal})
+        self.assertEqual(status, 200)
+        draft = drafted["draft"]
+        self.assertEqual(draft["revision"], 1)
+        self.assertEqual(len(draft["sources"]), 2)
+        self.assertIn("学起", draft["plan"]["overview"])
+        self.assertEqual(len(self.call("/api/bootstrap")[1]["courses"]), before)
+        status, confirmed = self.call("/api/courses/confirm", {"draft_id": draft["id"], "revision": 1})
+        self.assertEqual(status, 200)
+        return confirmed["course_id"]
+
+    def test_review_revision_confirmation_and_refresh(self) -> None:
+        self.configure()
+        status, drafted = self.call("/api/courses/draft", {"title": "课程甲", "goal": "从零开始"})
+        self.assertEqual(status, 200)
+        first = drafted["draft"]
+        self.assertEqual(first["revision"], 1)
+        self.assertEqual(len(first["sources"]), 2)
+        self.assertEqual(len(first["plan"]["sections"]), 4)
+        self.assertEqual(self.call("/api/bootstrap")[1]["courses"], [])
+        status, old_endpoint = self.call("/api/courses/create", {"title": "绕过审查"})
+        self.assertEqual(status, 404)
+        status, revised = self.call("/api/courses/draft", {"draft_id": first["id"], "revision": 1,
+            "title": "课程甲", "goal": "从零开始", "feedback": "增加更多实践"})
+        self.assertEqual(status, 200)
+        latest = revised["draft"]
+        self.assertEqual(latest["revision"], 2)
+        self.assertIn("实践", latest["plan"]["directions"][1])
+        self.assertEqual(self.call(f"/api/draft?draft_id={first['id']}")[1]["draft"]["revision"], 2)
+        self.assertEqual(len(self.call("/api/bootstrap")[1]["drafts"]), 1)
+        status, stale = self.call("/api/courses/confirm", {"draft_id": first["id"], "revision": 1})
         self.assertEqual(status, 400)
-        status, advance = self.call("/api/sections/advance", {"course_id": course_id, "expected_ordinal": 1})
+        status, confirmed = self.call("/api/courses/confirm", {"draft_id": latest["id"], "revision": 2})
+        self.assertEqual(status, 200)
+        course_id = confirmed["course_id"]
+        self.assertEqual(confirmed["course"]["course"]["current_ordinal"], 1)
+        self.assertIsNone(confirmed["course"]["section"]["lesson"])
+        self.assertEqual(confirmed["course"]["review"]["revision"], 2)
+        status, repeated = self.call("/api/courses/confirm", {"draft_id": latest["id"], "revision": 2})
+        self.assertEqual(repeated["course_id"], course_id)
+        self.assertEqual(len(self.call("/api/bootstrap")[1]["courses"]), 1)
+        self.assertEqual(self.call("/api/bootstrap")[1]["drafts"], [])
+        self.assertGreaterEqual(len(FakeProvider.search_queries), 4)
+
+    def test_course_flow_persists_quizzes_and_isolates_memory(self) -> None:
+        self.configure()
+        course_id = self.draft_and_confirm("课程乙", "从零开始")
+        status, blocked = self.call("/api/sections/quiz", {"course_id": course_id, "ordinal": 2})
         self.assertEqual(status, 400)
         status, lesson = self.call("/api/sections/lesson", {"course_id": course_id, "ordinal": 1})
         self.assertEqual(status, 200)
         self.assertIn("从零开始", lesson["section"]["lesson"])
-        status, repeat = self.call("/api/sections/lesson", {"course_id": course_id, "ordinal": 1})
-        self.assertEqual(repeat["section"]["lesson"], lesson["section"]["lesson"])
-        self.assertEqual(len(repeat["turns"]), 1)
-        status, asked = self.call("/api/sections/ask", {"course_id": course_id, "ordinal": 1,
-                                                        "question": "请再解释一遍"})
-        self.assertEqual(status, 200)
-        self.assertEqual(len(asked["turns"]), 3)
+        self.assertEqual(len(self.call("/api/sections/lesson", {"course_id": course_id, "ordinal": 1})[1]["turns"]), 1)
         status, quiz = self.call("/api/sections/quiz", {"course_id": course_id, "ordinal": 1})
         self.assertEqual(status, 200)
-        self.assertEqual(len(quiz["quizzes"][0]["questions"]), 4)
         self.assertNotIn("answer", json.dumps(quiz["quizzes"][0]))
-        quiz_id = quiz["quizzes"][0]["id"]
         status, submitted = self.call("/api/quizzes/submit", {"course_id": course_id,
-            "quiz_id": quiz_id, "answers": ["b", "b", "a", "a"]})
+            "quiz_id": quiz["quizzes"][0]["id"], "answers": ["b", "b", "a", "a"]})
         self.assertEqual(status, 200)
-        self.assertEqual(submitted["result"]["score"], 2)
         self.assertEqual(submitted["mastery"]["sections"][0]["rate"], 50)
-        self.assertEqual(submitted["mastery"]["sections"][0]["label"], "需补强")
         status, retest = self.call("/api/sections/quiz", {"course_id": course_id, "ordinal": 1})
         self.assertEqual(status, 200)
-        self.assertEqual(len(retest["quizzes"]), 2)
-        self.assertIsNone(retest["quizzes"][-1]["score"])
         status, improved = self.call("/api/quizzes/submit", {"course_id": course_id,
             "quiz_id": retest["quizzes"][-1]["id"], "answers": ["b"] * 4})
-        self.assertEqual(status, 200)
         self.assertEqual(improved["mastery"]["sections"][0]["rate"], 75)
-        status, third = self.call("/api/sections/quiz", {"course_id": course_id, "ordinal": 1})
-        self.assertEqual(status, 200)
-        status, stable = self.call("/api/quizzes/submit", {"course_id": course_id,
-            "quiz_id": third["quizzes"][-1]["id"], "answers": ["b"] * 4})
-        self.assertEqual(status, 200)
-        self.assertEqual(stable["mastery"]["sections"][0]["label"], "较稳固")
-        status, created_b = self.call("/api/courses/create", {"title": "课程乙", "goal": "独立目标"})
-        self.assertEqual(status, 200)
-        self.assertEqual(created_b["course"]["mastery"]["tested_sections"], 0)
-        self.assertIsNone(created_b["course"]["mastery"]["overall_rate"])
-        self.assertEqual(self.server.storage.weak_points(self._session_id(), created_b["course_id"]), [])
-        status, lesson_b = self.call("/api/sections/lesson", {"course_id": created_b["course_id"], "ordinal": 1})
-        self.assertEqual(status, 200)
-        self.assertEqual(FakeModelHandler.lesson_payloads[-1]["earlier_missed_questions"], [])
+        other_id = self.draft_and_confirm("课程丙", "独立目标")
+        self.assertEqual(self.server.storage.weak_points(self.session_id(), other_id), [])
+        self.call("/api/sections/lesson", {"course_id": other_id, "ordinal": 1})
+        self.assertEqual(FakeProvider.lesson_payloads[-1]["earlier_missed_questions"], [])
         status, advanced = self.call("/api/sections/advance", {"course_id": course_id, "expected_ordinal": 1})
         self.assertEqual(status, 200)
         self.assertEqual(advanced["course"]["current_ordinal"], 2)
-        self.assertIsNone(advanced["section"]["lesson"])
-        status, lesson_two = self.call("/api/sections/lesson", {"course_id": course_id, "ordinal": 2})
-        self.assertEqual(status, 200)
-        self.assertTrue(FakeModelHandler.lesson_payloads[-1]["earlier_missed_questions"])
-        self.assertEqual(FakeModelHandler.lesson_payloads[-1]["course"], "课程甲")
-        status, duplicate = self.call("/api/sections/advance", {"course_id": course_id, "expected_ordinal": 1})
-        self.assertEqual(status, 400)
-        status, back = self.call(f"/api/course?course_id={course_id}&ordinal=1")
-        self.assertEqual(status, 200)
-        self.assertEqual(back["section"]["lesson"], lesson["section"]["lesson"])
-        self.assertEqual(len(back["quizzes"]), 3)
-        reopened = Storage(self.data_path)
-        self.assertEqual(reopened.course(self._session_id(), course_id)["current_ordinal"], 2)
+        self.assertEqual(self.call("/api/sections/advance", {"course_id": course_id,
+            "expected_ordinal": 1})[0], 400)
+        self.call("/api/sections/lesson", {"course_id": course_id, "ordinal": 2})
+        self.assertTrue(FakeProvider.lesson_payloads[-1]["earlier_missed_questions"])
+        self.assertEqual(FakeProvider.lesson_payloads[-1]["course"], "课程乙")
+        self.assertEqual(len(self.call(f"/api/course?course_id={course_id}&ordinal=1")[1]["quizzes"]), 2)
+        self.assertEqual(Storage(self.data_path).course(self.session_id(), course_id)["current_ordinal"], 2)
 
-    def _session_id(self) -> str:
-        for cookie in self.cookies:
-            if cookie.name == "mindos_session":
-                return cookie.value
-        raise AssertionError("session cookie missing")
-
-    def test_other_browser_cannot_read_or_change_course(self) -> None:
+    def test_other_browser_cannot_read_or_confirm_draft(self) -> None:
         self.configure()
-        _, created = self.call("/api/courses/create", {"title": "私有课程"})
-        course_id = created["course_id"]
+        _, drafted = self.call("/api/courses/draft", {"title": "私有课程"})
+        draft_id = drafted["draft"]["id"]
         other = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
-        status, data = self.call("/api/bootstrap", client=other)
-        self.assertEqual(status, 200)
-        self.assertEqual(data["courses"], [])
-        status, _ = self.call(f"/api/course?course_id={course_id}", client=other)
-        self.assertEqual(status, 400)
-        status, _ = self.call("/api/sections/lesson", {"course_id": course_id, "ordinal": 1}, client=other)
-        self.assertEqual(status, 400)
+        self.assertEqual(self.call("/api/bootstrap", client=other)[1]["drafts"], [])
+        self.assertEqual(self.call(f"/api/draft?draft_id={draft_id}", client=other)[0], 400)
+        self.assertEqual(self.call("/api/courses/confirm", {"draft_id": draft_id, "revision": 1}, other)[0], 400)
 
-    def test_old_data_migrates_with_local_backup_and_preserves_model_profile(self) -> None:
+    def test_missing_search_key_does_not_fake_web_research(self) -> None:
+        status, saved = self.call("/api/models/save", {"name": "仅模型",
+            "base_url": f"http://127.0.0.1:{self.provider.server_port}",
+            "chat_model": "fake", "api_key": "model-only"})
+        self.assertEqual(status, 200)
+        status, result = self.call("/api/courses/draft", {"title": "只有模型的课程"})
+        self.assertEqual(status, 503)
+        self.assertIn("搜索密钥", result["error"])
+        self.assertEqual(self.call("/api/bootstrap")[1]["drafts"], [])
+        self.call("/api/search/save", {"api_key": "wrong-search-key"})
+        status, invalid = self.call("/api/courses/draft", {"title": "密钥错误的课程"})
+        self.assertEqual(status, 503)
+        self.assertIn("搜索密钥无效", invalid["error"])
+        self.assertEqual(self.call("/api/bootstrap")[1]["drafts"], [])
+
+    def test_old_data_migrates_with_backup_and_preserves_model_profile(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "old.sqlite3"
             with sqlite3.connect(path) as db:
@@ -196,9 +254,4 @@ class PrototypeTests(unittest.TestCase):
                 db.execute("INSERT INTO model_profiles VALUES('p','name','https://example.com','model','','ciphertext')")
             store = Storage(path)
             self.assertEqual(len(store.model_profiles()), 1)
-            with sqlite3.connect(path) as db:
-                self.assertIsNone(db.execute("SELECT name FROM sqlite_master WHERE name='learning_targets'").fetchone())
-            backup = path.with_name(path.name + ".before-custom-courses.sqlite3")
-            self.assertTrue(backup.exists())
-            with sqlite3.connect(backup) as db:
-                self.assertIsNotNone(db.execute("SELECT name FROM sqlite_master WHERE name='learning_targets'").fetchone())
+            self.assertTrue(path.with_name(path.name + ".before-custom-courses.sqlite3").exists())

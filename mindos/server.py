@@ -17,6 +17,7 @@ from urllib.parse import parse_qs, urlsplit
 from .model import ModelGateway, ModelUnavailable
 from .secrets import SecretStore
 from .storage import Storage
+from .web_search import SearchUnavailable, WebSearch
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
@@ -24,7 +25,8 @@ LOGGER = logging.getLogger("mindos")
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/style.css": ("style.css", "text/css; charset=utf-8")}
-ENV_KEYS = {"MINDOS_MODEL_BASE_URL", "MINDOS_CHAT_MODEL", "MINDOS_MODEL_API_KEY", "MINDOS_DATA_PATH"}
+ENV_KEYS = {"MINDOS_MODEL_BASE_URL", "MINDOS_CHAT_MODEL", "MINDOS_MODEL_API_KEY",
+            "MINDOS_BRAVE_SEARCH_API_KEY", "MINDOS_DATA_PATH"}
 
 
 class MindOSServer(ThreadingHTTPServer):
@@ -120,9 +122,22 @@ class MindOSHandler(BaseHTTPRequestHandler):
                     | {"has_key": bool(p["encrypted_api_key"]), "key_usable": self._profile_key_usable(p)}
                     for p in self.server.storage.model_profiles()]
         active = next((p for p in profiles if p["id"] == selected), None)
+        saved_search = self.server.storage.search_key(self._session())
+        try:
+            search_usable = bool(self.server.secrets.decrypt(saved_search)) if saved_search else bool(
+                os.getenv("MINDOS_BRAVE_SEARCH_API_KEY", ""))
+        except ValueError:
+            search_usable = False
         return {"profiles": profiles, "selected_id": selected or ("env" if self.server.model.chat_ready else None),
                 "env_available": self.server.model.chat_ready,
-                "model_ready": bool(active and active["key_usable"] or not selected and self.server.model.chat_ready)}
+                "model_ready": bool(active and active["key_usable"] or not selected and self.server.model.chat_ready),
+                "search_has_key": bool(saved_search or os.getenv("MINDOS_BRAVE_SEARCH_API_KEY", "")),
+                "search_ready": search_usable}
+
+    def _search(self) -> WebSearch:
+        encrypted = self.server.storage.search_key(self._session())
+        api_key = self.server.secrets.decrypt(encrypted) if encrypted else os.getenv("MINDOS_BRAVE_SEARCH_API_KEY", "")
+        return WebSearch(api_key)
 
     def _owned_course(self, course_id: str) -> dict:
         if not isinstance(course_id, str) or len(course_id) > 80:
@@ -130,6 +145,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
         course = self.server.storage.course(self._session(), course_id)
         if not course:
             raise ValueError("课程不存在")
+        review = self.server.storage.confirmed_review(self._session(), course_id)
+        course["review_plan"] = review["plan"] if review else None
         return course
 
     def _unlocked_section(self, course: dict, ordinal: object) -> dict:
@@ -142,8 +159,10 @@ class MindOSHandler(BaseHTTPRequestHandler):
         course = self._owned_course(course_id)
         current = course["sections"][course["current_ordinal"] - 1]
         viewed = self._unlocked_section(course, ordinal or course["current_ordinal"])
-        return {"course": course, "mastery": self.server.storage.mastery(self._session(), course_id),
+        return {"course": {key: value for key, value in course.items() if key != "review_plan"},
+                "mastery": self.server.storage.mastery(self._session(), course_id),
                 "current_section": current, "section": viewed,
+                "review": self.server.storage.confirmed_review(self._session(), course_id),
                 "turns": self.server.storage.tutor_turns(self._session(), course_id, viewed["id"]),
                 "quizzes": self.server.storage.section_quizzes(self._session(), course_id, viewed["id"])}
 
@@ -161,7 +180,15 @@ class MindOSHandler(BaseHTTPRequestHandler):
         elif parsed.path == "/api/health":
             self._json(HTTPStatus.OK, {"status": "ok"})
         elif parsed.path == "/api/bootstrap":
-            self._json(HTTPStatus.OK, {**self._models_public(), "courses": self.server.storage.courses(self._session())})
+            self._json(HTTPStatus.OK, {**self._models_public(),
+                "courses": self.server.storage.courses(self._session()),
+                "drafts": self.server.storage.drafts(self._session())})
+        elif parsed.path == "/api/draft":
+            draft_id = parse_qs(parsed.query).get("draft_id", [""])[0]
+            draft = self.server.storage.draft(self._session(), draft_id)
+            if not draft:
+                raise ValueError("课程审查稿不存在")
+            self._json(HTTPStatus.OK, {"draft": draft})
         elif parsed.path == "/api/course":
             course_id = parse_qs(parsed.query).get("course_id", [""])[0]
             ordinal = parse_qs(parsed.query).get("ordinal", [""])[0]
@@ -219,7 +246,20 @@ class MindOSHandler(BaseHTTPRequestHandler):
         elif path == "/api/models/test":
             self._model().test_connection()
             self._json(HTTPStatus.OK, {"ok": True})
-        elif path == "/api/courses/create":
+        elif path == "/api/search/save":
+            api_key = payload.get("api_key", "")
+            clear = payload.get("clear", False)
+            if (not isinstance(api_key, str) or len(api_key) > 4096 or "\n" in api_key or
+                    "\r" in api_key or not isinstance(clear, bool) or (clear and api_key)):
+                raise ValueError("网页搜索密钥格式无效")
+            if api_key:
+                self.server.storage.save_search_key(self._session(), self.server.secrets.encrypt(api_key))
+            elif clear:
+                self.server.storage.save_search_key(self._session(), "")
+            else:
+                raise ValueError("请输入 Brave Search API 密钥")
+            self._json(HTTPStatus.OK, self._models_public())
+        elif path == "/api/courses/draft":
             title, goal = payload.get("title"), payload.get("goal", "")
             if not isinstance(title, str) or not 2 <= len(title.strip()) <= 100:
                 raise ValueError("请输入 2 至 100 字的课程名称")
@@ -227,8 +267,39 @@ class MindOSHandler(BaseHTTPRequestHandler):
                 raise ValueError("学习目标不能超过 500 字")
             if len(self.server.storage.courses(self._session())) >= 50:
                 raise ValueError("最多创建 50 门课程")
-            outline = self._model().plan_course(title.strip(), goal.strip())
-            course = self.server.storage.create_course(self._session(), title.strip(), goal.strip(), outline)
+            draft_id, revision = payload.get("draft_id"), payload.get("revision")
+            feedback = payload.get("feedback", "")
+            if not isinstance(feedback, str) or len(feedback) > 500:
+                raise ValueError("修改意见不能超过 500 字")
+            previous = None
+            if draft_id is not None:
+                if not isinstance(draft_id, str) or not isinstance(revision, int) or isinstance(revision, bool):
+                    raise ValueError("课程审查稿编号无效")
+                previous = self.server.storage.draft(self._session(), draft_id)
+                if not previous or previous["confirmed_course_id"]:
+                    raise ValueError("课程审查稿不存在或已确认")
+                if previous["revision"] != revision:
+                    raise ValueError("审查稿已经变化，请刷新后重新修改")
+                if not feedback.strip() and title.strip() == previous["title"] and goal.strip() == previous["goal"]:
+                    raise ValueError("请填写想修改的学习方向")
+            elif len(self.server.storage.drafts(self._session())) >= 20:
+                raise ValueError("最多保留 20 份未确认审查稿")
+            model = self._model()
+            search = self._search()
+            queries = model.search_queries(title.strip(), goal.strip(), feedback.strip(),
+                                           previous["plan"] if previous else None)
+            sources = search.search(queries)
+            plan = model.plan_course_review(title.strip(), goal.strip(), feedback.strip(),
+                                            previous["plan"] if previous else None, sources)
+            draft = self.server.storage.save_draft(self._session(), title.strip(), goal.strip(),
+                feedback.strip(), plan, sources, draft_id, revision)
+            self._json(HTTPStatus.OK, {"draft": draft})
+        elif path == "/api/courses/confirm":
+            draft_id, revision = payload.get("draft_id"), payload.get("revision")
+            if (not isinstance(draft_id, str) or not isinstance(revision, int) or
+                    isinstance(revision, bool)):
+                raise ValueError("课程审查稿编号无效")
+            course = self.server.storage.confirm_draft(self._session(), draft_id, revision)
             self._json(HTTPStatus.OK, {"course_id": course["id"], "course": self._course_public(course["id"])})
         elif path == "/api/sections/lesson":
             course = self._owned_course(payload.get("course_id"))
@@ -294,6 +365,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
         except ValueError as exc:
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
         except ModelUnavailable as exc:
+            self._json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
+        except SearchUnavailable as exc:
             self._json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
         except Exception:
             LOGGER.exception("请求处理失败")

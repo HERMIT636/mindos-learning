@@ -1,5 +1,6 @@
 const $ = id => document.getElementById(id);
-const state = { courses: [], profiles: [], selectedId: null, courseId: null, data: null, busy: false, editingId: null };
+const state = { courses: [], drafts: [], draft: null, profiles: [], selectedId: null,
+  courseId: null, data: null, busy: false, editingId: null, searchReady: false };
 
 function node(tag, text = '', className = '') {
   const item = document.createElement(tag);
@@ -47,10 +48,51 @@ function renderSidebar() {
 }
 
 function showWelcome() {
-  state.courseId = null; state.data = null;
-  $('welcome').hidden = false; $('course-view').hidden = true;
+  state.courseId = null; state.data = null; state.draft = null;
+  $('welcome').hidden = false; $('course-view').hidden = true; $('review-view').hidden = true;
   $('breadcrumb').textContent = '我的学习空间';
-  renderSidebar();
+  renderSidebar(); renderDraftList();
+}
+
+function renderDraftList() {
+  const box = $('draft-list'); box.replaceChildren(); box.hidden = !state.drafts.length;
+  if (!state.drafts.length) return;
+  box.append(node('h3', '未确认的课程审查稿'));
+  state.drafts.forEach(draft => {
+    const button = node('button', draft.title, 'draft-button'); button.type = 'button';
+    button.append(node('small', `第 ${draft.revision} 版 · 点击继续审查`));
+    button.addEventListener('click', () => renderReview(draft));
+    box.append(button);
+  });
+}
+
+function renderReview(draft) {
+  state.draft = draft; state.courseId = null;
+  $('welcome').hidden = true; $('course-view').hidden = true; $('review-view').hidden = false;
+  $('breadcrumb').textContent = `${draft.title} / 审查课程方向`;
+  $('review-title').textContent = draft.title;
+  $('review-revision').textContent = `· 第 ${draft.revision} 版`;
+  $('review-overview').textContent = draft.plan.overview;
+  $('review-title-input').value = draft.title;
+  $('review-goal-input').value = draft.goal;
+  $('review-feedback').value = '';
+  for (const [id, items] of [['review-outcomes', draft.plan.outcomes],
+                              ['review-directions', draft.plan.directions]]) {
+    const list = $(id); list.replaceChildren(...items.map(item => node('li', item)));
+  }
+  const sections = $('review-sections'); sections.replaceChildren();
+  draft.plan.sections.forEach(item => {
+    const row = node('li'); row.append(node('strong', item.title), node('span', item.objective));
+    sections.append(row);
+  });
+  const sources = $('review-sources'); sources.replaceChildren();
+  draft.sources.forEach((source, index) => {
+    const row = node('div', '', 'source-item');
+    const link = node('a', `${index + 1}. ${source.title || source.url}`);
+    link.href = source.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    row.append(link, node('p', source.description || '无摘要')); sources.append(row);
+  });
+  renderSidebar(); window.scrollTo(0, 0);
 }
 
 function fillProfile(id) {
@@ -67,6 +109,11 @@ function fillProfile(id) {
 function renderProfiles(data) {
   state.profiles = data.profiles;
   state.selectedId = data.selected_id;
+  state.searchReady = data.search_ready;
+  $('search-key').value = '';
+  $('search-key').placeholder = data.search_has_key ? '搜索密钥已保存；输入新密钥可替换' : '输入 Brave Search API 密钥';
+  $('search-status').textContent = data.search_ready ? '网页搜索已配置' :
+    data.search_has_key ? '搜索密钥无法解密，请重新输入' : '尚未配置网页搜索';
   const select = $('profile-select'); select.replaceChildren();
   if (data.env_available) {
     const option = node('option', '环境变量配置'); option.value = 'env'; select.append(option);
@@ -188,7 +235,7 @@ function renderCourse(data) {
   state.data = data; state.courseId = data.course.id;
   state.courses = state.courses.map(course => course.id === data.course.id
     ? { ...course, current_ordinal: data.course.current_ordinal } : course);
-  $('welcome').hidden = true; $('course-view').hidden = false;
+  $('welcome').hidden = true; $('course-view').hidden = false; $('review-view').hidden = true;
   $('breadcrumb').textContent = `${data.course.title} / 第 ${data.section.ordinal} 节`;
   $('course-title').textContent = data.course.title;
   $('course-goal').textContent = data.course.goal || '从基础开始，循序渐进地学习';
@@ -226,8 +273,12 @@ async function openCourse(id, ordinal) {
 async function bootstrap() {
   try {
     const data = await api('/api/bootstrap');
-    state.courses = data.courses; renderProfiles(data); renderSidebar();
-    if (!data.model_ready) { $('settings').hidden = false; showNotice('先配置并测试 AI 模型，再创建课程。'); }
+    state.courses = data.courses; state.drafts = data.drafts;
+    renderProfiles(data); renderSidebar();
+    if (!data.model_ready || !data.search_ready) {
+      $('settings').hidden = false;
+      showNotice('创建课程审查稿需要 AI 模型和网页搜索密钥，请先在这里完成配置。');
+    }
     showWelcome();
   } catch (error) { showNotice(error.message); }
 }
@@ -257,16 +308,48 @@ $('profile-test').addEventListener('click', () => action($('profile-test'), '正
 $('profile-delete').addEventListener('click', () => action($('profile-delete'), '正在删除配置…', async () => {
   renderProfiles(await api('/api/models/delete', { id: state.editingId }));
 }));
+$('search-form').addEventListener('submit', event => {
+  event.preventDefault();
+  action($('search-form').querySelector('button'), '正在保存网页搜索配置…', async () => {
+    renderProfiles(await api('/api/search/save', { api_key: $('search-key').value }));
+  });
+});
 $('course-form').addEventListener('submit', event => {
   event.preventDefault();
-  action($('course-create'), 'AI 正在规划课程小节，请稍候…', async () => {
-    const result = await api('/api/courses/create', {
+  action($('course-create'), '正在联网调研并拟定课程方向…', async () => {
+    const result = await api('/api/courses/draft', {
       title: $('course-title-input').value, goal: $('course-goal-input').value,
     });
-    state.courses = (await api('/api/bootstrap')).courses;
+    state.drafts = (await api('/api/bootstrap')).drafts;
+    renderReview(result.draft);
+  });
+});
+$('review-form').addEventListener('submit', event => {
+  event.preventDefault(); const draft = state.draft;
+  action($('review-revise'), '正在按你的修改意见重新搜索并调整方向…', async () => {
+    const result = await api('/api/courses/draft', {
+      draft_id: draft.id, revision: draft.revision,
+      title: $('review-title-input').value, goal: $('review-goal-input').value,
+      feedback: $('review-feedback').value,
+    });
+    state.drafts = (await api('/api/bootstrap')).drafts;
+    renderReview(result.draft);
+  });
+});
+$('review-confirm').addEventListener('click', () => {
+  const draft = state.draft;
+  if ($('review-title-input').value.trim() !== draft.title ||
+      $('review-goal-input').value.trim() !== draft.goal || $('review-feedback').value.trim()) {
+    showNotice('还有未应用的修改，请先点“按修改意见重新调研”。'); return;
+  }
+  action($('review-confirm'), '正在保存你确认的课程…', async () => {
+    const result = await api('/api/courses/confirm', { draft_id: draft.id, revision: draft.revision });
+    const latest = await api('/api/bootstrap');
+    state.courses = latest.courses; state.drafts = latest.drafts;
     renderCourse(result.course);
   });
 });
+$('review-back').addEventListener('click', showWelcome);
 $('lesson-generate').addEventListener('click', () => {
   const data = state.data;
   action($('lesson-generate'), 'AI 正在深入讲解这一节，请稍候…', async () => {

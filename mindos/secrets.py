@@ -50,4 +50,4 @@ class SecretStore:
         try:
             return cipher.decrypt(token.encode("ascii")).decode("utf-8")
         except (InvalidToken, UnicodeDecodeError, ValueError) as exc:
-            raise ValueError("保存的 API 密钥无法解密，请检查本机主密钥文件") from exc
+            raise ValueError("保存的 API 密钥无法解密。请在“管理模型与 API”中重新输入密钥并保存；若刚更换了电脑或运行环境，原加密密钥不会自动迁移") from exc

@@ -62,9 +62,19 @@ class MindOSHandler(BaseHTTPRequestHandler):
         selected = self.server.storage.selected_model_profile(self._session())
         return self.server.storage.model_profile(selected) if selected else None
 
+    def _profile_key_usable(self, profile: dict) -> bool:
+        if not profile["encrypted_api_key"]:
+            return True
+        try:
+            self.server.secrets.decrypt(profile["encrypted_api_key"])
+            return True
+        except ValueError:
+            return False
+
     def _model_ready(self) -> bool:
         profile = self._selected_profile()
-        return bool(profile["base_url"] and profile["chat_model"]) if profile else self.server.model.chat_ready
+        return (bool(profile["base_url"] and profile["chat_model"]) and
+                self._profile_key_usable(profile)) if profile else self.server.model.chat_ready
 
     def _embedding_ready(self) -> bool:
         profile = self._selected_profile()
@@ -82,7 +92,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
         selected = self.server.storage.selected_model_profile(self._session())
         return {"profiles": [
             {key: profile[key] for key in ("id", "name", "base_url", "chat_model", "embedding_model")}
-            | {"has_key": bool(profile["encrypted_api_key"])}
+            | {"has_key": bool(profile["encrypted_api_key"]),
+               "key_usable": self._profile_key_usable(profile)}
             for profile in self.server.storage.model_profiles()
         ], "selected_id": selected or ("env" if self.server.model.chat_ready else None),
             "env_available": self.server.model.chat_ready}
@@ -240,7 +251,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
             if not isinstance(mode, str) or mode not in {"materials", "ai"}:
                 raise ValueError("请选择资料模式或大模型模式")
             if mode == "ai" and not self._model_ready():
-                raise ValueError("服务端尚未配置大模型；请先在本机 .env 中配置并重启，或选择资料模式")
+                raise ValueError("模型配置尚不可用；请在“管理模型与 API”中检查配置、重新输入失效密钥并测试连接")
             self.server.storage.set_mode(self._session(), mode)
             self._json(HTTPStatus.OK, {"mode": mode})
         elif parsed.path == "/api/models/save":
@@ -298,12 +309,13 @@ class MindOSHandler(BaseHTTPRequestHandler):
             self.server.storage.delete_model_profile(profile_id)
             self._json(HTTPStatus.OK, self._models_public())
         elif parsed.path == "/api/models/test":
-            if not self._model_ready():
+            if not self._selected_profile() and not self.server.model.chat_ready:
                 raise ValueError("请先选择模型配置")
-            result = self._model()._post("/chat/completions", {
-                "model": self._model().chat_model, "max_tokens": 12,
+            model = self._model()
+            result = model._post("/chat/completions", {
+                "model": model.chat_model, "max_tokens": 64,
                 "messages": [{"role": "user", "content": "请回复 OK"}],
-            }, timeout=15)
+            }, timeout=30)
             if (not isinstance(result.get("choices"), list) or not result["choices"] or
                     not isinstance(result["choices"][0].get("message", {}).get("content"), str) or
                     not result["choices"][0]["message"]["content"].strip()):

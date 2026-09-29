@@ -31,6 +31,7 @@ class ModelGateway:
         self.chat_model = config.get("chat_model", "")
         self.embedding_model = config.get("embedding_model", "")
         self.api_key = config.get("api_key", "")
+        self.provider_host = ""
         if self.base_url:
             parsed = urllib.parse.urlsplit(self.base_url)
             if (parsed.scheme not in {"http", "https"} or not parsed.netloc or
@@ -38,6 +39,7 @@ class ModelGateway:
                 raise ValueError("MINDOS_MODEL_BASE_URL 必须是 HTTP(S) API 地址")
             if parsed.scheme == "http" and parsed.hostname not in {"localhost", "127.0.0.1", "::1"}:
                 raise ValueError("远程模型地址必须使用 HTTPS")
+            self.provider_host = (parsed.hostname or "").lower()
 
     @property
     def chat_ready(self) -> bool:
@@ -50,6 +52,10 @@ class ModelGateway:
     def _post(self, endpoint: str, payload: dict, timeout: int = 20) -> dict:
         if not self.base_url:
             raise ModelUnavailable("模型服务尚未配置")
+        if (self.provider_host == "api.deepseek.com" and endpoint == "/chat/completions" and
+                "thinking" not in payload and "reasoning_effort" not in payload):
+            # DeepSeek defaults to thinking mode, which can exhaust a short answer budget.
+            payload = {**payload, "thinking": {"type": "disabled"}}
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         headers = {"Content-Type": "application/json"}
         if self.api_key:
@@ -70,7 +76,13 @@ class ModelGateway:
             if exc.code == 404:
                 raise ModelUnavailable("模型接口不存在，请检查 API 地址和模型名称") from exc
             if exc.code == 429:
-                raise ModelUnavailable("模型服务限流或额度不足，请稍后再试") from exc
+                raise ModelUnavailable("模型服务请求过于频繁，请稍后再试") from exc
+            if exc.code == 402:
+                raise ModelUnavailable("模型服务余额不足，请检查服务商账户额度") from exc
+            if exc.code in (400, 422):
+                raise ModelUnavailable("模型服务不接受当前请求，请检查 API 地址、模型名称和接口兼容性") from exc
+            if exc.code in (408, 504):
+                raise ModelUnavailable("模型服务响应超时，请稍后重试") from exc
             raise ModelUnavailable("模型服务请求失败，请检查连接配置") from exc
         except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
             raise ModelUnavailable("模型服务暂不可用，请查看本机配置") from exc
@@ -167,7 +179,7 @@ class ModelGateway:
         result = self._post("/chat/completions", {
             "model": self.chat_model, "max_tokens": 6000 if new_lesson else 3000,
             "messages": messages,
-        }, timeout=90 if new_lesson else 45)
+        }, timeout=120 if new_lesson else 60)
         try:
             answer = result["choices"][0]["message"]["content"]
             if not isinstance(answer, str) or not answer.strip():

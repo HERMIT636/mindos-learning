@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import http.cookiejar
+import io
 import json
 import os
 import sqlite3
@@ -14,6 +15,7 @@ import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import patch
 
 from mindos.catalog import Catalog
 from mindos.model import ModelGateway
@@ -74,6 +76,32 @@ class FakeModelHandler(BaseHTTPRequestHandler):
 
 
 class PrototypeTests(unittest.TestCase):
+    def test_deepseek_chat_uses_non_thinking_mode(self) -> None:
+        sent = []
+
+        class Opener:
+            def open(self, request, timeout):
+                sent.append(json.loads(request.data))
+                return io.BytesIO(b'{"choices":[{"message":{"content":"OK"}}]}')
+
+        model = ModelGateway({"base_url": "https://api.deepseek.com", "chat_model": "deepseek-flash",
+                              "api_key": "test-only"})
+        with patch("mindos.model.urllib.request.build_opener", return_value=Opener()):
+            model._post("/chat/completions", {"model": model.chat_model,
+                                               "messages": [{"role": "user", "content": "OK"}]})
+            model._post("/chat/completions", {"model": model.chat_model,
+                                               "thinking": {"type": "enabled"},
+                                               "messages": [{"role": "user", "content": "OK"}]})
+        self.assertEqual(sent[0]["thinking"], {"type": "disabled"})
+        self.assertEqual(sent[1]["thinking"], {"type": "enabled"})
+
+    def test_lost_local_master_key_has_recovery_message(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            first = SecretStore(Path(directory) / "first.key")
+            second = SecretStore(Path(directory) / "second.key")
+            with self.assertRaisesRegex(ValueError, "重新输入密钥并保存"):
+                second.decrypt(first.encrypt("test-only"))
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.directory = tempfile.TemporaryDirectory()
@@ -167,6 +195,25 @@ class PrototypeTests(unittest.TestCase):
                 "chat_model": "fake-chat", "embedding_model": "", "api_key": ""})
             self.assertEqual(status, 200)
             self.assertTrue(updated["profiles"][0]["has_key"])
+            original_secrets = self.server.secrets
+            self.server.secrets = SecretStore(Path(self.directory.name) / "replacement.key")
+            try:
+                status, stale = self.call("/api/models")
+                self.assertEqual(status, 200)
+                self.assertFalse(stale["profiles"][0]["key_usable"])
+                status, failed = self.call("/api/models/test", {})
+                self.assertEqual(status, 400)
+                self.assertIn("重新输入密钥", failed["error"])
+                status, recovered = self.call("/api/models/save", {"id": profile_id,
+                    "name": "修改后", "base_url": f"http://127.0.0.1:{fake.server_port}/v1",
+                    "chat_model": "fake-chat", "embedding_model": "", "api_key": marker})
+                self.assertEqual(status, 200)
+                self.assertTrue(recovered["profiles"][0]["key_usable"])
+                status, tested = self.call("/api/models/test", {})
+                self.assertEqual(status, 200)
+                self.assertTrue(tested["ok"])
+            finally:
+                self.server.secrets = original_secrets
             status, invalid = self.call("/api/models/save", {"name": "不安全地址",
                 "base_url": "http://example.com/v1", "chat_model": "fake-chat",
                 "api_key": "placeholder"})

@@ -140,23 +140,26 @@ function renderModelProfiles(data) {
   state.profiles = data.profiles;
   state.selectedProfileId = data.selected_id;
   state.envAvailable = data.env_available;
-  state.chatReady = Boolean(data.selected_id);
   const options = [];
   if (data.env_available) {
     const option = element('option', '', '环境变量配置');
     option.value = 'env'; options.push(option);
   }
   data.profiles.forEach(profile => {
-    const option = element('option', '', `${profile.name} · ${profile.chat_model}${profile.has_key ? ' · 已设密钥' : ''}`);
+    const option = element('option', '', `${profile.name} · ${profile.chat_model}${profile.has_key ? ' · 已设密钥' : ''}${profile.key_usable === false ? ' · 需重填密钥' : ''}`);
     option.value = profile.id; options.push(option);
   });
   ui.profileSelect.replaceChildren(...options);
   ui.profileSelect.value = data.selected_id || options[0]?.value || '';
   ui.profileUse.disabled = !options.length;
+  const selected = data.profiles.find(profile => profile.id === data.selected_id);
+  state.chatReady = Boolean(data.selected_id && selected?.key_usable !== false);
   ui.profileTest.disabled = !data.selected_id;
   ui.chooseAi.disabled = !state.chatReady;
   fillModelForm(ui.profileSelect.value);
-  ui.modeHelp.textContent = state.chatReady
+  ui.modeHelp.textContent = selected?.key_usable === false
+    ? '已保存的密钥在当前运行环境无法解密。请选中该配置，在下方重新输入 API 密钥并保存，然后测试连接。'
+    : state.chatReady
     ? '模型配置已就绪。可以开始 AI 教学；新配置建议先测试连接。'
     : '先在下方添加模型 API 地址和名称。密钥只保存在本机服务端。';
 }

@@ -17,7 +17,7 @@ from urllib.parse import parse_qs, urlsplit
 from .model import ModelGateway, ModelUnavailable
 from .secrets import SecretStore
 from .storage import Storage
-from .web_search import SearchUnavailable, WebSearch
+from .web_search import PublicSourceSearch, SearchUnavailable, WebSearch
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
@@ -134,7 +134,11 @@ class MindOSHandler(BaseHTTPRequestHandler):
                 "search_has_key": bool(saved_search or os.getenv("MINDOS_BRAVE_SEARCH_API_KEY", "")),
                 "search_ready": search_usable}
 
-    def _search(self) -> WebSearch:
+    def _search(self, mode: str) -> PublicSourceSearch | WebSearch:
+        if mode == "public":
+            return PublicSourceSearch()
+        if mode != "brave":
+            raise ValueError("请选择有效的资料检索方式")
         encrypted = self.server.storage.search_key(self._session())
         api_key = self.server.secrets.decrypt(encrypted) if encrypted else os.getenv("MINDOS_BRAVE_SEARCH_API_KEY", "")
         return WebSearch(api_key)
@@ -261,6 +265,9 @@ class MindOSHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.OK, self._models_public())
         elif path == "/api/courses/draft":
             title, goal = payload.get("title"), payload.get("goal", "")
+            search_mode = payload.get("search_mode", "public")
+            if search_mode not in ("public", "brave"):
+                raise ValueError("请选择有效的资料检索方式")
             if not isinstance(title, str) or not 2 <= len(title.strip()) <= 100:
                 raise ValueError("请输入 2 至 100 字的课程名称")
             if not isinstance(goal, str) or len(goal) > 500:
@@ -280,12 +287,15 @@ class MindOSHandler(BaseHTTPRequestHandler):
                     raise ValueError("课程审查稿不存在或已确认")
                 if previous["revision"] != revision:
                     raise ValueError("审查稿已经变化，请刷新后重新修改")
-                if not feedback.strip() and title.strip() == previous["title"] and goal.strip() == previous["goal"]:
+                previous_mode = "brave" if any(source.get("provider", "Brave") == "Brave"
+                                               for source in previous["sources"]) else "public"
+                if (not feedback.strip() and title.strip() == previous["title"] and
+                        goal.strip() == previous["goal"] and search_mode == previous_mode):
                     raise ValueError("请填写想修改的学习方向")
             elif len(self.server.storage.drafts(self._session())) >= 20:
                 raise ValueError("最多保留 20 份未确认审查稿")
             model = self._model()
-            search = self._search()
+            search = self._search(search_mode)
             queries = model.search_queries(title.strip(), goal.strip(), feedback.strip(),
                                            previous["plan"] if previous else None)
             sources = search.search(queries)

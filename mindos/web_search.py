@@ -1,8 +1,10 @@
-"""Small, bounded Brave Web Search adapter for course-direction review."""
+"""Bounded source discovery for course-direction review."""
 
 from __future__ import annotations
 
 import json
+import re
+from html import unescape
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -75,9 +77,105 @@ class WebSearch:
                 title = item.get("title", "")
                 description = item.get("description", "")
                 results.append({"title": str(title)[:180], "url": clean_link,
-                                "description": str(description)[:240]})
+                                "description": str(description)[:240], "provider": "Brave"})
                 if len(results) >= 8:
                     return results
         if not results:
             raise SearchUnavailable("网页搜索没有找到可用结果，请换一个更明确的课程名称")
         return results
+
+
+class PublicSourceSearch:
+    """Keyless discovery from public encyclopedia and code repository indexes.
+
+    This is deliberately not described as a whole-web search engine.
+    """
+
+    WIKIPEDIA_ENDPOINTS = {
+        "zh": "https://zh.wikipedia.org/w/api.php",
+        "en": "https://en.wikipedia.org/w/api.php",
+    }
+    GITHUB_ENDPOINT = "https://api.github.com/search/repositories"
+    USER_AGENT = "MindOS-Learning/1.0 (https://github.com/HERMIT636/mindos-learning)"
+
+    @staticmethod
+    def _get_json(url: str) -> dict:
+        request = urllib.request.Request(url, headers={
+            "Accept": "application/json", "User-Agent": PublicSourceSearch.USER_AGENT,
+        })
+        with urllib.request.build_opener(NoRedirect).open(request, timeout=10) as response:
+            raw = response.read(1_500_001)
+        if len(raw) > 1_500_000:
+            raise ValueError("搜索响应过大")
+        body = json.loads(raw)
+        if not isinstance(body, dict):
+            raise ValueError("搜索响应格式无效")
+        return body
+
+    @staticmethod
+    def _plain(value: object, limit: int) -> str:
+        if not isinstance(value, str):
+            return ""
+        return re.sub(r"\s+", " ", unescape(re.sub(r"<[^>]*>", " ", value))).strip()[:limit]
+
+    def search(self, queries: list[str]) -> list[dict]:
+        if not 1 <= len(queries) <= 3 or any(not isinstance(query, str) or
+                                               not 3 <= len(query.strip()) <= 250 for query in queries):
+            raise ValueError("搜索词格式无效")
+        results: list[dict] = []
+        seen: set[str] = set()
+        failures = 0
+
+        def add(title: object, link: object, description: object, provider: str) -> None:
+            if not isinstance(link, str) or len(link) > 1000:
+                return
+            try:
+                parsed = urllib.parse.urlsplit(link)
+            except ValueError:
+                return
+            if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password:
+                return
+            clean = urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, parsed.path, parsed.query, ""))
+            if clean in seen:
+                return
+            seen.add(clean)
+            results.append({"title": self._plain(title, 180), "url": clean,
+                            "description": self._plain(description, 240), "provider": provider})
+
+        for query in queries:
+            if len(results) >= 8:
+                break
+            for language, endpoint in self.WIKIPEDIA_ENDPOINTS.items():
+                params = {"action": "query", "list": "search", "srsearch": query.strip(),
+                          "srlimit": 2, "format": "json", "formatversion": 2}
+                try:
+                    body = self._get_json(endpoint + "?" + urllib.parse.urlencode(params))
+                    entries = body.get("query", {}).get("search", [])
+                    if not isinstance(entries, list):
+                        raise ValueError("搜索响应格式无效")
+                    for item in entries[:2]:
+                        if not isinstance(item, dict) or not isinstance(item.get("title"), str):
+                            continue
+                        link = f"https://{language}.wikipedia.org/wiki/" + urllib.parse.quote(
+                            item["title"].replace(" ", "_"), safe="")
+                        add(item["title"], link, item.get("snippet", ""), f"Wikipedia {language}")
+                except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError,
+                        json.JSONDecodeError):
+                    failures += 1
+            params = {"q": query.strip(), "per_page": 2}
+            try:
+                body = self._get_json(self.GITHUB_ENDPOINT + "?" + urllib.parse.urlencode(params))
+                entries = body.get("items", [])
+                if not isinstance(entries, list):
+                    raise ValueError("搜索响应格式无效")
+                for item in entries[:2]:
+                    if isinstance(item, dict):
+                        add(item.get("full_name"), item.get("html_url"), item.get("description"), "GitHub")
+            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError,
+                    json.JSONDecodeError):
+                failures += 1
+        if not results:
+            if failures:
+                raise SearchUnavailable("免密钥资料检索暂时不可用或没有结果；请检查网络、换搜索词，或选用 Brave")
+            raise SearchUnavailable("公开资料索引没有找到可用结果；请换一个更明确的课程名称")
+        return results[:8]

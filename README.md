@@ -4,7 +4,7 @@
 
 ## 已实现
 
-- **课程审查**：模型拟定搜索词，Brave Search 检索网页，模型依据搜索结果的标题和摘要生成简明方向、学习成果和小节目录。审查稿及来源保存在本机，刷新后可以继续审查。此阶段不生成具体讲义和题目。
+- **课程审查**：模型拟定搜索词，默认免额外密钥检索 Wikipedia 与 GitHub；Brave 网页搜索可选。模型依据结果的标题和摘要生成简明方向、学习成果和小节目录。审查稿及来源保存在本机，刷新后可以继续审查。此阶段不生成具体讲义和题目。
 - **用户确认**：可修改课程名称、目标和学习方向并重新调研；旧版审查稿不能误确认。确认后才创建课程。
 - **逐节教学**：讲解按节生成并保存；可随时追问，只有点击“进入下一小节”才推进。
 - **独立小测**：每次生成 4 道单选题，提交后保存题目、作答、得分和解释；可反复复测旧小节。
@@ -22,7 +22,7 @@ python -m pip install -r requirements.txt
 python -m mindos.server
 ```
 
-打开 <http://127.0.0.1:8765>，在“管理模型与 API”中配置对话模型和 **Brave Search API 密钥**。DeepSeek 对话模型的地址可填 `https://api.deepseek.com`，模型名称填 `deepseek-flash`；DeepSeek 密钥只负责模型调用，不能代替网页搜索密钥。也可以通过本机 `.env` 提供 `MINDOS_BRAVE_SEARCH_API_KEY`。搜索词会发送给 Brave，模型服务会收到搜索摘要和审查稿内容，两项服务可能产生费用。
+打开 <http://127.0.0.1:8765>，在“管理模型与 API”中配置对话模型即可开始。DeepSeek 对话模型的地址可填 `https://api.deepseek.com`，模型名称填 `deepseek-flash`。默认检索无需另配密钥，但只覆盖 Wikipedia 和 GitHub 的公开索引，不等于全网搜索。需要更广的网页检索时，可选配 Brave Search API 密钥，或通过本机 `.env` 提供 `MINDOS_BRAVE_SEARCH_API_KEY`。搜索词会发送给所选来源，模型服务会收到搜索摘要和审查稿内容；模型与 Brave 服务可能产生费用。
 
 学习数据默认保存在 `data/mindos-demo.sqlite3`，不会提交到仓库。旧版数据库首次升级时会先在同目录创建 `.before-custom-courses.sqlite3` 备份，再清除旧固定课程记录；模型配置保留。运行测试：`python -m unittest discover -s tests -v`。
 

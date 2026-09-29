@@ -76,6 +76,8 @@ function renderReview(draft) {
   $('review-title-input').value = draft.title;
   $('review-goal-input').value = draft.goal;
   $('review-feedback').value = '';
+  $('review-search-mode').value = draft.sources.some(source => !source.provider || source.provider === 'Brave')
+    ? 'brave' : 'public';
   for (const [id, items] of [['review-outcomes', draft.plan.outcomes],
                               ['review-directions', draft.plan.directions]]) {
     const list = $(id); list.replaceChildren(...items.map(item => node('li', item)));
@@ -90,7 +92,7 @@ function renderReview(draft) {
     const row = node('div', '', 'source-item');
     const link = node('a', `${index + 1}. ${source.title || source.url}`);
     link.href = source.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
-    row.append(link, node('p', source.description || '无摘要')); sources.append(row);
+    row.append(link, node('p', `${source.provider ? source.provider + ' · ' : ''}${source.description || '无摘要'}`)); sources.append(row);
   });
   renderSidebar(); window.scrollTo(0, 0);
 }
@@ -112,8 +114,8 @@ function renderProfiles(data) {
   state.searchReady = data.search_ready;
   $('search-key').value = '';
   $('search-key').placeholder = data.search_has_key ? '搜索密钥已保存；输入新密钥可替换' : '输入 Brave Search API 密钥';
-  $('search-status').textContent = data.search_ready ? '网页搜索已配置' :
-    data.search_has_key ? '搜索密钥无法解密，请重新输入' : '尚未配置网页搜索';
+  $('search-status').textContent = data.search_ready ? 'Brave 已配置，可选用' :
+    data.search_has_key ? 'Brave 密钥无法解密，请重新输入' : '未配置 Brave；免密钥资料检索仍可使用';
   const select = $('profile-select'); select.replaceChildren();
   if (data.env_available) {
     const option = node('option', '环境变量配置'); option.value = 'env'; select.append(option);
@@ -275,9 +277,9 @@ async function bootstrap() {
     const data = await api('/api/bootstrap');
     state.courses = data.courses; state.drafts = data.drafts;
     renderProfiles(data); renderSidebar();
-    if (!data.model_ready || !data.search_ready) {
+    if (!data.model_ready) {
       $('settings').hidden = false;
-      showNotice('创建课程审查稿需要 AI 模型和网页搜索密钥，请先在这里完成配置。');
+      showNotice('创建课程审查稿需要先配置 AI 模型；默认资料检索无需额外密钥。');
     }
     showWelcome();
   } catch (error) { showNotice(error.message); }
@@ -316,9 +318,10 @@ $('search-form').addEventListener('submit', event => {
 });
 $('course-form').addEventListener('submit', event => {
   event.preventDefault();
-  action($('course-create'), '正在联网调研并拟定课程方向…', async () => {
+  action($('course-create'), '正在检索资料并拟定课程方向…', async () => {
     const result = await api('/api/courses/draft', {
       title: $('course-title-input').value, goal: $('course-goal-input').value,
+      search_mode: $('course-search-mode').value,
     });
     state.drafts = (await api('/api/bootstrap')).drafts;
     renderReview(result.draft);
@@ -330,7 +333,7 @@ $('review-form').addEventListener('submit', event => {
     const result = await api('/api/courses/draft', {
       draft_id: draft.id, revision: draft.revision,
       title: $('review-title-input').value, goal: $('review-goal-input').value,
-      feedback: $('review-feedback').value,
+      feedback: $('review-feedback').value, search_mode: $('review-search-mode').value,
     });
     state.drafts = (await api('/api/bootstrap')).drafts;
     renderReview(result.draft);
@@ -339,7 +342,9 @@ $('review-form').addEventListener('submit', event => {
 $('review-confirm').addEventListener('click', () => {
   const draft = state.draft;
   if ($('review-title-input').value.trim() !== draft.title ||
-      $('review-goal-input').value.trim() !== draft.goal || $('review-feedback').value.trim()) {
+      $('review-goal-input').value.trim() !== draft.goal || $('review-feedback').value.trim() ||
+      $('review-search-mode').value !==
+        (draft.sources.some(source => !source.provider || source.provider === 'Brave') ? 'brave' : 'public')) {
     showNotice('还有未应用的修改，请先点“按修改意见重新调研”。'); return;
   }
   action($('review-confirm'), '正在保存你确认的课程…', async () => {

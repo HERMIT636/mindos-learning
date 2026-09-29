@@ -17,7 +17,7 @@ from pathlib import Path
 from mindos.secrets import SecretStore
 from mindos.server import MindOSServer
 from mindos.storage import Storage
-from mindos.web_search import WebSearch
+from mindos.web_search import PublicSourceSearch, WebSearch
 
 
 class FakeProvider(BaseHTTPRequestHandler):
@@ -26,6 +26,13 @@ class FakeProvider(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed = urllib.parse.urlsplit(self.path)
+        if parsed.path == "/w/api.php":
+            self.send_json({"query": {"search": [{"title": "机器学习", "snippet": "从基础概念开始"}]}})
+            return
+        if parsed.path == "/search/repositories":
+            self.send_json({"items": [{"full_name": "example/course", "html_url": "https://github.com/example/course",
+                                       "description": "公开教程与实例"}]})
+            return
         if parsed.path != "/res/v1/web/search":
             self.send_error(404); return
         if self.headers.get("X-Subscription-Token") != "search-test-private-key":
@@ -89,7 +96,14 @@ class PrototypeTests(unittest.TestCase):
         cls.provider_thread = threading.Thread(target=cls.provider.serve_forever, daemon=True)
         cls.provider_thread.start()
         cls.original_search_endpoint = WebSearch.ENDPOINT
+        cls.original_wikipedia_endpoints = PublicSourceSearch.WIKIPEDIA_ENDPOINTS
+        cls.original_github_endpoint = PublicSourceSearch.GITHUB_ENDPOINT
         WebSearch.ENDPOINT = f"http://127.0.0.1:{cls.provider.server_port}/res/v1/web/search"
+        PublicSourceSearch.WIKIPEDIA_ENDPOINTS = {
+            "zh": f"http://127.0.0.1:{cls.provider.server_port}/w/api.php",
+            "en": f"http://127.0.0.1:{cls.provider.server_port}/w/api.php",
+        }
+        PublicSourceSearch.GITHUB_ENDPOINT = f"http://127.0.0.1:{cls.provider.server_port}/search/repositories"
         cls.data_path = Path(cls.directory.name) / "mindos.sqlite3"
         cls.server = MindOSServer(0, cls.data_path)
         cls.server.secrets = SecretStore(Path(cls.directory.name) / "master.key")
@@ -102,6 +116,8 @@ class PrototypeTests(unittest.TestCase):
         cls.server.shutdown(); cls.server.server_close(); cls.thread.join(timeout=2)
         cls.provider.shutdown(); cls.provider.server_close(); cls.provider_thread.join(timeout=2)
         WebSearch.ENDPOINT = cls.original_search_endpoint
+        PublicSourceSearch.WIKIPEDIA_ENDPOINTS = cls.original_wikipedia_endpoints
+        PublicSourceSearch.GITHUB_ENDPOINT = cls.original_github_endpoint
         cls.directory.cleanup()
 
     def setUp(self) -> None:
@@ -141,7 +157,8 @@ class PrototypeTests(unittest.TestCase):
 
     def draft_and_confirm(self, title: str, goal: str = "") -> str:
         before = len(self.call("/api/bootstrap")[1]["courses"])
-        status, drafted = self.call("/api/courses/draft", {"title": title, "goal": goal})
+        status, drafted = self.call("/api/courses/draft", {"title": title, "goal": goal,
+                                                             "search_mode": "brave"})
         self.assertEqual(status, 200)
         draft = drafted["draft"]
         self.assertEqual(draft["revision"], 1)
@@ -154,7 +171,8 @@ class PrototypeTests(unittest.TestCase):
 
     def test_review_revision_confirmation_and_refresh(self) -> None:
         self.configure()
-        status, drafted = self.call("/api/courses/draft", {"title": "课程甲", "goal": "从零开始"})
+        status, drafted = self.call("/api/courses/draft", {"title": "课程甲", "goal": "从零开始",
+                                                         "search_mode": "brave"})
         self.assertEqual(status, 200)
         first = drafted["draft"]
         self.assertEqual(first["revision"], 1)
@@ -164,7 +182,8 @@ class PrototypeTests(unittest.TestCase):
         status, old_endpoint = self.call("/api/courses/create", {"title": "绕过审查"})
         self.assertEqual(status, 404)
         status, revised = self.call("/api/courses/draft", {"draft_id": first["id"], "revision": 1,
-            "title": "课程甲", "goal": "从零开始", "feedback": "增加更多实践"})
+            "title": "课程甲", "goal": "从零开始", "feedback": "增加更多实践",
+            "search_mode": "brave"})
         self.assertEqual(status, 200)
         latest = revised["draft"]
         self.assertEqual(latest["revision"], 2)
@@ -223,26 +242,56 @@ class PrototypeTests(unittest.TestCase):
 
     def test_other_browser_cannot_read_or_confirm_draft(self) -> None:
         self.configure()
-        _, drafted = self.call("/api/courses/draft", {"title": "私有课程"})
+        _, drafted = self.call("/api/courses/draft", {"title": "私有课程", "search_mode": "brave"})
         draft_id = drafted["draft"]["id"]
         other = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
         self.assertEqual(self.call("/api/bootstrap", client=other)[1]["drafts"], [])
         self.assertEqual(self.call(f"/api/draft?draft_id={draft_id}", client=other)[0], 400)
         self.assertEqual(self.call("/api/courses/confirm", {"draft_id": draft_id, "revision": 1}, other)[0], 400)
 
-    def test_missing_search_key_does_not_fake_web_research(self) -> None:
+    def test_keyless_sources_work_and_brave_is_optional(self) -> None:
         status, saved = self.call("/api/models/save", {"name": "仅模型",
             "base_url": f"http://127.0.0.1:{self.provider.server_port}",
             "chat_model": "fake", "api_key": "model-only"})
         self.assertEqual(status, 200)
         status, result = self.call("/api/courses/draft", {"title": "只有模型的课程"})
+        self.assertEqual(status, 200)
+        self.assertTrue(result["draft"]["sources"])
+        self.assertTrue({source["provider"] for source in result["draft"]["sources"]} &
+                        {"Wikipedia zh", "Wikipedia en", "GitHub"})
+        self.assertFalse(self.call("/api/bootstrap")[1]["search_ready"])
+        status, missing = self.call("/api/courses/draft", {"title": "需要 Brave 的课程",
+                                                             "search_mode": "brave"})
         self.assertEqual(status, 503)
-        self.assertIn("搜索密钥", result["error"])
-        self.assertEqual(self.call("/api/bootstrap")[1]["drafts"], [])
+        self.assertIn("搜索密钥", missing["error"])
         self.call("/api/search/save", {"api_key": "wrong-search-key"})
-        status, invalid = self.call("/api/courses/draft", {"title": "密钥错误的课程"})
+        status, invalid = self.call("/api/courses/draft", {"title": "密钥错误的课程",
+                                                             "search_mode": "brave"})
         self.assertEqual(status, 503)
         self.assertIn("搜索密钥无效", invalid["error"])
+        self.assertEqual(len(self.call("/api/bootstrap")[1]["drafts"]), 1)
+        self.call("/api/search/save", {"api_key": "search-test-private-key"})
+        first = result["draft"]
+        status, revised = self.call("/api/courses/draft", {
+            "draft_id": first["id"], "revision": first["revision"], "title": first["title"],
+            "goal": first["goal"], "search_mode": "brave"})
+        self.assertEqual(status, 200)
+        self.assertEqual({source["provider"] for source in revised["draft"]["sources"]}, {"Brave"})
+
+    def test_keyless_search_failure_does_not_invent_sources(self) -> None:
+        self.call("/api/models/save", {"name": "测试模型", "base_url": f"http://127.0.0.1:{self.provider.server_port}",
+                                       "chat_model": "fake", "api_key": "model-only"})
+        old_wiki = PublicSourceSearch.WIKIPEDIA_ENDPOINTS
+        old_github = PublicSourceSearch.GITHUB_ENDPOINT
+        try:
+            PublicSourceSearch.WIKIPEDIA_ENDPOINTS = {"zh": "http://127.0.0.1:1/w/api.php"}
+            PublicSourceSearch.GITHUB_ENDPOINT = "http://127.0.0.1:1/search/repositories"
+            status, failed = self.call("/api/courses/draft", {"title": "无法检索的课程"})
+        finally:
+            PublicSourceSearch.WIKIPEDIA_ENDPOINTS = old_wiki
+            PublicSourceSearch.GITHUB_ENDPOINT = old_github
+        self.assertEqual(status, 503)
+        self.assertIn("检索暂时不可用", failed["error"])
         self.assertEqual(self.call("/api/bootstrap")[1]["drafts"], [])
 
     def test_old_data_migrates_with_backup_and_preserves_model_profile(self) -> None:

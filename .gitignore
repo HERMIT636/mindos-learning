@@ -43,15 +43,6 @@ evaluation-private/
 *.pth
 
 # Local drafts, backups and publication archives
-# Downloaded third-party originals are local audit material, not project releases.
-external-resources/python-foundations/*.html
-external-resources/linear-algebra/*.html
-external-resources/linear-algebra/*.pdf
-external-resources/linear-algebra/*.tar.gz
-external-resources/machine-learning/*.html
-external-resources/machine-learning/*.zip
-external-resources/hpc-foundations/*.pdf
-external-resources/ascend-c-operators/*.html
 历史版本/
 MindOS_大创挑战杯优化建议稿.md
 release/

@@ -1,11 +1,11 @@
-name: 功能或课程提案
-description: 提议新的使用场景、平台能力或课程包
+name: 功能提案
+description: 提议教学、测试或学习记录的新能力
 title: "[提案] "
 body:
   - type: textarea
     id: need
     attributes:
-      label: 谁需要解决什么问题
+      label: 谁遇到了什么学习问题
     validations:
       required: true
   - type: textarea
@@ -17,5 +17,4 @@ body:
   - type: textarea
     id: validation
     attributes:
-      label: 如何验证
-      description: 课程提案请补充资料来源、分发许可与内容审核安排。
+      label: 如何验证学习体验或结果

@@ -3,93 +3,53 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#142b3e">
-  <meta name="description" content="MindOS 多课程自适应学习原型">
-  <title>MindOS · 把下一步学清楚</title>
+  <meta name="theme-color" content="#133a3c">
+  <meta name="description" content="MindOS · 创建自己的课程，一节一节学会">
+  <title>MindOS · 你的 AI 课程</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <div class="shell">
-    <aside class="sidebar" aria-label="课程导航">
-      <div class="brand"><span class="brand-mark">M</span><span><strong>MindOS</strong><small>学习路径实验室</small></span></div>
-      <div class="sidebar-copy"><span class="eyebrow">你的学习空间</span><h2>从目标出发，<br>一步步学会。</h2><p>短诊断定位起点，再按知识关系补强、练习和复测。</p></div>
-      <div class="sidebar-section"><span class="sidebar-label">选择课程</span><nav id="course-list" class="course-list" aria-label="课程列表" hidden></nav></div>
-      <div class="sidebar-foot"><span class="foot-dot"></span> 本地演示 · 草稿课程内容</div>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand" href="/" id="home-link"><span class="brand-icon">M</span><span><strong>MindOS</strong><small>一节一节学会</small></span></a>
+      <p class="sidebar-label">我的课程</p>
+      <nav id="course-list" aria-label="我的课程"></nav>
+      <button id="new-course-side" class="sidebar-add" type="button">＋ 新建课程</button>
+      <p class="sidebar-foot">每门课程分别保存讲解、测试和掌握记录。你的数据保存在本机。</p>
     </aside>
-
     <main class="main">
-      <header class="topbar"><span class="topbar-location">学习工作台 <span>/</span> <b id="breadcrumb">课程</b></span><span><button id="change-mode" class="text-button" type="button" hidden>管理模型与 API</button> <span class="status-pill" id="model-status">正在连接本地服务</span></span></header>
+      <header class="topbar"><span id="breadcrumb">我的学习空间</span><button id="settings-toggle" class="text-button" type="button">管理模型与 API</button></header>
       <div class="content">
-        <section class="panel mode-gate" id="mode-gate" aria-labelledby="mode-gate-title">
-          <span class="eyebrow">开始一对一学习</span><h1 id="mode-gate-title">连接 AI 教师</h1><p>按课程路线逐节深入讲解；你可以随时打断提问，每节结束做一道小测。</p>
-          <div class="mode-cards"><button id="choose-ai" class="mode-card" type="button"><strong>开始 AI 教学</strong><span>讲解会依据课程目标、先修关系和你的作答情况生成；本地草稿讲义不再作为主讲内容。</span></button></div>
-          <p id="mode-help" class="panel-intro">模型服务状态正在检查……</p>
-          <section class="model-manager" aria-labelledby="model-manager-title"><h2 id="model-manager-title">管理模型与 API</h2><p class="panel-intro">配置保存在这台电脑上。密钥输入后只传给本机服务，不会在页面回显；远程服务须使用 HTTPS。</p>
-            <label for="profile-select">已保存的模型</label><div class="model-manager-row"><select id="profile-select"><option value="">暂无配置</option></select><button id="profile-use" class="button button-secondary" type="button">使用所选模型</button><button id="profile-test" class="button button-secondary" type="button">测试当前模型连接</button></div>
-            <form id="profile-form" autocomplete="off"><div class="model-manager-grid"><label>配置名称<input id="profile-name" maxlength="60" required placeholder="例如：我的学习模型"></label><label>API 地址<input id="profile-url" type="url" maxlength="500" required placeholder="https://服务商地址/v1"></label><label>对话模型名称<input id="profile-chat" maxlength="120" required placeholder="填写服务商给出的模型 ID"></label><label>向量模型名称（可选）<input id="profile-embedding" maxlength="120" placeholder="教学主流程不需要"></label><label>API 密钥<input id="profile-key" type="password" maxlength="4096" autocomplete="new-password" placeholder="新建时输入；修改时留空表示保留原密钥"></label><label class="model-manager-check"><input id="profile-clear-key" type="checkbox">清除已保存密钥</label></div><div class="model-manager-actions"><button id="profile-save" class="button button-primary" type="submit">保存并选用</button><button id="profile-new" class="button button-secondary" type="button">新建配置</button><button id="profile-delete" class="button button-secondary" type="button">删除当前配置</button></div></form><p id="profile-status" class="panel-intro" role="status"></p>
-          </section>
+        <div id="notice" class="notice" role="status" hidden></div>
+        <section id="settings" class="card settings" hidden>
+          <div class="section-head"><div><p class="eyebrow">学习模型</p><h2>管理模型与 API</h2></div><button id="settings-close" class="icon-button" type="button" aria-label="关闭设置">×</button></div>
+          <p class="muted">选择你自己的对话模型。密钥由本机服务加密保存，页面不会回显。</p>
+          <div class="field-row"><label>已保存配置<select id="profile-select"></select></label><button id="profile-use" class="button secondary" type="button">选用</button><button id="profile-test" class="button secondary" type="button">测试连接</button></div>
+          <form id="profile-form" autocomplete="off">
+            <div class="settings-grid"><label>配置名称<input id="profile-name" maxlength="60" required placeholder="例如：我的 DeepSeek"></label><label>API 地址<input id="profile-url" type="url" maxlength="500" required placeholder="https://api.deepseek.com"></label><label>模型名称<input id="profile-chat" maxlength="120" required placeholder="deepseek-flash"></label><label>API 密钥<input id="profile-key" type="password" maxlength="4096" autocomplete="new-password" placeholder="输入新密钥；留空保留旧密钥"></label></div>
+            <div class="action-row"><button class="button primary" type="submit">保存并选用</button><button id="profile-new" class="button secondary" type="button">新建配置</button><button id="profile-delete" class="button quiet-button" type="button">删除配置</button></div>
+          </form>
+          <p id="profile-status" class="muted" role="status"></p>
         </section>
-
-        <section class="panel course-picker" id="course-picker" aria-labelledby="course-picker-title" hidden><span class="eyebrow">下一步 · 选择课程</span><h2 id="course-picker-title">你想学习哪门课程？</h2><p class="panel-intro">先选课程，再按章节选目标知识点。</p><div class="goal-row"><label for="course-select">目标课程</label><select id="course-select"></select><button id="course-confirm" class="button button-primary" type="button">进入课程</button></div></section>
-
-        <section class="hero" id="course-hero" aria-labelledby="course-title" hidden>
-          <div class="hero-text"><span class="eyebrow warm">MINDOS · 课程概览</span><h1 id="course-title">正在加载课程</h1><p id="course-audience">请稍候。</p><div class="hero-tags" id="course-goals"></div></div>
-          <div class="hero-figure" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="core-dot"></div><span class="orbit-label label-one">学习</span><span class="orbit-label label-two">练习</span><span class="orbit-label label-three">复测</span></div>
+        <section id="welcome" class="welcome">
+          <div class="welcome-copy"><p class="eyebrow">为你的目标开始</p><h1>想学什么，就从这里开始。</h1><p>输入课程名称，MindOS 会规划从零基础到应用的路线。讲解和小测每次只生成当前一节，你决定什么时候继续。</p></div>
+          <form id="course-form" class="card create-card"><h2>新建课程</h2><label>我想学习的课程<input id="course-title-input" maxlength="100" required placeholder="例如：机器学习基础、摄影构图、微积分"></label><label>学习目标（可选）<textarea id="course-goal-input" rows="3" maxlength="500" placeholder="例如：从零开始，最后能独立完成一个小项目"></textarea></label><button id="course-create" class="button primary" type="submit">创建课程并规划小节 →</button><p class="muted">创建时只规划小节目录；讲解与小测在进入小节后按需生成。</p></form>
         </section>
-
-        <nav class="flow-steps" id="flow-steps" aria-label="学习功能导航" hidden><button type="button" data-stage="target">① 学习目标</button><button type="button" data-stage="diagnostic">② 学前小测（可跳过）</button><button type="button" data-stage="explain">③ 逐讲学习</button><button type="button" data-stage="practice">④ 练习与自测</button><button type="button" data-stage="status">⑤ 状态与计划</button></nav>
-
-        <div id="stage-target" class="stage-page" hidden></div>
-        <div id="stage-diagnostic" class="stage-page" hidden><div class="stage-intro"><span class="eyebrow">STEP 02</span><h2>学前小测（可跳过）</h2><p>知道多少就答多少；完全不会也没关系，可以直接从第一讲开始。</p></div><p id="diagnostic-complete" class="panel" hidden>已进入讲解路线。学前小测可以以后再做，跳过不会被记为答错。</p></div>
-        <div id="stage-explain" class="stage-page" hidden><section class="panel lesson-panel" id="lesson-panel"><div class="panel-head"><div><span class="eyebrow">STEP 03 · LESSON</span><h2 id="lesson-title">从第一讲开始</h2></div><button id="lesson-refresh" class="button button-secondary" type="button">重新讲解本节</button></div><p class="panel-intro" id="lesson-context">AI 会从你的起点讲解；遇到不懂的地方，随时在下方追问。</p><div class="lesson-navigation"><span id="lesson-position"></span><div><button id="lesson-prev" class="button button-secondary" type="button">上一讲</button><button id="lesson-next" class="button button-primary" type="button">下一讲</button></div></div><div id="lesson-result" class="lesson-result" aria-live="polite">正在准备讲解…</div></section><div class="stage-actions"><button id="go-practice" class="button button-primary" type="button">继续：练习与独立自测 ↗</button></div></div>
-        <div id="stage-practice" class="stage-page" hidden><div class="stage-intro"><span class="eyebrow">STEP 04</span><h2>练习与独立自测</h2><p>本节 AI 小测用于即时理解检查；这里的不同题目可用于独立复测和更新学习状态。</p></div><div class="stage-actions"><button id="go-status" class="button button-secondary" type="button">查看证据与后续计划 ↗</button><button id="back-explain" class="button button-secondary" type="button">返回知识点讲解</button></div></div>
-        <div id="stage-status" class="stage-page" hidden><div class="stage-intro"><span class="eyebrow">STEP 05</span><h2>知识状态与后续计划</h2><p>对照短诊断、独立作答证据与先修关系，决定下一步。</p></div></div>
-
-        <section class="panel setup-panel" id="setup" aria-labelledby="setup-title" hidden>
-          <div class="panel-head"><div><span class="eyebrow">STEP 01</span><h2 id="setup-title">选择要学到哪一讲</h2></div><span class="small-badge">从基础开始</span></div>
-          <p class="panel-intro">先选章节和目标知识点。讲解会从这条路线的基础知识开始，一讲一讲走到目标；学前小测可以跳过。</p>
-          <div class="goal-row"><label for="chapter-select">目标章节</label><select id="chapter-select"></select><label for="concept-select">目标知识点</label><select id="concept-select"></select><button id="goal-button" class="button button-primary" type="button">开始学习这条路线</button></div>
-          <div id="custom-goal-box" class="custom-goal" hidden><label for="custom-goal">也可以描述自己的目标，让 AI 对照当前课程目录分析</label><textarea id="custom-goal" rows="2" maxlength="200" placeholder="例如：我想学会判断模型是否过拟合，或理解 Ascend C 的 Tiling 和尾块处理。"></textarea><button id="analyze-goal" class="button button-secondary" type="button">分析并定位知识点</button><p id="goal-analysis" class="panel-intro" role="status"></p></div>
-          <p id="goal-current" class="goal-current"></p>
-          <div id="diagnostic-box" class="diagnostic-box" hidden><span class="eyebrow">可选学前小测</span><p id="diagnostic-count"></p><h3 id="diagnostic-prompt"></h3><div id="diagnostic-choices" class="choice-list"></div><div class="stage-actions"><button id="diagnostic-submit" class="button button-secondary" type="button">提交这一题</button><button id="diagnostic-skip" class="button button-primary" type="button">跳过测验，从零开始讲解</button></div><p id="diagnostic-feedback" class="panel-intro" role="status"></p></div>
-        </section>
-
-        <section class="panel path-panel" id="path-panel" aria-labelledby="path-title" hidden>
-          <div class="panel-head"><div><span class="eyebrow">STEP 02 → 03</span><h2 id="path-title">薄弱点与先修路线</h2></div><span class="small-badge">按当前证据调整</span></div>
-          <p id="path-summary" class="panel-intro"></p><div id="path-list" class="path-list"></div>
-        </section>
-
-        <section class="metrics" id="metrics" aria-label="学习概况" hidden>
-          <div class="metric"><span>知识维度</span><strong id="metric-total">—</strong><small>按课程分别记录</small></div>
-          <div class="metric"><span>复测通过</span><strong id="metric-retested">—</strong><small>来自不同任务的证据</small></div>
-          <div class="metric"><span>待补强与复核</span><strong id="metric-needs">—</strong><small>值得优先关注</small></div>
-          <div class="metric"><span>独立作答</span><strong id="metric-evidence">—</strong><small>已记录的有效提交</small></div>
-        </section>
-
-        <div class="columns" id="learning-columns" hidden>
-          <div class="primary-column">
-            <section class="panel next-panel" id="next-panel" aria-labelledby="next-title"><div class="panel-head"><div><span class="eyebrow">NEXT TASK</span><h2 id="next-title">建议下一步</h2></div><span class="small-badge">依据当前证据</span></div><p id="next-reason" class="next-reason">正在整理学习路线…</p><button id="next-button" class="button button-primary" type="button">前往建议任务 <span aria-hidden="true">↗</span></button></section>
-
-            <section class="panel work-panel" id="workspace" aria-labelledby="work-title"><div class="panel-head"><div><span class="eyebrow">STEP 05 · PRACTICE & RETEST</span><h2 id="work-title">练习与独立变式复测</h2></div><span class="small-badge">公开演示题</span></div>
-              <div class="work-controls"><label for="task-select">选择练习</label><select id="task-select"></select></div>
-              <div class="mode-tabs" role="group" aria-label="作答模式"><button id="mode-practice" class="mode-tab active" type="button" aria-pressed="true">辅助练习</button><button id="mode-independent" class="mode-tab" type="button" aria-pressed="false">独立作答</button></div>
-              <div id="mode-note" class="mode-note">可以查看资料并试答；练习结果不会计入独立掌握证据。</div>
-              <div class="question-box"><div class="question-kicker"><span id="task-kind">题型</span><span id="task-concept">知识点</span></div><h3 id="task-prompt">请选择题目</h3><div id="answer-field"></div></div>
-              <div class="work-actions"><button id="submit-button" class="button button-primary" type="button">提交作答</button><span class="quiet">开放回答和代码题仅保存作答，暂不自动评分。</span></div>
-              <div id="feedback" class="feedback" role="status" aria-live="polite" hidden></div>
-            </section>
+        <section id="course-view" hidden>
+          <div class="course-header"><div><p class="eyebrow">我的课程 <span id="course-counter"></span></p><h1 id="course-title"></h1><p id="course-goal" class="muted"></p></div><div class="course-memory"><span>课程掌握记录</span><strong id="course-rate">未测试</strong><small id="course-coverage"></small></div></div>
+          <div class="study-grid">
+            <aside class="card outline"><div class="section-head"><h2>学习路线</h2><span id="outline-count" class="badge"></span></div><p class="muted">只开放已进入的小节。点击旧小节可以回看和复测。</p><div id="section-list"></div></aside>
+            <div class="study-column">
+              <section class="card lesson-card"><div class="section-head"><div><p id="section-number" class="eyebrow"></p><h2 id="section-title"></h2><p id="section-objective" class="muted"></p></div><span id="section-mastery" class="badge"></span></div>
+                <div id="lesson-content" class="lesson-content"></div><button id="lesson-generate" class="button primary" type="button">生成本节讲解</button>
+                <div id="ask-area" hidden><div class="divider"></div><h3>哪里还没讲明白？</h3><div id="conversation"></div><form id="ask-form" class="ask-form"><textarea id="ask-input" rows="2" maxlength="500" placeholder="随时提问，也可以输入“继续”"></textarea><button class="button secondary" type="submit">发送问题</button></form></div>
+              </section>
+              <section id="quiz-card" class="card quiz-card" hidden><div class="section-head"><div><p class="eyebrow">独立小测</p><h2>检查本节掌握程度</h2></div><span id="quiz-count" class="badge"></span></div><p class="muted">每次生成 4 道新题；提交后更新这一节及课程的掌握记录。可以反复测试。</p><div id="quiz-history"></div><div id="quiz-active"></div><button id="quiz-new" class="button secondary" type="button">生成本节小测</button></section>
+              <section class="card next-card"><div><h2>下一步</h2><p id="next-hint" class="muted"></p></div><button id="next-section" class="button primary" type="button">进入下一小节 →</button></section>
+            </div>
           </div>
-
-          <div class="secondary-column">
-            <section class="panel progress-panel" id="progress-panel" aria-labelledby="progress-title"><div class="panel-head"><div><span class="eyebrow">LEARNING MAP</span><h2 id="progress-title">知识状态</h2></div></div><p class="panel-intro">诊断给出起点，独立变式作答继续更新证据；二者分别标记。</p><div id="progress-list" class="progress-list"></div></section>
-
-            <section class="panel ask-panel" id="ask-panel" aria-labelledby="ask-title"><div class="panel-head"><div><span class="eyebrow">随时打断追问</span><h2 id="ask-title">这一讲哪里没懂？</h2></div></div><p class="panel-intro" id="ask-description">直接问具体困惑，也可以输入“继续”；AI 会接着本节对话回答。</p><form id="ask-form"><label for="ask-input" class="visually-hidden">输入课程问题</label><textarea id="ask-input" rows="3" maxlength="500" placeholder="例如：这里为什么要先划分训练集？"></textarea><button class="button button-secondary" id="ask-button" type="submit">提问 <span aria-hidden="true">↗</span></button></form><div id="ask-result" class="ask-result" aria-live="polite"></div><div id="ai-quiz-box" class="ai-quiz panel" hidden><h3>本节学完，做个小测验</h3><p class="panel-intro">AI 根据本节讲解生成一道即时检查题，答后给解释；不计入独立掌握证据。</p><button id="quiz-generate" class="button button-secondary" type="button">开始本节小测</button><div id="quiz-content" aria-live="polite"></div></div></section>
-
-            <section class="panel history-panel" id="history-panel" aria-labelledby="history-title"><div class="panel-head"><div><span class="eyebrow">EVIDENCE</span><h2 id="history-title">近期作答证据</h2></div></div><div id="history-list" class="history-list"><p class="empty">尚无作答记录。</p></div></section>
-          </div>
-        </div>
-        <footer class="page-foot">MindOS 原型 · 课程内容尚待教师审核。掌握状态仅用于演示，不代表真实能力测评。</footer>
+        </section>
       </div>
     </main>
   </div>

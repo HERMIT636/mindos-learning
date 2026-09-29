@@ -1,24 +1,24 @@
 name: 问题反馈
-description: 报告文档、课程内容或检查工具的问题
+description: 报告自定义课程、逐节讲解、测试或网页问题
 title: "[问题] "
 body:
   - type: markdown
     attributes:
-      value: "项目当前处于设计与示例阶段。请说明问题所在文件；不要粘贴密钥或学生个人数据。"
+      value: "请提供复现步骤和预期结果；不要粘贴 API 密钥或个人学习记录。"
   - type: input
     id: location
     attributes:
-      label: 所在文件或课程
+      label: 所在页面或功能
     validations:
       required: true
   - type: textarea
     id: details
     attributes:
       label: 实际问题与预期结果
-      description: 涉及工具运行时请提供复现步骤和环境。
+      description: 请尽量说明运行环境和复现步骤。
     validations:
       required: true
   - type: textarea
     id: evidence
     attributes:
-      label: 参考依据或建议修正
+      label: 相关报错或建议修正

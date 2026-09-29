@@ -1,4 +1,4 @@
-"""Run the local MindOS learning prototype with Python's standard library."""
+"""Local MindOS server for user-created, section-by-section AI courses."""
 
 from __future__ import annotations
 
@@ -14,29 +14,23 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from .catalog import Catalog, ROOT
-from .flow import diagnostic_tasks, learning_plan, public_diagnostics
-from .learning import progress, recommendation, submit
 from .model import ModelGateway, ModelUnavailable
-from .retrieval import retrieve, terms
 from .secrets import SecretStore
 from .storage import Storage
 
-LOGGER = logging.getLogger("mindos")
+ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
-ENV_KEYS = {"MINDOS_MODEL_BASE_URL", "MINDOS_CHAT_MODEL", "MINDOS_EMBEDDING_MODEL", "MINDOS_MODEL_API_KEY", "MINDOS_DATA_PATH"}
-STATIC = {
-    "/": (WEB / "index.html", "text/html; charset=utf-8"),
-    "/app.js": (WEB / "app.js", "text/javascript; charset=utf-8"),
-    "/style.css": (WEB / "style.css", "text/css; charset=utf-8"),
-}
+LOGGER = logging.getLogger("mindos")
+STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
+          "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+          "/style.css": ("style.css", "text/css; charset=utf-8")}
+ENV_KEYS = {"MINDOS_MODEL_BASE_URL", "MINDOS_CHAT_MODEL", "MINDOS_MODEL_API_KEY", "MINDOS_DATA_PATH"}
 
 
 class MindOSServer(ThreadingHTTPServer):
     daemon_threads = True
 
     def __init__(self, port: int, data_path: Path) -> None:
-        self.catalog = Catalog()
         self.storage = Storage(data_path)
         self.model = ModelGateway()
         self.secrets = SecretStore()
@@ -58,46 +52,6 @@ class MindOSHandler(BaseHTTPRequestHandler):
             self._session_value = secrets.token_hex(16) if self._new_session else value
         return self._session_value
 
-    def _selected_profile(self) -> dict | None:
-        selected = self.server.storage.selected_model_profile(self._session())
-        return self.server.storage.model_profile(selected) if selected else None
-
-    def _profile_key_usable(self, profile: dict) -> bool:
-        if not profile["encrypted_api_key"]:
-            return True
-        try:
-            self.server.secrets.decrypt(profile["encrypted_api_key"])
-            return True
-        except ValueError:
-            return False
-
-    def _model_ready(self) -> bool:
-        profile = self._selected_profile()
-        return (bool(profile["base_url"] and profile["chat_model"]) and
-                self._profile_key_usable(profile)) if profile else self.server.model.chat_ready
-
-    def _embedding_ready(self) -> bool:
-        profile = self._selected_profile()
-        return bool(profile["base_url"] and profile["embedding_model"]) if profile else self.server.model.embedding_ready
-
-    def _model(self) -> ModelGateway:
-        profile = self._selected_profile()
-        if profile is None:
-            return self.server.model
-        return ModelGateway({"base_url": profile["base_url"], "chat_model": profile["chat_model"],
-                             "embedding_model": profile["embedding_model"],
-                             "api_key": self.server.secrets.decrypt(profile["encrypted_api_key"])})
-
-    def _models_public(self) -> dict:
-        selected = self.server.storage.selected_model_profile(self._session())
-        return {"profiles": [
-            {key: profile[key] for key in ("id", "name", "base_url", "chat_model", "embedding_model")}
-            | {"has_key": bool(profile["encrypted_api_key"]),
-               "key_usable": self._profile_key_usable(profile)}
-            for profile in self.server.storage.model_profiles()
-        ], "selected_id": selected or ("env" if self.server.model.chat_ready else None),
-            "env_available": self.server.model.chat_ready}
-
     def _send(self, status: HTTPStatus, body: bytes, content_type: str) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
@@ -105,14 +59,14 @@ class MindOSHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
-        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'")
+        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'")
         self._session()
         if self._new_session:
             self.send_header("Set-Cookie", f"mindos_session={self._session_value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000")
         self.end_headers()
         self.wfile.write(body)
 
-    def _json(self, status: HTTPStatus, payload: dict | list) -> None:
+    def _json(self, status: HTTPStatus, payload: dict) -> None:
         self._send(status, json.dumps(payload, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
 
     def _request_json(self) -> dict:
@@ -134,454 +88,64 @@ class MindOSHandler(BaseHTTPRequestHandler):
 
     def _check_local_request(self) -> None:
         valid_hosts = {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
-        host = self.headers.get("Host", "")
-        origin = self.headers.get("Origin")
+        host, origin = self.headers.get("Host", ""), self.headers.get("Origin")
         if host not in valid_hosts or (origin and origin not in {f"http://{item}" for item in valid_hosts}):
             raise ValueError("仅接受本机页面提交")
 
-    def _dashboard(self, course_id: str) -> dict:
-        pack = self.server.catalog.get(course_id)
-        rows = self.server.storage.submissions(self._session(), course_id, pack["version"])
-        answers = self.server.storage.diagnostics(self._session(), pack)
-        by_concept = {(task["concept_id"], task["dimension_id"]): answers[task["id"]]
-                      for task in diagnostic_tasks(pack) if task["id"] in answers}
-        states = progress(pack, rows, by_concept)
-        goal = self.server.storage.goal(self._session(), pack)
-        target = self.server.storage.target(self._session(), pack)
-        plan = learning_plan(pack, states, answers, goal, target["concept_id"] if target else None) if goal or target else []
-        return {
-            "course": self.server.catalog.public_course(course_id),
-            "goal": goal,
-            "target": target,
-            "diagnostic_skipped": bool(target and self.server.storage.diagnostics_skipped(
-                self._session(), pack, target["concept_id"])),
-            "learning_mode": self.server.storage.mode(self._session()),
-            "diagnostic": public_diagnostics(pack, answers, target["concept_id"] if target else None),
-            "progress": states,
-            "plan": plan,
-            "recommendation": recommendation(pack, states, rows, self.server.storage.helped_tasks(self._session(), pack),
-                                             {item["concept_id"] for item in plan} if goal or target else None),
-            "valid_evidence_count": sum(row["counts_for_state"] for row in rows),
-            "recent": list(reversed(rows[-8:])),
-        }
+    def _profile_key_usable(self, profile: dict) -> bool:
+        try:
+            self.server.secrets.decrypt(profile["encrypted_api_key"])
+            return True
+        except ValueError:
+            return False
 
-    def _concept_source(self, pack: dict, concept: dict) -> dict:
-        chunks = [item for item in self.server.catalog.teaching_chunks(pack)
-                  if concept["id"] in item["concept_ids"]]
-        if not chunks:
-            raise ValueError("该知识点暂无课程资料")
-        sections = [item for item in chunks if " · " in item["title"]] or chunks
-        concept_terms = terms(concept["title"])
+    def _selected_profile(self) -> dict | None:
+        selected = self.server.storage.selected_model_profile(self._session())
+        return self.server.storage.model_profile(selected) if selected else None
 
-        def score(item: dict) -> tuple[int, int]:
-            section_terms = terms(item["title"].split(" · ")[-1])
-            return (sum(min(weight, section_terms[token]) for token, weight in concept_terms.items()),
-                    len(item["content"]))
-
-        return max(sections, key=score)
-
-    def _learner_hint(self, pack: dict, concept_id: str | None) -> str:
-        if not concept_id:
-            return "尚未指定当前知识点；不要推断学习者水平"
-        prerequisite_ids = {edge["from"] for edge in pack["relations"]
-                            if edge["type"] == "prerequisite" and edge["to"] == concept_id}
-        rows = [item for item in self._dashboard(pack["id"])["progress"]
-                if item["concept_id"] in prerequisite_ids | {concept_id}]
-        if not rows:
-            return "当前知识点暂无学习证据"
-        return "；".join(
-            f"{item['concept_title']}／{item['dimension_label']}：{item['state_label']}，"
-            f"短诊断{'未做' if item['diagnostic_result'] is None else '通过' if item['diagnostic_result'] else '待补强'}，"
-            f"独立作答证据{item['evidence_count']}份"
-            for item in rows
-        )
-
-    def _tutor_concept(self, pack: dict, concept_id: str) -> dict:
-        if self.server.storage.mode(self._session()) != "ai" or not self._model_ready():
-            raise ValueError("逐节讲解需要先配置并启用大模型")
-        target = self.server.storage.target(self._session(), pack)
-        if target is None:
-            raise ValueError("请先确认目标知识点")
-        answers = self.server.storage.diagnostics(self._session(), pack)
-        if (not self.server.storage.diagnostics_skipped(self._session(), pack, target["concept_id"])
-                and any(task["id"] not in answers for task in diagnostic_tasks(pack, target["concept_id"]))):
-            raise ValueError("请先完成或跳过学前小测")
-        route = {item["concept_id"] for item in self._dashboard(pack["id"])["plan"]}
-        if concept_id not in route:
-            raise ValueError("请选择当前目标路线中的知识点")
-        return next(item for item in pack["concepts"] if item["id"] == concept_id)
-
-    def _get(self) -> None:
-        self._check_local_request()
-        parsed = urlsplit(self.path)
-        if parsed.path in STATIC:
-            path, content_type = STATIC[parsed.path]
-            self._send(HTTPStatus.OK, path.read_bytes(), content_type)
-        elif parsed.path == "/api/health":
-            self._json(HTTPStatus.OK, {"status": "ok", "courses": len(self.server.catalog.packs)})
-        elif parsed.path == "/api/courses":
-            self._json(HTTPStatus.OK, {
-                "courses": self.server.catalog.courses(),
-                "chat_ready": self._model_ready(),
-                "embedding_ready": self._embedding_ready(),
-                "learning_mode": self.server.storage.mode(self._session()),
-            })
-        elif parsed.path == "/api/models":
-            self._json(HTTPStatus.OK, self._models_public())
-        elif parsed.path == "/api/dashboard":
-            course_id = parse_qs(parsed.query).get("course_id", [""])[0]
-            self._json(HTTPStatus.OK, self._dashboard(course_id))
+    def _model(self) -> ModelGateway:
+        profile = self._selected_profile()
+        if profile is None:
+            model = self.server.model
         else:
-            self._json(HTTPStatus.NOT_FOUND, {"error": "页面不存在"})
+            model = ModelGateway({"base_url": profile["base_url"], "chat_model": profile["chat_model"],
+                                  "api_key": self.server.secrets.decrypt(profile["encrypted_api_key"])})
+        if not model.chat_ready:
+            raise ValueError("请先在“管理模型与 API”中配置对话模型")
+        return model
 
-    def _post(self) -> None:
-        self._check_local_request()
-        payload = self._request_json()
-        parsed = urlsplit(self.path)
-        if parsed.path == "/api/submit":
-            course_id = payload.get("course_id", "")
-            task_id = payload.get("task_id", "")
-            pack = self.server.catalog.get(course_id)
-            task = self.server.catalog.task(pack, task_id)
-            result = submit(self.server.storage, self._session(), pack, task,
-                            payload.get("answer"), payload.get("mode", "practice"))
-            self._json(HTTPStatus.OK, {"result": result, "dashboard": self._dashboard(course_id)})
-        elif parsed.path == "/api/mode":
-            mode = payload.get("mode")
-            if not isinstance(mode, str) or mode not in {"materials", "ai"}:
-                raise ValueError("请选择资料模式或大模型模式")
-            if mode == "ai" and not self._model_ready():
-                raise ValueError("模型配置尚不可用；请在“管理模型与 API”中检查配置、重新输入失效密钥并测试连接")
-            self.server.storage.set_mode(self._session(), mode)
-            self._json(HTTPStatus.OK, {"mode": mode})
-        elif parsed.path == "/api/models/save":
-            profile_id = payload.get("id")
-            old = None
-            if profile_id is not None:
-                if not isinstance(profile_id, str) or len(profile_id) > 64:
-                    raise ValueError("模型配置编号无效")
-                old = self.server.storage.model_profile(profile_id)
-                if old is None:
-                    raise ValueError("模型配置不存在")
-            elif len(self.server.storage.model_profiles()) >= 20:
-                raise ValueError("最多保存 20 个模型配置")
-            fields = {}
-            for key, limit in (("name", 60), ("base_url", 500),
-                               ("chat_model", 120), ("embedding_model", 120)):
-                value = payload.get(key, "")
-                if not isinstance(value, str) or len(value) > limit or "\n" in value or "\r" in value:
-                    raise ValueError("模型名称或地址格式无效")
-                fields[key] = value.strip()
-            if not fields["name"] or not fields["base_url"] or not fields["chat_model"]:
-                raise ValueError("请填写配置名称、API 地址和对话模型名称")
-            api_key = payload.get("api_key", "")
-            clear_key = payload.get("clear_key", False)
-            if (not isinstance(api_key, str) or len(api_key) > 4096 or
-                    "\n" in api_key or "\r" in api_key or not isinstance(clear_key, bool) or
-                    (clear_key and api_key)):
-                raise ValueError("API 密钥格式无效")
-            key_for_validation = api_key or (self.server.secrets.decrypt(old["encrypted_api_key"])
-                                             if old and not clear_key else "")
-            ModelGateway({"base_url": fields["base_url"], "chat_model": fields["chat_model"],
-                          "embedding_model": fields["embedding_model"], "api_key": key_for_validation})
-            encrypted = (self.server.secrets.encrypt(api_key) if api_key else
-                         "" if clear_key else old["encrypted_api_key"] if old else "")
-            profile = {"id": profile_id or secrets.token_urlsafe(12), **fields,
-                       "encrypted_api_key": encrypted}
-            self.server.storage.save_model_profile(profile)
-            self.server.storage.select_model_profile(self._session(), profile["id"])
-            self._json(HTTPStatus.OK, self._models_public())
-        elif parsed.path == "/api/models/select":
-            profile_id = payload.get("id")
-            if profile_id == "env":
-                if not self.server.model.chat_ready:
-                    raise ValueError("没有可用的环境变量模型配置")
-                self.server.storage.select_model_profile(self._session(), None)
-            elif isinstance(profile_id, str) and self.server.storage.model_profile(profile_id):
-                self.server.storage.select_model_profile(self._session(), profile_id)
-            else:
-                raise ValueError("请选择已保存的模型配置")
-            self._json(HTTPStatus.OK, self._models_public())
-        elif parsed.path == "/api/models/delete":
-            profile_id = payload.get("id")
-            if not isinstance(profile_id, str) or not self.server.storage.model_profile(profile_id):
-                raise ValueError("模型配置不存在")
-            self.server.storage.delete_model_profile(profile_id)
-            self._json(HTTPStatus.OK, self._models_public())
-        elif parsed.path == "/api/models/test":
-            if not self._selected_profile() and not self.server.model.chat_ready:
-                raise ValueError("请先选择模型配置")
-            model = self._model()
-            result = model._post("/chat/completions", {
-                "model": model.chat_model, "max_tokens": 64,
-                "messages": [{"role": "user", "content": "请回复 OK"}],
-            }, timeout=30)
-            if (not isinstance(result.get("choices"), list) or not result["choices"] or
-                    not isinstance(result["choices"][0].get("message", {}).get("content"), str) or
-                    not result["choices"][0]["message"]["content"].strip()):
-                raise ModelUnavailable("模型连接成功，但返回格式不符合预期")
-            self._json(HTTPStatus.OK, {"ok": True})
-        elif parsed.path == "/api/target":
-            pack = self.server.catalog.get(payload.get("course_id", ""))
-            if not self.server.storage.mode(self._session()):
-                raise ValueError("请先选择学习方式")
-            chapter_id, concept_id = payload.get("chapter_id"), payload.get("concept_id")
-            chapter = next((item for item in pack["chapters"] if item["id"] == chapter_id), None)
-            if chapter is None or concept_id not in chapter["concept_ids"]:
-                raise ValueError("请选择当前课程章节内的知识点")
-            custom = payload.get("custom_text", "")
-            if not isinstance(custom, str) or len(custom) > 200:
-                raise ValueError("自定义目标不能超过 200 字")
-            if custom and self.server.storage.mode(self._session()) != "ai":
-                raise ValueError("自定义目标分析需要大模型模式")
-            self.server.storage.set_target(self._session(), pack, chapter_id, concept_id, custom.strip())
-            self._json(HTTPStatus.OK, {"dashboard": self._dashboard(pack["id"])})
-        elif parsed.path == "/api/analyze-goal":
-            pack = self.server.catalog.get(payload.get("course_id", ""))
-            if self.server.storage.mode(self._session()) != "ai" or not self._model_ready():
-                raise ValueError("请先启用已配置的大模型模式")
-            custom = payload.get("custom_text")
-            if not isinstance(custom, str) or not 4 <= len(custom.strip()) <= 200:
-                raise ValueError("请用 4 至 200 字描述想达到的学习目标")
-            states = self._dashboard(pack["id"])["progress"]
-            learner_hint = "；".join(f"{item['concept_title']}·{item['dimension_label']}：{item['state_label']}" for item in states)
-            analysis = self._model().analyze_goal(pack, custom.strip(), learner_hint)
-            concept_id = analysis.get("concept_id")
-            rationale = analysis.get("rationale")
-            if concept_id is not None and concept_id not in {item["id"] for item in pack["concepts"]}:
-                raise ModelUnavailable("模型返回了课程之外的知识点，请重试")
-            if not isinstance(rationale, str) or not rationale.strip():
-                raise ModelUnavailable("模型没有给出目标分析理由，请重试")
-            chapter = next((item for item in pack["chapters"] if concept_id in item["concept_ids"]), None)
-            self._json(HTTPStatus.OK, {"concept_id": concept_id,
-                                       "chapter_id": chapter["id"] if chapter else None,
-                                       "rationale": rationale.strip()[:300]})
-        elif parsed.path == "/api/goal":
-            pack = self.server.catalog.get(payload.get("course_id", ""))
-            goal = payload.get("goal")
-            if not isinstance(goal, str) or goal not in pack["learning_goals"]:
-                raise ValueError("请选择当前课程提供的学习目标")
-            self.server.storage.set_goal(self._session(), pack, goal)
-            self._json(HTTPStatus.OK, {"dashboard": self._dashboard(pack["id"])})
-        elif parsed.path == "/api/diagnose":
-            pack = self.server.catalog.get(payload.get("course_id", ""))
-            if not self.server.storage.goal(self._session(), pack) and not self.server.storage.target(self._session(), pack):
-                raise ValueError("请先选择学习目标")
-            target = self.server.storage.target(self._session(), pack)
-            task = next((item for item in diagnostic_tasks(pack, target["concept_id"] if target else None)
-                         if item["id"] == payload.get("task_id")), None)
-            if task is None:
-                raise ValueError("诊断题不存在")
-            if task["id"] in self.server.storage.diagnostics(self._session(), pack):
-                raise ValueError("这道诊断题已完成")
-            answer = payload.get("answer")
-            if not isinstance(answer, str) or answer not in {item["id"] for item in task["choices"]}:
-                raise ValueError("请选择诊断题提供的选项")
-            correct = answer == task["answer"]
-            self.server.storage.add_diagnostic(self._session(), pack, task["id"], answer, correct)
-            self._json(HTTPStatus.OK, {"result": {"correct": correct}, "dashboard": self._dashboard(pack["id"])})
-        elif parsed.path == "/api/skip-diagnostics":
-            pack = self.server.catalog.get(payload.get("course_id", ""))
-            target = self.server.storage.target(self._session(), pack)
-            if target is None:
-                raise ValueError("请先确认目标知识点")
-            self.server.storage.skip_diagnostics(self._session(), pack, target["concept_id"])
-            self._json(HTTPStatus.OK, {"dashboard": self._dashboard(pack["id"])})
-        elif parsed.path == "/api/tutor/start":
-            pack = self.server.catalog.get(payload.get("course_id", ""))
-            concept = self._tutor_concept(pack, payload.get("concept_id", ""))
-            reset = payload.get("reset", False)
-            if not isinstance(reset, bool):
-                raise ValueError("重新讲解参数无效")
-            history = self.server.storage.tutor_turns(self._session(), pack, concept["id"])
-            if not history or reset:
-                prerequisites = [item["title"] for item in pack["concepts"]
-                                 if any(edge["type"] == "prerequisite" and edge["from"] == item["id"]
-                                        and edge["to"] == concept["id"] for edge in pack["relations"])]
-                answer = self._model().tutor(
-                    pack["title"], concept["title"], prerequisites,
-                    self._learner_hint(pack, concept["id"]),
-                    "请从零开始深入讲解这一节，像一对一教学那样逐步说明，并允许我随时打断提问。",
-                    [], new_lesson=True)
-                self.server.storage.save_tutor_turns(
-                    self._session(), pack, concept["id"], [("assistant", "lesson", answer)], reset=True)
-                history = [{"role": "assistant", "kind": "lesson", "content": answer}]
-            self._json(HTTPStatus.OK, {"title": concept["title"], "answer": history[0]["content"],
-                                       "turns": history[1:], "generated": True})
-        elif parsed.path == "/api/tutor/ask":
-            pack = self.server.catalog.get(payload.get("course_id", ""))
-            concept = self._tutor_concept(pack, payload.get("concept_id", ""))
-            question = payload.get("question", "")
-            if not isinstance(question, str) or not 2 <= len(question.strip()) <= 500:
-                raise ValueError("请输入 2 至 500 字的问题")
-            history = self.server.storage.tutor_turns(self._session(), pack, concept["id"])
-            if not history or history[0]["kind"] != "lesson":
-                raise ValueError("请先开始本节讲解")
-            prerequisites = [item["title"] for item in pack["concepts"]
-                             if any(edge["type"] == "prerequisite" and edge["from"] == item["id"]
-                                    and edge["to"] == concept["id"] for edge in pack["relations"])]
-            answer = self._model().tutor(
-                pack["title"], concept["title"], prerequisites,
-                self._learner_hint(pack, concept["id"]), question.strip(), history)
-            self.server.storage.save_tutor_turns(self._session(), pack, concept["id"],
-                                                 [("user", "question", question.strip()),
-                                                  ("assistant", "answer", answer)])
-            self._json(HTTPStatus.OK, {"answer": answer, "generated": True})
-        elif parsed.path == "/api/ask":
-            course_id = payload.get("course_id", "")
-            pack = self.server.catalog.get(course_id)
-            question = payload.get("question", "")
-            concept_id = payload.get("concept_id")
-            task_id = payload.get("task_id")
-            if payload.get("mode", "practice") == "independent":
-                raise ValueError("独立作答期间不提供讲解")
-            if not isinstance(question, str) or not 2 <= len(question.strip()) <= 500:
-                raise ValueError("请输入 2 至 500 字的问题")
-            if concept_id and concept_id not in {item["id"] for item in pack["concepts"]}:
-                raise ValueError("知识点不存在")
-            if task_id:
-                self.server.catalog.task(pack, task_id)
-                self.server.storage.mark_help(self._session(), pack, task_id)
-            ai_mode = self.server.storage.mode(self._session()) == "ai"
-            chunks = self.server.catalog.teaching_chunks(pack)
-            if concept_id:
-                chunks = [item for item in chunks if concept_id in item["concept_ids"]]
-            chunks += self.server.catalog.external_chunks(pack, concept_id)
-            sources, retrieval_mode, notice = retrieve(
-                question.strip(), chunks, concept_id, self._model(), self.server.storage,
-                use_vectors=ai_mode)
-            generated = False
-            if not sources:
-                answer = "当前课程资料中未找到足够相关的内容。请补充更具体的术语或问题。"
-            elif ai_mode and self._model_ready():
-                hint = self._learner_hint(pack, concept_id)
-                try:
-                    answer = self._model().explain(question.strip(), sources, hint)
-                    generated = True
-                    citations = {int(number) for number in re.findall(r"\[(\d+)\]", answer)}
-                    if citations - set(range(1, len(sources) + 1)):
-                        answer = re.sub(r"\[(\d+)\]", lambda match: match.group(0)
-                                        if int(match.group(1)) <= len(sources) else "", answer)
-                        notice = "模型引用了本次检索之外的编号，已移除无效编号；请核对原文。"
-                except ModelUnavailable:
-                    answer = self._source_hint(sources[0])
-                    notice = "模型连接失败；作答记录未受影响。"
-            else:
-                answer = self._source_hint(sources[0])
-            self._json(HTTPStatus.OK, {
-                "answer": answer, "retrieval_mode": retrieval_mode,
-                "sources": [{key: item[key] for key in ("id", "title", "content", "url", "provenance")}
-                            for item in sources],
-                "notice": notice,
-                "generated": generated,
-            })
-        elif parsed.path == "/api/lesson":
-            pack = self.server.catalog.get(payload.get("course_id", ""))
-            target = self.server.storage.target(self._session(), pack)
-            if target is None:
-                raise ValueError("请先确认目标知识点")
-            answers = self.server.storage.diagnostics(self._session(), pack)
-            if (not self.server.storage.diagnostics_skipped(self._session(), pack, target["concept_id"])
-                    and any(task["id"] not in answers for task in diagnostic_tasks(pack, target["concept_id"]))):
-                raise ValueError("请先完成或跳过基础测试")
-            route = {item["concept_id"] for item in self._dashboard(pack["id"])["plan"]}
-            concept_id = payload.get("concept_id", target["concept_id"])
-            if concept_id not in route:
-                raise ValueError("请选择当前目标路线中的知识点")
-            concept = next(item for item in pack["concepts"] if item["id"] == concept_id)
-            materials = self.server.catalog.lesson_materials(pack, concept["id"])
-            if not materials:
-                raise ValueError("该知识点暂无课程资料")
-            sources = [item for item in self.server.catalog.teaching_chunks(pack)
-                       if concept["id"] in item["concept_ids"]]
-            if self.server.storage.mode(self._session()) == "ai":
-                sources += self.server.catalog.external_chunks(pack, concept["id"])
-            learner_hint = self._learner_hint(pack, concept["id"])
-            generated, notice = False, None
-            authored_lesson = "\n\n".join(item["content"] for item in materials)
-            if self.server.storage.mode(self._session()) == "ai" and self._model_ready():
-                try:
-                    answer = self._model().explain(
-                        f"请从零基础逐步讲解知识点「{concept['title']}」，先解释术语和学习目的，"
-                        "再分步骤展示例子，每一步说明为什么这样做，最后用一道不泄露独立测评的小检查帮助理解。"
-                        "根据学习者状态调整起点和难度，但不要解答当前独立题。",
-                        sources, learner_hint, deep_lesson=True)
-                    generated = True
-                    citations = {int(number) for number in re.findall(r"\[(\d+)\]", answer)}
-                    if citations - set(range(1, len(sources) + 1)):
-                        answer = re.sub(r"\[(\d+)\]", lambda match: match.group(0)
-                                        if int(match.group(1)) <= len(sources) else "", answer)
-                        notice = "模型引用了本次课程资料之外的编号，已移除无效编号；请核对原文。"
-                except ModelUnavailable:
-                    answer = authored_lesson
-                    notice = "模型暂不可用，已展示完整课程讲义。"
-            else:
-                answer = authored_lesson
-            self._json(HTTPStatus.OK, {"title": concept["title"], "answer": answer,
-                                       "generated": generated, "notice": notice,
-                                       "base_lesson": authored_lesson,
-                                       "sources": sources if generated else materials,
-                                       "source": materials[0]})
-        elif parsed.path == "/api/quiz":
-            pack = self.server.catalog.get(payload.get("course_id", ""))
-            if self.server.storage.mode(self._session()) != "ai" or not self._model_ready():
-                raise ValueError("按需生成小测验需要已配置的大模型模式")
-            concept_id = payload.get("concept_id")
-            concept = next((item for item in pack["concepts"] if item["id"] == concept_id), None)
-            if concept is None:
-                raise ValueError("请选择当前课程知识点")
-            if payload.get("tutor") is True:
-                self._tutor_concept(pack, concept_id)
-                history = self.server.storage.tutor_turns(self._session(), pack, concept_id)
-                if not history or history[0]["kind"] != "lesson":
-                    raise ValueError("请先开始本节讲解")
-                source = {"title": f"本节 AI 讲解：{concept['title']}",
-                          "content": history[0]["content"], "url": ""}
-            else:
-                source = self._concept_source(pack, concept)
-            states = [item for item in self._dashboard(pack["id"])["progress"] if item["concept_id"] == concept_id]
-            learner_hint = "；".join(f"{item['dimension_label']}：{item['state_label']}" for item in states)
-            generated = self._model().generate_quiz(concept["title"], source, learner_hint)
-            prompt, choices, answer, explanation = (generated.get(key) for key in
-                                                     ("prompt", "choices", "answer", "explanation"))
-            if (not isinstance(prompt, str) or not 10 <= len(prompt.strip()) <= 400
-                    or not isinstance(choices, list) or len(choices) != 3
-                    or not all(isinstance(item, dict) and item.get("id") in ("a", "b", "c")
-                               and isinstance(item.get("text"), str) and 1 <= len(item["text"]) <= 200
-                               for item in choices)
-                    or [item["id"] for item in choices] != ["a", "b", "c"]
-                    or answer not in ("a", "b", "c")
-                    or not isinstance(explanation, str) or not 5 <= len(explanation.strip()) <= 800
-                    or prompt in {task["prompt"] for task in pack["tasks"]}):
-                raise ModelUnavailable("模型生成的小测验格式不合格，请重试")
-            quiz = {"id": secrets.token_urlsafe(16), "concept_id": concept_id,
-                    "prompt": prompt.strip(), "choices": choices, "answer": answer,
-                    "explanation": explanation.strip(), "source_title": source["title"],
-                    "source_url": source["url"]}
-            self.server.storage.save_quiz(self._session(), pack, quiz)
-            self._json(HTTPStatus.OK, {key: quiz[key] for key in
-                                       ("id", "concept_id", "prompt", "choices", "source_title", "source_url")})
-        elif parsed.path == "/api/quiz-answer":
-            pack = self.server.catalog.get(payload.get("course_id", ""))
-            quiz_id = payload.get("quiz_id", "")
-            if not isinstance(quiz_id, str) or len(quiz_id) > 100:
-                raise ValueError("小测验编号无效")
-            quiz = self.server.storage.quiz(self._session(), pack, quiz_id)
-            if quiz is None:
-                raise ValueError("小测验不存在或不属于当前会话")
-            answer = payload.get("answer")
-            if answer not in ("a", "b", "c"):
-                raise ValueError("请选择一个选项")
-            self._json(HTTPStatus.OK, {"correct": answer == quiz["answer"],
-                                       "answer": quiz["answer"], "explanation": quiz["explanation"],
-                                       "counts_for_state": False})
-        else:
-            self._json(HTTPStatus.NOT_FOUND, {"error": "接口不存在"})
+    def _models_public(self) -> dict:
+        selected = self.server.storage.selected_model_profile(self._session())
+        profiles = [{key: p[key] for key in ("id", "name", "base_url", "chat_model")}
+                    | {"has_key": bool(p["encrypted_api_key"]), "key_usable": self._profile_key_usable(p)}
+                    for p in self.server.storage.model_profiles()]
+        active = next((p for p in profiles if p["id"] == selected), None)
+        return {"profiles": profiles, "selected_id": selected or ("env" if self.server.model.chat_ready else None),
+                "env_available": self.server.model.chat_ready,
+                "model_ready": bool(active and active["key_usable"] or not selected and self.server.model.chat_ready)}
 
-    @staticmethod
-    def _source_hint(source: dict) -> str:
-        content = source["content"].strip()
-        return f"课程资料 [1]：\n{content[:1800]}"
+    def _owned_course(self, course_id: str) -> dict:
+        if not isinstance(course_id, str) or len(course_id) > 80:
+            raise ValueError("课程编号无效")
+        course = self.server.storage.course(self._session(), course_id)
+        if not course:
+            raise ValueError("课程不存在")
+        return course
+
+    def _unlocked_section(self, course: dict, ordinal: object) -> dict:
+        if (not isinstance(ordinal, int) or isinstance(ordinal, bool) or
+                not 1 <= ordinal <= course["current_ordinal"]):
+            raise ValueError("未来小节尚未开放，请先明确选择进入下一小节")
+        return course["sections"][ordinal - 1]
+
+    def _course_public(self, course_id: str, ordinal: int | None = None) -> dict:
+        course = self._owned_course(course_id)
+        current = course["sections"][course["current_ordinal"] - 1]
+        viewed = self._unlocked_section(course, ordinal or course["current_ordinal"])
+        return {"course": course, "mastery": self.server.storage.mastery(self._session(), course_id),
+                "current_section": current, "section": viewed,
+                "turns": self.server.storage.tutor_turns(self._session(), course_id, viewed["id"]),
+                "quizzes": self.server.storage.section_quizzes(self._session(), course_id, viewed["id"])}
 
     def do_GET(self) -> None:
         self._safe_call(self._get)
@@ -589,11 +153,144 @@ class MindOSHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         self._safe_call(self._post)
 
+    def _get(self) -> None:
+        parsed = urlsplit(self.path)
+        if parsed.path in STATIC:
+            name, content_type = STATIC[parsed.path]
+            self._send(HTTPStatus.OK, (WEB / name).read_bytes(), content_type)
+        elif parsed.path == "/api/health":
+            self._json(HTTPStatus.OK, {"status": "ok"})
+        elif parsed.path == "/api/bootstrap":
+            self._json(HTTPStatus.OK, {**self._models_public(), "courses": self.server.storage.courses(self._session())})
+        elif parsed.path == "/api/course":
+            course_id = parse_qs(parsed.query).get("course_id", [""])[0]
+            ordinal = parse_qs(parsed.query).get("ordinal", [""])[0]
+            self._json(HTTPStatus.OK, self._course_public(course_id, int(ordinal) if ordinal.isdigit() else None))
+        else:
+            self._json(HTTPStatus.NOT_FOUND, {"error": "页面或接口不存在"})
+
+    def _post(self) -> None:
+        self._check_local_request()
+        payload = self._request_json()
+        path = urlsplit(self.path).path
+        if path == "/api/models/save":
+            profile_id = payload.get("id")
+            old = None
+            if profile_id is not None:
+                if not isinstance(profile_id, str) or not (old := self.server.storage.model_profile(profile_id)):
+                    raise ValueError("模型配置不存在")
+            elif len(self.server.storage.model_profiles()) >= 20:
+                raise ValueError("最多保存 20 个模型配置")
+            fields = {}
+            for key, limit in (("name", 60), ("base_url", 500), ("chat_model", 120)):
+                value = payload.get(key, "")
+                if not isinstance(value, str) or len(value) > limit or "\n" in value or "\r" in value:
+                    raise ValueError("模型配置格式无效")
+                fields[key] = value.strip()
+            if not all(fields.values()):
+                raise ValueError("请填写配置名称、API 地址和模型名称")
+            api_key = payload.get("api_key", "")
+            if not isinstance(api_key, str) or len(api_key) > 4096 or "\n" in api_key or "\r" in api_key:
+                raise ValueError("API 密钥格式无效")
+            if not api_key and old and old["encrypted_api_key"] and not self._profile_key_usable(old):
+                raise ValueError("旧密钥无法解密，请重新输入密钥后保存")
+            ModelGateway({"base_url": fields["base_url"], "chat_model": fields["chat_model"], "api_key": api_key})
+            encrypted = self.server.secrets.encrypt(api_key) if api_key else old["encrypted_api_key"] if old else ""
+            profile = {"id": profile_id or secrets.token_urlsafe(12), **fields,
+                       "embedding_model": "", "encrypted_api_key": encrypted}
+            self.server.storage.save_model_profile(profile)
+            self.server.storage.select_model_profile(self._session(), profile["id"])
+            self._json(HTTPStatus.OK, self._models_public())
+        elif path == "/api/models/select":
+            profile_id = payload.get("id")
+            if profile_id == "env" and self.server.model.chat_ready:
+                self.server.storage.select_model_profile(self._session(), None)
+            elif isinstance(profile_id, str) and self.server.storage.model_profile(profile_id):
+                self.server.storage.select_model_profile(self._session(), profile_id)
+            else:
+                raise ValueError("请选择已保存的模型配置")
+            self._json(HTTPStatus.OK, self._models_public())
+        elif path == "/api/models/delete":
+            profile_id = payload.get("id")
+            if not isinstance(profile_id, str) or not self.server.storage.model_profile(profile_id):
+                raise ValueError("模型配置不存在")
+            self.server.storage.delete_model_profile(profile_id)
+            self._json(HTTPStatus.OK, self._models_public())
+        elif path == "/api/models/test":
+            self._model().test_connection()
+            self._json(HTTPStatus.OK, {"ok": True})
+        elif path == "/api/courses/create":
+            title, goal = payload.get("title"), payload.get("goal", "")
+            if not isinstance(title, str) or not 2 <= len(title.strip()) <= 100:
+                raise ValueError("请输入 2 至 100 字的课程名称")
+            if not isinstance(goal, str) or len(goal) > 500:
+                raise ValueError("学习目标不能超过 500 字")
+            if len(self.server.storage.courses(self._session())) >= 50:
+                raise ValueError("最多创建 50 门课程")
+            outline = self._model().plan_course(title.strip(), goal.strip())
+            course = self.server.storage.create_course(self._session(), title.strip(), goal.strip(), outline)
+            self._json(HTTPStatus.OK, {"course_id": course["id"], "course": self._course_public(course["id"])})
+        elif path == "/api/sections/lesson":
+            course = self._owned_course(payload.get("course_id"))
+            section = self._unlocked_section(course, payload.get("ordinal"))
+            if not section["lesson"]:
+                lesson = self._model().teach_section(
+                    course, section, self.server.storage.mastery(self._session(), course["id"]),
+                    self.server.storage.weak_points(self._session(), course["id"]))
+                self.server.storage.save_lesson(self._session(), course["id"], section["id"], lesson)
+            self._json(HTTPStatus.OK, self._course_public(course["id"], section["ordinal"]))
+        elif path == "/api/sections/ask":
+            course = self._owned_course(payload.get("course_id"))
+            section = self._unlocked_section(course, payload.get("ordinal"))
+            question = payload.get("question")
+            if not section["lesson"]:
+                raise ValueError("请先生成本节讲解")
+            if not isinstance(question, str) or not 2 <= len(question.strip()) <= 500:
+                raise ValueError("请输入 2 至 500 字的问题")
+            turns = self.server.storage.tutor_turns(self._session(), course["id"], section["id"])
+            answer = self._model().answer_question(course, section, turns, question.strip())
+            self.server.storage.add_tutor_exchange(self._session(), course["id"], section["id"], question.strip(), answer)
+            self._json(HTTPStatus.OK, self._course_public(course["id"], section["ordinal"]))
+        elif path == "/api/sections/quiz":
+            course = self._owned_course(payload.get("course_id"))
+            section = self._unlocked_section(course, payload.get("ordinal"))
+            if not section["lesson"]:
+                raise ValueError("请先生成本节讲解")
+            previous = self.server.storage.section_quizzes(self._session(), course["id"], section["id"])
+            if previous and previous[-1]["submitted_at"] is None:
+                self._json(HTTPStatus.OK, self._course_public(course["id"], section["ordinal"]))
+                return
+            prompts = [q["prompt"] for quiz in previous for q in quiz["questions"]]
+            weak_prompts = [question["prompt"] for quiz in previous if quiz["submitted_at"]
+                            for question, user_answer, result in zip(
+                                quiz["questions"], quiz["user_answers"], quiz["results"])
+                            if user_answer != result["answer"]]
+            questions, answers = self._model().generate_quiz(course, section, prompts, weak_prompts)
+            self.server.storage.create_quiz(self._session(), course["id"], section["id"], questions, answers)
+            self._json(HTTPStatus.OK, self._course_public(course["id"], section["ordinal"]))
+        elif path == "/api/quizzes/submit":
+            course = self._owned_course(payload.get("course_id"))
+            answers = payload.get("answers")
+            if not isinstance(answers, list) or any(not isinstance(a, str) for a in answers):
+                raise ValueError("请完成全部题目")
+            result = self.server.storage.submit_quiz(self._session(), course["id"], payload.get("quiz_id"), answers)
+            self._json(HTTPStatus.OK, {"result": result, **self._course_public(course["id"])})
+        elif path == "/api/sections/advance":
+            course = self._owned_course(payload.get("course_id"))
+            expected = payload.get("expected_ordinal")
+            if not isinstance(expected, int) or isinstance(expected, bool) or expected != course["current_ordinal"]:
+                raise ValueError("课程进度已变化，请刷新后再试")
+            if not course["sections"][expected - 1]["lesson"]:
+                raise ValueError("请先学习当前小节")
+            if not self.server.storage.advance(self._session(), course["id"], expected):
+                raise ValueError("已经是最后一节，或课程进度已变化")
+            self._json(HTTPStatus.OK, self._course_public(course["id"]))
+        else:
+            self._json(HTTPStatus.NOT_FOUND, {"error": "接口不存在"})
+
     def _safe_call(self, handler) -> None:
         try:
             handler()
-        except KeyError as exc:
-            self._json(HTTPStatus.NOT_FOUND, {"error": str(exc.args[0])})
         except ValueError as exc:
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
         except ModelUnavailable as exc:

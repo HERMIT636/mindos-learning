@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id);
-const state = { courses: [], drafts: [], draft: null, profiles: [], selectedId: null,
-  courseId: null, data: null, courseMode: 'course', atomDetail: null, atomMode: 'quick', busy: false, editingId: null, searchReady: false };
+const state = MindOSStore.create({ page: 'dashboard',courseView:'learn',starGalaxy:null,aiTutorState:{expanded:false,pending:false},courses: [], drafts: [], draft: null, profiles: [], selectedId: null,
+  courseId: null, data: null, courseMode: 'course', atomDetail: null, atomMode: 'quick', busy: false, editingId: null, searchReady: false });
 
 let navigationVersion=0;
 const responseVersions=new WeakMap();
@@ -51,13 +51,14 @@ function renderSidebar() {
     if (course.id === state.courseId) button.classList.add('active');
     const small = node('small', `已到第 ${course.current_ordinal} 节`);
     button.append(small);
-    button.addEventListener('click', () => openCourse(course.id));
+    button.addEventListener('click', () => openCourse(course.id,undefined,'overview'));
     list.append(button);
   });
 }
 
 function showWelcome() {
   invalidateNavigation();
+  if(typeof MindOSUniverse!=='undefined'){MindOSUniverse.hideStandalone();MindOSUniverse.navigation('create');}
   $('course-materials').value='';$('course-policy-field').hidden=true;
   document.querySelector('input[name="source-policy"][value="balanced"]').checked=true;
   $('course-level').value='零基础';
@@ -100,6 +101,7 @@ function fillSearchProfile() {
 
 function renderReview(draft) {
   if(!currentResponse(draft))return;
+  MindOSUniverse.hideStandalone();MindOSUniverse.navigation('review');
   invalidateNavigation();
   state.draft = draft; state.courseId = null;
   $('course-management').hidden = true;
@@ -290,7 +292,8 @@ function renderContentHistory(target,history,lesson=false){
 
 function renderCourse(data) {
   if(!currentResponse(data))return;
-  if (state.courseId !== data.course.id) { state.courseMode = 'course'; state.atomDetail = null; }
+  if (state.courseId !== data.course.id) { state.courseMode = 'course'; state.atomDetail = null;state.starGalaxy=null; }
+  MindOSUniverse.hideStandalone();MindOSUniverse.navigation('course');
   state.data = data; state.courseId = data.course.id;
   state.courses = state.courses.map(course => course.id === data.course.id
     ? { ...course, current_ordinal: data.course.current_ordinal } : course);
@@ -325,6 +328,7 @@ function renderCourse(data) {
     : last ? '这门课程的小节已全部开放，你仍可以回看和继续复测。'
     : data.section.lesson ? '准备好了再由你选择进入下一节；系统不会自动跳转。'
     : '先学习当前小节，再决定是否进入下一节。';
+  MindOSUniverse.renderCourse(data);
 }
 
 function respondToTeaching({kind,question,button}){
@@ -346,7 +350,8 @@ document.addEventListener('DOMContentLoaded',()=>{
  });
 });
 
-async function openCourse(id, ordinal) {
+async function openCourse(id, ordinal,view='learn') {
+  state.courseView=view;
   invalidateNavigation();
   const version=navigationVersion;
   try {
@@ -365,11 +370,11 @@ async function bootstrap() {
       $('settings').hidden = false;
       showNotice('创建课程审查稿需要先配置 AI 模型；默认资料检索无需额外密钥。');
     }
-    showWelcome();
+    await MindOSUniverse.showDashboard();
   } catch (error) { showNotice(error.message); }
 }
 
-$('home-link').addEventListener('click', event => { event.preventDefault(); showWelcome(); });
+$('home-link').addEventListener('click', event => { event.preventDefault(); MindOSUniverse.showDashboard(); });
 $('new-course-side').addEventListener('click', () => { showWelcome(); $('course-title-input').focus(); });
 $('settings-toggle').addEventListener('click', () => { $('settings').hidden = !$('settings').hidden; });
 $('settings-close').addEventListener('click', () => { $('settings').hidden = true; });
@@ -476,17 +481,15 @@ $('next-section').addEventListener('click', () => {
       expected_ordinal: data.course.current_ordinal }));
   });
 });
-bootstrap();
+document.addEventListener('DOMContentLoaded',bootstrap);
 
 const atomTypes = {concept:'概念', mechanism:'机制', operation:'操作', relation:'关系', reason:'原因', rule:'规则', skill:'技能'};
 const relationTypes = {implements:'实现', extends:'扩展', prerequisite:'前置', part_of:'组成', related:'相关', causes:'因果', similar:'相似', contrasts:'对比', applied_in:'应用'};
 const depthLabels = ['','认识','理解','推理','应用','创造'];
 
 function setCourseMode(mode) {
-  state.courseMode = mode;
-  $('chapter-mode').hidden = mode !== 'course'; $('map-mode').hidden = mode !== 'map';
-  $('mode-course').className = `button ${mode === 'course' ? 'primary' : 'secondary'}`;
-  $('mode-map').className = `button ${mode === 'map' ? 'primary' : 'secondary'}`;
+  state.courseMode=mode;
+  MindOSUniverse.viewCourse(mode==='map'?'stars':'learn');
 }
 
 function atomButton(atom, text) {
@@ -501,7 +504,7 @@ function atomButton(atom, text) {
 function renderKnowledge(data) {
   refreshProduction(data.course.id);
   const knowledge = data.knowledge;
-  setCourseMode(state.courseMode);
+
   $('graph-build').hidden = knowledge.ready && knowledge.structure_complete;
   $('graph-build').textContent=knowledge.ready?'补全课程索引':'生成课程索引';
   $('diagnostic-new').disabled = !knowledge.ready || !knowledge.atoms.some(a=>a.section===1);
@@ -534,42 +537,7 @@ function renderKnowledge(data) {
   else $('atom-panel').hidden = true;
 }
 
-function drawKnowledgeMap(knowledge) {
-  const root = $('knowledge-map'); root.replaceChildren();
-  if (!knowledge.ready) return;
-  const ns = 'http://www.w3.org/2000/svg';
-  const make = (tag, attrs = {}, text = '') => { const el = document.createElementNS(ns, tag);
-    Object.entries(attrs).forEach(([k,v]) => el.setAttribute(k, v)); el.textContent = text; return el; };
-  const width = state.data.course.sections.length * 235 + 30;
-  const svg = make('svg', {width, height:560, viewBox:`0 0 ${width} 560`, role:'img', 'aria-label':'课程知识原子前置关系地图'});
-  const defs = make('defs'); const marker = make('marker', {id:'knowledge-arrow', viewBox:'0 0 10 10', refX:9, refY:5,
-    markerWidth:6, markerHeight:6, orient:'auto-start-reverse'});
-  marker.append(make('path', {d:'M 0 0 L 10 5 L 0 10 z', fill:'#8aa69f'})); defs.append(marker); svg.append(defs);
-  const positions = new Map();
-  state.data.course.sections.forEach(section => {
-    const x = (section.ordinal - 1) * 235 + 15;
-    svg.append(make('text', {x:x+5,y:26, class:'map-heading'}, `第 ${section.ordinal} 节`));
-    knowledge.atoms.filter(a => a.section === section.ordinal).forEach((a,index) => positions.set(a.id, {x, y:48+index*78}));
-  });
-  knowledge.edges.filter(e => e.type === 'prerequisite').forEach(edge => {
-    const a=positions.get(edge.from), b=positions.get(edge.to); if (!a || !b) return;
-    const path = a.x === b.x ? `M ${a.x+205} ${a.y+23} Q ${a.x+230} ${(a.y+b.y)/2+23} ${b.x+205} ${b.y+23}`
-      : `M ${a.x+205} ${a.y+23} C ${a.x+225} ${a.y+23} ${b.x-20} ${b.y+23} ${b.x} ${b.y+23}`;
-    svg.append(make('path', {d:path, fill:'none', stroke:'#b5c8c1', 'marker-end':'url(#knowledge-arrow)'}));
-  });
-  knowledge.atoms.forEach(a => {
-    const p=positions.get(a.id); const g=make('g', {tabindex:0, role:'button', 'aria-label':`${a.title}，${a.status}${a.unlocked?'':'，待进入'}`, class:'map-node'});
-    g.append(make('title', {}, `${a.title} · ${a.summary}`));
-    g.append(make('rect', {x:p.x,y:p.y,width:205,height:51,rx:9,
-      fill:!a.unlocked?'#f1f3f2':a.rate !== null && a.rate<60?'#fff0de':a.read?'#e8f5ee':'#fff',stroke:'#a9c5ba'}));
-    g.append(make('text', {x:p.x+10,y:p.y+20}, a.title.length>13 ? a.title.slice(0,13)+'…' : a.title));
-    g.append(make('text', {x:p.x+10,y:p.y+39,class:'map-state'}, a.unlocked ? `${a.read?'已读 · ':''}${a.status}${a.rate===null?'':' '+a.rate+'%'}`:'待进入对应章节'));
-    const activate=()=> { if (!a.unlocked) {showNotice('请先在章节模式主动进入对应小节。'); return;} openAtom(a.id); };
-    g.addEventListener('click', activate); g.addEventListener('keydown',event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();activate();}});
-    svg.append(g);
-  });
-  root.append(svg);
-}
+function drawKnowledgeMap(knowledge) {MindOSUniverse.renderStarMap(knowledge);}
 
 async function openAtom(id) {
   invalidateNavigation();
@@ -577,9 +545,12 @@ async function openAtom(id) {
   try {
     const courseId = state.data.course.id;
     const result = await api(`/api/atom?${new URLSearchParams({course_id:courseId,atom_id:id})}`);
+    const context = await api(`/api/courses/${encodeURIComponent(courseId)}/learning-state?${new URLSearchParams({ordinal:result.atom.section,atom_id:id})}`);
+    result.learning_state = context.learning_state;
     if (state.data?.course.id !== courseId) return;
     state.atomMode = result.content.quick ? 'quick' : result.content.deep ? 'deep' : 'quick';
     renderAtom(result); $('atom-panel').scrollIntoView({behavior:'smooth',block:'start'});
+    refreshProduction(courseId);
   } catch(error) { if(version===navigationVersion)showNotice(error.message); }
 }
 

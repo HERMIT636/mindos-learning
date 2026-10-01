@@ -102,6 +102,7 @@ const CourseManager = (() => {
   async function open() {
     if(state.busy)return;
     invalidateNavigation();
+    MindOSUniverse.hideStandalone();MindOSUniverse.navigation('courses');
     state.courseId=null;state.data=null;state.draft=null;
     for(const id of ['welcome','review-view','course-view'])$(id).hidden=true;
     $('course-management').hidden=false;$('breadcrumb').textContent='课程管理 · 我的课程';

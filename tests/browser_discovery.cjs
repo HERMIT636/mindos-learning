@@ -8,7 +8,7 @@ const assert=require('node:assert/strict');
  await page.context().addCookies([{name:'mindos_session',value:process.env.MINDOS_TEST_COOKIE,url:process.env.MINDOS_TEST_URL,httpOnly:true,sameSite:'Strict'}]);
  const idle=()=>page.waitForFunction(()=>!state.busy && document.getElementById('notice').hidden);
  const completed=()=>page.waitForFunction(()=>!document.getElementById('discovery-banner').textContent.includes('正在')&&document.getElementById('production-batches').querySelector('section'));
- await page.goto(process.env.MINDOS_TEST_URL);
+ await page.goto(process.env.MINDOS_TEST_URL);await page.locator('#new-course-side').click();
  assert.equal(await page.locator('#course-policy-field').isVisible(),false);
  await page.locator('#course-title-input').fill('无上传自动发现课程');await page.locator('#course-goal-input').fill('从零理解注意力与前置知识');await page.locator('#course-level').selectOption({label:'了解一些基础'});await page.locator('#course-search-mode').selectOption('brave');
  await page.locator('#course-create').click();await idle();await page.locator('#review-confirm').click();await idle();await completed();

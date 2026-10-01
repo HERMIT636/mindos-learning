@@ -1,0 +1,166 @@
+{
+  "checked_at": "2026-10-01T10:52:32.195757+00:00",
+  "scope": "Knowledge Universe frontend and existing backend projections",
+  "unit_tests": {
+    "root": {
+      "count": 124,
+      "seconds": 11.965,
+      "passed": true
+    },
+    "publish": {
+      "count": 124,
+      "seconds": 11.758,
+      "passed": true
+    }
+  },
+  "browser_checks": [
+    {
+      "name": "universe",
+      "passed": true,
+      "browser": "Microsoft Edge / Playwright",
+      "viewport_checks": [
+        [
+          1440,
+          1000
+        ],
+        [
+          390,
+          844
+        ]
+      ],
+      "database": "disposable fixture"
+    },
+    {
+      "name": "atie",
+      "passed": true,
+      "browser": "Microsoft Edge / Playwright",
+      "viewport_checks": [
+        [
+          1440,
+          960
+        ],
+        [
+          390,
+          844
+        ]
+      ],
+      "database": "disposable fixture"
+    },
+    {
+      "name": "tutor",
+      "passed": true,
+      "browser": "Microsoft Edge / Playwright",
+      "viewport_checks": [
+        [
+          1440,
+          960
+        ],
+        [
+          390,
+          844
+        ]
+      ],
+      "database": "disposable fixture"
+    },
+    {
+      "name": "architecture",
+      "passed": true,
+      "browser": "Microsoft Edge / Playwright",
+      "viewport_checks": [
+        [
+          1440,
+          960
+        ]
+      ],
+      "database": "disposable fixture"
+    },
+    {
+      "name": "management",
+      "passed": true,
+      "browser": "Microsoft Edge / Playwright",
+      "viewport_checks": [
+        [
+          1440,
+          960
+        ],
+        [
+          390,
+          844
+        ]
+      ],
+      "database": "disposable fixture"
+    },
+    {
+      "name": "knowledge",
+      "passed": true,
+      "browser": "Microsoft Edge / Playwright",
+      "viewport_checks": [
+        [
+          1440,
+          960
+        ],
+        [
+          390,
+          844
+        ]
+      ],
+      "database": "disposable fixture"
+    },
+    {
+      "name": "production",
+      "passed": true,
+      "browser": "Microsoft Edge / Playwright",
+      "viewport_checks": [
+        [
+          1440,
+          960
+        ],
+        [
+          390,
+          844
+        ]
+      ],
+      "database": "disposable fixture"
+    },
+    {
+      "name": "discovery",
+      "passed": true,
+      "browser": "Microsoft Edge / Playwright",
+      "viewport_checks": [
+        [
+          1440,
+          960
+        ],
+        [
+          390,
+          844
+        ]
+      ],
+      "database": "disposable fixture"
+    }
+  ],
+  "boundaries": [
+    "No real paid model/search calls in acceptance fixtures",
+    "No real-user learning outcome validation",
+    "Transfer ability remains unmeasured",
+    "Recommendations reuse existing rules; proactive reminders and new personalized path planner are not implemented"
+  ],
+  "screenshots": "Temporary fixture courses and actual fixture quiz submissions; not real learner results",
+  "source_sha256": {
+    "mindos/dashboard.py": "5af033df441edec504621b96f1584122669b8b2c32792e44473cf1a7ea5b48e9",
+    "mindos/server.py": "0a194710e0f33ef7fa5c21c209334ba84be5c0deebb9a8722ffc89b6d4e451f7",
+    "web/app.js": "72dc2e3eb9362632d99247ccc28bef71b409b048cf6043d8dfe5defe9a728a54",
+    "web/index.html": "a72a8e06c58fff905f09e60a6d057c97f730ad89f9782cbb41af6ff6d0f11b42",
+    "web/universe.css": "29a9381c133ecb80490e3f31d1b21b8033c1b16c02d8637715bcc40f8e747167",
+    "web/components/mindos/state.js": "e80eccc34166b065ad55d312716a0c18079e8ac6c7f859aaa9ba644c5a4e430a",
+    "web/components/mindos/universe.js": "70ae7a8606bc1100029f2ba4e0d8760a73a9bd2f601ad115b33a455bbbb962f9",
+    "web/components/CourseAssistant/course-assistant.js": "6b7d2d25128cf465ead0dfc0f03ee4ea5dbb070513760142a3f1d0c34a27ca75",
+    "scripts/check_browser.py": "61dc4b0d394d7d7707346b14a78906eeeb3bc0c1f2f0ba3a29b6a5c44429d0df",
+    "tests/test_dashboard.py": "9ba3e3f7add43ed5a258b1359d9e08da11a1b87d2b4a1a7334bcb01f7f7b145b",
+    "tests/browser_universe.cjs": "088cb51910e7dcc986297796f99efda00828291c431995cc2571fe3edf799861"
+  },
+  "syntax": {
+    "python": "passed",
+    "javascript": "passed"
+  }
+}

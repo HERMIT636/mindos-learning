@@ -3,28 +3,32 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#133a3c">
+  <meta name="theme-color" content="#090e1d">
   <meta name="description" content="MindOS · 创建自己的课程，一节一节学会">
-  <title>MindOS · 你的 AI 课程</title>
+  <title>MindOS · 知识宇宙</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/universe.css">
+  <script src="/components/mindos/state.js" defer></script>
   <script src="/components/teaching/teaching-blocks.js" defer></script>
   <script src="/app.js" defer></script>
   <script src="/production.js" defer></script>
+  <script src="/components/mindos/universe.js" defer></script>
   <script src="/components/CourseManager/course-manager.js" defer></script>
   <script src="/components/CourseAssistant/course-assistant.js" defer></script>
 </head>
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <a class="brand" href="/" id="home-link"><span class="brand-icon">M</span><span><strong>MindOS</strong><small>一节一节学会</small></span></a>
-      <button id="course-manager-open" class="sidebar-add" type="button">课程管理 · 我的课程</button>
-      <p class="sidebar-label">学习中心 · 学习中的课程</p>
+      <a class="brand" href="/" id="home-link"><span class="brand-icon">✦</span><span><strong>MindOS</strong><small>你的知识宇宙</small></span></a>
+      <nav class="primary-nav" aria-label="主导航"><button id="dashboard-open" type="button"><span>◈</span> 学习驾驶舱</button><button id="growth-open" type="button"><span>⌁</span> 成长档案</button></nav>
+      <button id="course-manager-open" class="sidebar-add" type="button">我的课程</button>
+      <p class="sidebar-label">正在探索</p>
       <nav id="course-list" aria-label="我的课程"></nav>
       <button id="new-course-side" class="sidebar-add" type="button">＋ 新建课程</button>
       <p class="sidebar-foot">每门课程分别保存讲解、测试和掌握记录。你的数据保存在本机。</p>
     </aside>
     <main class="main">
-      <header class="topbar"><span id="breadcrumb">我的学习空间</span><button id="settings-toggle" class="text-button" type="button">管理模型与 API</button></header>
+      <header class="topbar"><span id="breadcrumb">学习驾驶舱</span><span class="topbar-status">本机记录 · 课程记忆隔离</span><button id="settings-toggle" class="text-button" type="button">管理模型与 API</button></header>
       <div class="content">
         <div id="notice" class="notice" role="status" hidden></div>
         <section id="settings" class="card settings" hidden>
@@ -47,8 +51,10 @@
             <div class="action-row"><button class="button secondary" type="submit">保存搜索配置</button><button id="search-clear" class="button quiet-button" type="button">清除所选密钥</button><span id="search-status" class="muted"></span></div>
           </form>
         </section>
-        <section id="welcome" class="welcome">
-          <div class="welcome-copy"><div id="dashboard-courses" class="dashboard-courses"></div><p class="eyebrow">为你的目标开始</p><h1>想学什么，就从这里开始。</h1><p>输入课程名称，MindOS 会规划从零基础到应用的路线。讲解和小测每次只生成当前一节，你决定什么时候继续。</p></div>
+        <section id="learning-dashboard" aria-label="学习驾驶舱"><p class="muted">正在读取学习记录…</p></section>
+        <section id="growth-profile" hidden aria-label="成长档案"></section>
+        <section id="welcome" class="welcome" hidden>
+          <div class="welcome-copy"><div id="dashboard-courses" class="dashboard-courses"></div><p class="eyebrow">为你的目标开始</p><h1>为你的下一次探索<br>创建一门课程。</h1><p>输入课程名称，MindOS 会规划从零基础到应用的路线。讲解和小测每次只生成当前一节，你决定什么时候继续。</p></div>
           <div><form id="course-form" class="card create-card"><h2>新建课程</h2><label>我想学习的课程<input id="course-title-input" maxlength="100" required placeholder="例如：机器学习基础、摄影构图、微积分"></label><label>学习目标（可选）<textarea id="course-goal-input" rows="3" maxlength="500" placeholder="例如：从零开始，最后能独立完成一个小项目"></textarea></label><label>我目前的水平<select id="course-level"><option>零基础</option><option>了解一些基础</option><option>已有基础，想深入学习</option></select></label><label>课程资料（可选）<input id="course-materials" type="file" multiple accept=".pdf,.docx,.pptx,.md,.txt"></label><p class="muted">最多3份，总计6 MB。没有资料也能自动发现知识。选定资料会发送给你配置的模型理解。</p><fieldset id="course-policy-field" hidden><legend>知识来源偏好</legend><label><input type="radio" name="source-policy" value="balanced" checked> 综合资料（推荐）</label><p class="muted">上传资料作为重要参考，结合公开资料补充和检查事实问题。</p><label><input type="radio" name="source-policy" value="user_material_first"> 以我的资料为准</label><p class="muted">优先沿用资料的结构、术语与顺序；公开资料补缺和检查冲突。用户资料不因此成为事实权威。</p></fieldset><label>自动发现使用的检索入口<select id="course-search-mode"><option value="public">免密钥公开资料检索（Wikipedia 与 GitHub）</option><option value="brave">Brave / 兼容网页搜索（需配置）</option><option value="tavily">Tavily / 兼容网页搜索（需配置）</option></select></label><details><summary>课程基本信息（可选）</summary><label>课程简介<textarea id="course-description" maxlength="1000" rows="2"></textarea></label><label>封面地址<input id="course-cover" type="url" maxlength="1000" placeholder="HTTPS 图片地址"></label><label>标签<input id="course-tags" placeholder="用顿号或逗号分隔"></label><label>课程难度<select id="course-difficulty"><option>入门</option><option>基础</option><option>进阶</option><option>高级</option></select></label></details><button id="course-create" class="button primary" type="submit">规划课程并生成审查稿 →</button><p class="muted">先看通俗的课程方向和知识点，确认是你想学的内容后才创建课程；此时不生成详细讲解。</p></form><div id="draft-list" class="draft-list" hidden></div></div>
         </section>
         <section id="course-management" hidden>
@@ -73,12 +79,15 @@
 <div class="action-row"><label>本课程的知识来源偏好<select id="course-policy"><option value="balanced">综合资料（推荐）</option><option value="user_material_first">以我的资料为准</option></select></label><button id="policy-save" class="button secondary" type="button">保存来源偏好</button><button id="discovery-retry" class="button secondary" type="button">重新分析知识缺口</button></div><p class="muted">课程确认后自动发现资料与候选。重新分析会读取已有资料与图谱，只搜索缺口；不会重复完整课程搜索，也不会自动导入或推进学习。</p><div id="discovery-report"></div><h3>来源差异与事实冲突</h3><div id="source-conflicts"></div><div class="production-inputs"><form id="source-text-form"><h3>粘贴资料</h3><label>资料名称<input id="source-title" maxlength="150" required></label><label>资料原文<textarea id="source-text" rows="5" required placeholder="保留标题、定义、公式与例子，可粘贴 Markdown"></textarea></label><button class="button secondary">保存文字资料</button></form>
 <form id="source-file-form"><h3>上传资料</h3><label>选择文件<input id="source-file" type="file" accept=".pdf,.docx,.pptx,.md,.txt" required></label><p class="muted">每份最多 6 MB、10 万字。PDF 需有文字层；不识别扫描图、图片与复杂公式，页码和幻灯片位置可供核对。</p><button class="button secondary">解析并保存</button></form>
 <form id="source-url-form"><h3>获取网页正文</h3><label>公开网页地址<input id="source-url" type="url" required></label><label>获取方式<select id="source-fetch-mode"><option value="direct">直接获取网页文字（无需密钥）</option><option value="tavily">Tavily Extract（需配置）</option></select></label><p class="muted">直接获取只解析公开静态网页，不支持登录、动态加载或付费内容。</p><button class="button secondary">获取并保存正文</button></form>
-<form id="source-search-form"><h3>检索资料</h3><label>检索词<input id="source-query" minlength="3" maxlength="250" required></label><label>检索入口<select id="source-search-mode"><option value="public">免密钥 Wikipedia / GitHub（覆盖有限）</option><option value="tavily">Tavily / 兼容搜索</option><option value="brave">Brave / 兼容搜索</option></select></label><button class="button secondary">检索标题与摘要</button><div id="source-search-results"></div></form></div>
+<form id="source-search-form"><h3>检索资料</h3><label>检索词<input id="source-query" maxlength="250" required></label><label>检索入口<select id="source-search-mode"><option value="public">免密钥 Wikipedia / GitHub（覆盖有限）</option><option value="tavily">Tavily / 兼容搜索</option><option value="brave">Brave / 兼容搜索</option></select></label><button class="button secondary">检索标题与摘要</button><div id="source-search-results"></div></form></div>
 <h3>当前课程资料</h3><div id="source-list"></div><section id="source-detail" hidden></section><h3>知识候选与审查记录</h3><div id="production-batches"></div></details>
-          <div class="action-row course-modes" aria-label="课程学习模式"><button id="mode-course" class="button primary" type="button">章节讲解 · 系统学习</button><button id="mode-map" class="button secondary" type="button">知识地图 · 复习补漏</button></div>
+          <nav class="course-modes" aria-label="课程空间导航">
+            <button id="mode-overview" type="button">宇宙总览</button><button id="mode-course" type="button">学习空间</button><button id="mode-map" type="button">知识星图</button><button id="mode-feedback" type="button">小测反馈</button><button id="mode-history" type="button">学习记录</button>
+          </nav>
+          <section id="course-universe" hidden aria-label="课程宇宙总览"></section>
           <p id="knowledge-progress" class="muted"></p>
           <div id="chapter-mode" class="study-grid">
-            <aside class="card outline"><div class="section-head"><h2>学习路线</h2><span id="outline-count" class="badge"></span></div><p class="muted">只开放已进入的小节。点击旧小节可以回看和复测。</p><div id="section-list"></div></aside>
+            <aside class="card outline"><div class="section-head"><h2>星系导航</h2><span id="outline-count" class="badge"></span></div><p class="muted">只开放已进入的小节。点击旧小节可以回看和复测。</p><div id="section-list"></div></aside>
             <div class="study-column">
               <section class="card lesson-card"><div class="section-head"><div><p id="section-number" class="eyebrow"></p><h2 id="section-title"></h2><p id="section-objective" class="muted"></p></div><span id="section-mastery" class="badge"></span></div>
                 <div id="section-atoms" class="atom-chips"></div>
@@ -86,12 +95,15 @@
                 <div id="lesson-history"></div><p id="lesson-version-note" class="muted"></p><div id="lesson-content" class="lesson-content"></div><button id="lesson-generate" class="button primary" type="button">生成本节讲解</button>
                 <button id="section-read" class="button secondary" type="button" hidden>本节已读，记录学习进度</button><div id="ask-area" hidden><div class="divider"></div><h3>哪里还没讲明白？</h3><div id="conversation"></div><form id="ask-form" class="ask-form"><textarea id="ask-input" rows="2" maxlength="500" placeholder="随时提问，也可以输入“继续”"></textarea><button class="button secondary" type="submit">发送问题</button></form></div>
               </section>
-              <section id="quiz-card" class="card quiz-card" hidden><div class="section-head"><div><p class="eyebrow">独立小测</p><h2>检查本节掌握程度</h2></div><span id="quiz-count" class="badge"></span></div><p class="muted">每次生成 4 道新题；提交后更新这一节及课程的掌握记录。可以反复测试。</p><div id="quiz-history"></div><div id="quiz-active"></div><button id="quiz-new" class="button secondary" type="button">生成本节小测</button></section>
               <section class="card next-card"><div><h2>下一步</h2><p id="next-hint" class="muted"></p></div><button id="next-section" class="button primary" type="button">进入下一小节 →</button></section>
-            </div>
+            </div><aside id="learning-support" class="learning-support card"></aside>
           </div>
+          <section id="course-feedback" hidden><p id="quiz-empty" class="card muted">先在学习空间生成当前小节讲解，再用独立小测检查理解。</p>
+              <section id="quiz-card" class="card quiz-card" hidden><div class="section-head"><div><p class="eyebrow">独立小测</p><h2>检查本节掌握程度</h2></div><span id="quiz-count" class="badge"></span></div><p class="muted">每次生成 4 道新题；提交后更新这一节及课程的掌握记录。可以反复测试。</p><div id="quiz-history"></div><div id="quiz-active"></div><button id="quiz-new" class="button secondary" type="button">生成本节小测</button></section>
+          </section>
+          <section id="course-history" hidden aria-label="课程学习记录"></section>
           <div id="map-mode" hidden>
-            <section class="card"><div class="section-head"><div><p class="eyebrow">本课程知识地图</p><h2>看清联系，定点复习</h2></div><button id="graph-build" class="button primary" type="button">生成课程知识地图</button></div><p class="muted">地图与章节共享记录。箭头表示 AI 建议的前置关系，尚未经教师核验。生成地图只拆分知识结构，详细讲解按需生成。未来小节可查看名称与关系，主动进入对应小节后才能学习。</p><div id="knowledge-map" class="knowledge-map"></div><div id="knowledge-sections" class="knowledge-sections"></div></section>
+            <section class="card"><div class="section-head"><div><p class="eyebrow">本课程知识地图</p><h2>把知识连成星图</h2></div><button id="graph-build" class="button primary" type="button">生成课程知识地图</button></div><p class="muted">地图与章节共享记录。箭头表示 AI 建议的前置关系，尚未经教师核验。生成地图只拆分知识结构，详细讲解按需生成。未来小节可查看名称与关系，主动进入对应小节后才能学习。</p><div id="star-galaxy-filter" class="star-galaxy-filter" aria-label="星系筛选"></div><div class="star-legend"><span class="star-new">未测 / 未读</span><span class="star-learning">学习中</span><span class="star-strong">较稳固</span><span class="star-weak">需补强</span></div><p class="muted">星光只反映阅读与独立测试记录；章节顺序线和知识关系线分别显示，不把阅读当作掌握。</p><div id="knowledge-map" class="knowledge-map"></div><div id="knowledge-sections" class="knowledge-sections"></div></section>
             <div class="knowledge-panels"><section class="card"><h2>建议学习与复习</h2><p class="muted">建议来自错题、未测状态和距上次活动的天数。三天提醒是简单规则，不代表测量了遗忘概率；你自己决定顺序。</p><div id="learning-queue"></div></section><section class="card"><h2>基础摸底（可跳过）</h2><p class="muted">4 道题检查第一节的基础知识，不自动跳过或开放后续章节。</p><button id="diagnostic-new" class="button secondary" type="button">检查我的基础</button><div id="diagnostic-tests"></div></section></div>
             <section id="atom-panel" class="card" hidden><div class="section-head"><div><p id="atom-meta" class="eyebrow"></p><h2 id="atom-title"></h2><p id="atom-summary" class="muted"></p></div><span id="atom-state" class="badge"></span></div><p id="atom-why"></p><div id="atom-sources"></div><div id="atom-relations" class="atom-chips"></div><div class="action-row"><button id="atom-quick" class="button secondary" type="button">快速复习</button><button id="atom-deep" class="button secondary" type="button">深入理解</button><button id="atom-test" class="button secondary" type="button">做独立小测</button><button id="atom-read" class="button secondary" type="button">已阅读 / 已复习</button><button id="atom-return" class="button quiet-button" type="button">返回对应章节</button></div><p class="muted">阅读、追问和自评只留下学习记录；测试后才有原子正确率。已有章节讲解时可直接做原子测试，无需重复学两遍。</p><div id="atom-content" class="lesson-content"></div><div id="atom-history"></div><div id="atom-conversation"></div><form id="atom-ask-form" class="ask-form"><textarea id="atom-question" rows="2" maxlength="500" placeholder="围绕这个知识点追问"></textarea><button class="button secondary" type="submit">发送问题</button></form><div id="atom-tests"></div></section>
           </div>
@@ -100,10 +112,10 @@
     </main>
   </div>
   <div id="course-assistant" hidden>
-    <button id="assistant-toggle" class="assistant-floating" type="button" aria-label="课程智能助教" aria-controls="assistant-panel" aria-expanded="false" title="点击提问；拖动图标可调整位置">🤖</button>
-    <section id="assistant-panel" class="assistant-panel" hidden aria-label="课程智能助教聊天窗口">
-      <div class="section-head"><h2>课程智能助教</h2><button id="assistant-close" class="icon-button" aria-label="收起助教" type="button">×</button></div>
-      <p id="assistant-course"></p><p id="assistant-context" class="muted"></p>
+    <button id="assistant-toggle" class="assistant-floating" type="button" aria-label="课程智能助教" aria-controls="assistant-panel" aria-expanded="false" title="点击提问；拖动图标可调整位置"><span aria-hidden="true">✦</span><small>AI</small></button>
+    <section id="assistant-panel" class="assistant-panel" hidden aria-label="AI导师学习辅助">
+      <div class="section-head"><h2>AI 导师</h2><button id="assistant-close" class="icon-button" aria-label="收起助教" type="button">×</button></div>
+      <p id="assistant-course"></p><p id="assistant-context" class="muted"></p><div id="assistant-insight" class="assistant-insight"></div><button id="assistant-select-course" class="button secondary" type="button" hidden>选择课程，开始提问</button>
       <p class="muted assistant-boundary">聊天不会改变掌握记录。最新信息按本课程的检索配置查找；来源旁会说明检索范围。</p>
       <button id="assistant-history-more" type="button" class="button secondary" hidden>加载更早的聊天</button>
       <div id="assistant-messages" class="assistant-messages" aria-live="polite"></div>

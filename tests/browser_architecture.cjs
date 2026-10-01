@@ -16,7 +16,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const asse
  assert.equal(await page.evaluate(()=>state.courseId),b);assert.equal(await page.locator('#course-title').textContent(),'响应保护课程B');
  assert.equal(await page.evaluate(async a=>(await fetch('/api/course?course_id='+a).then(r=>r.json())).section.lesson!==null,a),true);
  await open(a);delayed=await defer('**/api/sections/ask');await page.locator('#ask-input').fill('再解释一下');await page.locator('#ask-form button').click();await delayed.seen;await page.locator('#home-link').click();delayed.release();await idle();await delayed.remove();
- assert.equal(await page.evaluate(()=>state.courseId),null);assert.equal(await page.locator('#welcome').isVisible(),true);assert.equal(await page.locator('#notice').isVisible(),false);
+ assert.equal(await page.evaluate(()=>state.page),'dashboard');assert.equal(await page.locator('#learning-dashboard').isVisible(),true);assert.equal(await page.locator('#notice').isVisible(),false);
  delayed=await defer('**/api/course?course_id='+a);await page.evaluate(a=>{openCourse(a);},a);await delayed.seen;await open(b);delayed.release();await page.waitForTimeout(250);await delayed.remove();assert.equal(await page.evaluate(()=>state.courseId),b);
  await open(a);await page.locator('#mode-map').click();await page.locator('#knowledge-sections button').filter({hasText:'概念 1'}).first().click();await page.waitForFunction(()=>state.atomDetail?.atom.id==='a1');
  delayed=await defer('**/api/atoms/lesson');await page.locator('#atom-quick').click();await delayed.seen;await open(b);delayed.release();await idle();await delayed.remove();assert.equal(await page.evaluate(()=>state.courseId),b);assert.equal(await page.evaluate(()=>state.atomDetail),null);

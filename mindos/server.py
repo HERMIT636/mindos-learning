@@ -38,6 +38,9 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/components/CourseManager/course-manager.js": ("components/CourseManager/course-manager.js", "text/javascript; charset=utf-8"),
           "/components/CourseAssistant/course-assistant.js": ("components/CourseAssistant/course-assistant.js", "text/javascript; charset=utf-8"),
           "/production.js": ("production.js", "text/javascript; charset=utf-8"),
+          "/components/mindos/state.js": ("components/mindos/state.js", "text/javascript; charset=utf-8"),
+          "/components/mindos/universe.js": ("components/mindos/universe.js", "text/javascript; charset=utf-8"),
+          "/universe.css": ("universe.css", "text/css; charset=utf-8"),
           "/style.css": ("style.css", "text/css; charset=utf-8")}
 ENV_KEYS = {"MINDOS_MODEL_BASE_URL", "MINDOS_CHAT_MODEL", "MINDOS_MODEL_API_KEY",
             "MINDOS_BRAVE_SEARCH_API_KEY", "MINDOS_DATA_PATH"}
@@ -289,6 +292,12 @@ class MindOSHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.OK,{'learning_state':state,'knowledge_context':knowledge})
         elif parsed.path == "/api/health":
             self._json(HTTPStatus.OK, {"status": "ok"})
+        elif parsed.path == '/api/dashboard':
+            from .dashboard import DashboardService
+            cid=parse_qs(parsed.query).get('course_id',[None])[0]
+            data=DashboardService(self.server.storage).read(self._session(),cid)
+            data['context']=self._course_public(data['current']['course_id']) if data['current'] else None
+            self._json(HTTPStatus.OK,data)
         elif parsed.path == "/api/bootstrap":
             self._json(HTTPStatus.OK, {**self._models_public(),
                 "courses": self.server.storage.courses(self._session()),
@@ -722,6 +731,9 @@ class MindOSHandler(BaseHTTPRequestHandler):
     def _safe_call(self, handler) -> None:
         try:
             handler()
+        except (BrokenPipeError, ConnectionResetError):
+            # A closed browser cannot receive another error response.
+            return
         except ValueError as exc:
             self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
         except ModelUnavailable as exc:

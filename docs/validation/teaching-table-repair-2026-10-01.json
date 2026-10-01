@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-01",
+  "issue": "Lesson generation rejected a comparison table twice; generic error obscured the schema mismatch",
+  "observed_actual_output": {
+    "comparison_block_index": 9,
+    "column_count": 4,
+    "row_value_count": 3,
+    "row_label_supplied_separately": true,
+    "initial_and_repaired_responses_same_schema": true
+  },
+  "fixes": [
+    "Recognized uniform leading row-header columns move to label_header without inventing cells",
+    "Preserve optional label_header in saved blocks and frontend table rendering",
+    "Make comparison prompt and repair failure describe value-column arity explicitly",
+    "Surface actual validation failure while keeping one repair and all scope/formula checks"
+  ],
+  "actual_log_replay": {
+    "responses": 2,
+    "block_count_each": 11,
+    "typed_validation_passed": true,
+    "existing_scope_validation_passed": true,
+    "live_model_calls": 0,
+    "personal_database_writes": 0
+  },
+  "tests": {
+    "root": {
+      "count": 131,
+      "seconds": 12.187,
+      "passed": true
+    },
+    "publish": {
+      "count": 131,
+      "seconds": 12.156,
+      "passed": true
+    }
+  },
+  "browser": {
+    "suite": "ATIE",
+    "passed": true,
+    "custom_row_header_and_column_alignment": true,
+    "existing_interactions_and_mobile": true
+  },
+  "source_sha256": {
+    "mindos/adaptive/content_generator.py": "5587ede039cb669b7db092c9f3df19a591910c404151c9a516541a5f638f7b03",
+    "mindos/model.py": "3a4ed920731e29ea7bc05bf863bfff3a187007df566dcd72b050151b6683e126",
+    "web/components/teaching/teaching-blocks.js": "636a5cf005a5402507c55180f94a9608fa6b299a42a637f0522d685787965a7b",
+    "tests/test_teaching_tables.py": "892c35981367a50edd2658f6870b71fac0c95ce0b9db6ccc6ed801073dce6d62"
+  }
+}

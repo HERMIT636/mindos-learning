@@ -8,6 +8,28 @@ from .teaching_state import LearningStateManager
 from .intervention_manager import feedback_from_message
 
 BLOCK_TYPES={'text','question','analogy','concept','flow','diagram','comparison','formula','example','checkpoint'}
+ROW_HEADERS={'性质','比较方面','比较项','对比项','方面','项目','维度','指标','特征','特点','属性','条目','名称','类型','术语','知识点','字段',
+             'aspect','property','properties','feature','features','criterion','criteria','item','dimension','metric','name','type'}
+
+def normalize_blocks(packet):
+    """Unambiguous layout conversions only: never invent missing table cells."""
+    if not isinstance(packet,dict) or not isinstance(packet.get('blocks'),list):return packet,[]
+    import copy
+    result=copy.deepcopy(packet);changes=[]
+    for index,block in enumerate(result['blocks']):
+        if not isinstance(block,dict) or block.get('type')!='comparison':continue
+        data=block.get('data')
+        if not isinstance(data,dict):continue
+        columns=data.get('columns');rows=data.get('rows')
+        if (not isinstance(columns,list) or not 3<=len(columns)<=5 or not isinstance(columns[0],str)
+                or columns[0].strip().casefold() not in ROW_HEADERS or not isinstance(rows,list) or not rows):continue
+        if data.get('label_header') not in (None,columns[0]):continue
+        if all(isinstance(row,dict) and isinstance(row.get('label'),str) and row['label'].strip()
+               and isinstance(row.get('values'),list) and len(row['values'])==len(columns)-1 for row in rows):
+            data['label_header']=columns[0];data['columns']=columns[1:]
+            changes.append({'block_index':index,'conversion':'comparison_row_header','original_column_count':len(columns),
+                            'value_column_count':len(columns)-1})
+    return result,changes
 
 def text(value,limit=8000):
     if not isinstance(value,str) or not value.strip() or len(value)>limit:raise ValueError('内容块文字为空或过长')
@@ -48,10 +70,12 @@ def validate_blocks(packet,action):
             columns=data.get('columns');rows=data.get('rows')
             if not isinstance(columns,list) or not 2<=len(columns)<=4 or not isinstance(rows,list) or not 1<=len(rows)<=10:raise ValueError('比较表结构无效')
             result=[]
-            for row in rows:
-                if not isinstance(row,dict) or not isinstance(row.get('values'),list) or len(row['values'])!=len(columns):raise ValueError('比较表列数不一致')
+            for row_index,row in enumerate(rows):
+                if not isinstance(row,dict) or not isinstance(row.get('values'),list):raise ValueError('比较表行数据无效')
+                if len(row['values'])!=len(columns):raise ValueError(f'比较表第{row_index+1}行有{len(row["values"])}个值，但columns有{len(columns)}列；columns只包含值列，行标签由label单独提供，不要把行标签表头放进columns')
                 result.append({'label':text(row.get('label'),100),'values':[text(v,500) for v in row['values']]})
             block['data']={'columns':[text(v,100) for v in columns],'rows':result}
+            if 'label_header' in data:block['data']['label_header']=text(data['label_header'],100)
         elif kind=='formula':
             if not action['allow_formulas']:raise ValueError('当前教学策略要求先建立直觉，不允许公式块')
             symbols=data.get('symbols',[]);steps=data.get('steps',[])
@@ -108,7 +132,7 @@ class ContentGenerator:
         return blocks,result
 
     def execute(self,model,payload,action,scope,request):
-        packet=None;failures=[];repair_reason=''
+        packet=None;failures=[];repair_reason='';normalizations=[]
         for attempt in range(2):
             try:
                 packet=request() if attempt==0 else model.repair_teaching_blocks(payload,packet,repair_reason)
@@ -117,18 +141,21 @@ class ContentGenerator:
                 repair_reason='JSON语法或对象格式无效：'+exc.reason
                 failure=exc
             else:
+                packet,changes=normalize_blocks(packet)
+                normalizations.extend(changes)
+                if changes and hasattr(model,'_diagnostic'):model._diagnostic({'stage':'atie_normalization','attempt':attempt+1,'changes':changes})
                 try:blocks,validation=self.validate(packet,action,scope);break
                 except (ValueError,TypeError,KeyError,AttributeError) as exc:
                     repair_reason=str(exc);failure=exc
             failures.append(repair_reason)
             if hasattr(model,'_diagnostic'):model._diagnostic({'stage':'atie_validation','attempt':attempt+1,'failure':repair_reason,'action':action})
-            if attempt==1:raise ModelUnavailable('教学内容仍未符合当前讲法或小节范围，已停止保存，请重试。') from failure
+            if attempt==1:raise ModelUnavailable('教学内容未通过检查，自动修订后仍有问题：'+repair_reason[:300]+'。已停止保存，请重试。') from failure
         related=packet.get('related_atom_ids',[])
         content=flatten_blocks(blocks)
         if len(content)>30000:raise ModelUnavailable('教学内容过长，请重试生成')
         return {'blocks':blocks,'content':content,'teaching_action':action,
                 'learning_state':payload['learning_state'],'related_atom_ids':related,
-                'validation':{**validation,'repair_attempts':len(failures),'initial_issues':failures}}
+                'validation':{**validation,'repair_attempts':len(failures),'initial_issues':failures,'normalizations':normalizations}}
 
     def lesson(self,user,course,section,model,mastery,weak):
         state,knowledge,scope,decision=self.prepare(user,course['id'],section)

@@ -1,0 +1,56 @@
+// Complete creation and conflict review against browser_discovery_fixture.py.
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const assert=require('node:assert/strict');
+(async()=>{
+ const browser=await chromium.launch({headless:true,channel:'msedge'});
+ try {
+ const page=await browser.newPage({viewport:{width:1440,height:960}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.context().addCookies([{name:'mindos_session',value:process.env.MINDOS_TEST_COOKIE,url:process.env.MINDOS_TEST_URL,httpOnly:true,sameSite:'Strict'}]);
+ const idle=()=>page.waitForFunction(()=>!state.busy && document.getElementById('notice').hidden);
+ const completed=()=>page.waitForFunction(()=>!document.getElementById('discovery-banner').textContent.includes('正在')&&document.getElementById('production-batches').querySelector('section'));
+ await page.goto(process.env.MINDOS_TEST_URL);
+ assert.equal(await page.locator('#course-policy-field').isVisible(),false);
+ await page.locator('#course-title-input').fill('无上传自动发现课程');await page.locator('#course-goal-input').fill('从零理解注意力与前置知识');await page.locator('#course-level').selectOption({label:'了解一些基础'});await page.locator('#course-search-mode').selectOption('brave');
+ await page.locator('#course-create').click();await idle();await page.locator('#review-confirm').click();await idle();await completed();
+ assert.equal(await page.evaluate(()=>state.data.course.source_policy),'balanced');
+ assert.equal(await page.evaluate(()=>state.data.course.learner_level),'了解一些基础');
+ assert.equal(await page.evaluate(()=>state.data.knowledge.ready),false);
+ await page.locator('#production-panel summary').first().click();
+ assert.match(await page.locator('#discovery-report').textContent(),/矩阵乘法 行列 直观说明/);
+ assert.equal(await page.locator('#source-list button').count(),1);
+ await page.getByRole('button',{name:'确认选中候选，加入知识地图'}).first().click();await idle();
+ await page.waitForFunction(()=>state.data.knowledge.ready);
+ assert.equal(await page.evaluate(()=>state.data.knowledge.tested_count),0);
+ assert.equal(await page.evaluate(()=>state.data.course.current_ordinal),1);
+ await page.reload();await page.locator('#course-list').getByRole('button',{name:/无上传自动发现课程/}).click();
+ await page.waitForFunction(()=>document.getElementById('discovery-banner').textContent.includes('自动发现完成'));
+ await page.locator('#new-course-side').click();
+ await page.locator('#course-title-input').fill('我的注意力课程');await page.locator('#course-goal-input').fill('按我的讲义从零理解');
+ await page.locator('#course-materials').setInputFiles({name:'Attention讲义.md',mimeType:'text/markdown',buffer:Buffer.from('# Attention\n\nAttention combines values using QKV and Softmax weights to explain relationships.\n\n## QKV\n\nQKV stands for Query, Key and Value used for attention representations.\n\n## Softmax\n\nSoftmax outputs non-negative weights whose sum is one in standard attention.')});
+ assert.equal(await page.locator('#course-policy-field').isVisible(),true);
+ await page.locator('input[name="source-policy"][value="user_material_first"]').check();
+ await page.locator('#course-create').click();await idle();
+ assert.equal(await page.locator('#review-sections li').count(),3);
+ assert.match(await page.locator('#review-search-report').textContent(),/以我的资料为准/);
+ await page.locator('#review-confirm').click();await idle();await completed();
+ await page.waitForFunction(()=>document.getElementById('discovery-banner').textContent.includes('未确认来源冲突'));
+ assert.deepEqual(await page.evaluate(()=>state.data.course.sections.map(s=>s.title)),['Attention','QKV','Softmax']);
+ assert.equal(await page.evaluate(()=>state.data.knowledge.ready),false);
+ await page.locator('#production-panel summary').first().click();
+ assert.equal(await page.locator('#source-list button').count(),2);
+ assert.match(await page.locator('#source-conflicts').textContent(),/来源 A.*用户上传.*来源 B.*网页检索/s);
+ await page.getByRole('button',{name:'确认选中候选，加入知识地图'}).first().click();await page.waitForFunction(()=>!state.busy);
+ assert.match(await page.locator('#notice').textContent(),/冲突/);
+ await page.getByRole('textbox',{name:'本课程采用的教学表达'}).fill('本课程采用非负且总和为一的定义；外部不同表述保留供核对，不视为认证。');
+ await page.getByRole('button',{name:'确认教学表达并保留冲突记录'}).click();await idle();
+ await page.waitForFunction(()=>document.getElementById('source-conflicts').textContent.includes('用户已确认教学表达'));
+ await page.getByRole('button',{name:'确认选中候选，加入知识地图'}).first().click();await idle();
+ await page.waitForFunction(()=>state.data.knowledge.ready);
+ assert.equal(await page.evaluate(()=>state.data.knowledge.tested_count),0);
+ await page.locator('#mode-map').click();await page.locator('#knowledge-sections button').first().click();await page.locator('#atom-panel').waitFor({state:'visible'});
+ assert.match(await page.locator('#atom-sources').textContent(),/用户已确认教学表达/);
+ await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ assert.deepEqual(errors,[]);
+ console.log('PASS: no-upload auto discovery, learner level, material-first structure, conflict import gate, confirmed expression, source trace, reload, isolated courses and mobile');
+ }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

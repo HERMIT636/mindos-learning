@@ -21,6 +21,7 @@ from mindos.web_search import PublicSourceSearch, WebSearch
 
 
 class FakeProvider(BaseHTTPRequestHandler):
+    discovery_demo = False
     lesson_payloads: list[dict] = []
     search_queries: list[str] = []
 
@@ -47,6 +48,15 @@ class FakeProvider(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        if self.path == "/search":
+            if self.headers.get("Authorization") != "Bearer tavily-test-private-key":
+                self.send_error(401); return
+            if payload.get("include_raw_content") is not False or payload.get("include_answer") is not False:
+                self.send_error(400); return
+            self.search_queries.append(payload["query"])
+            self.send_json({"results": [{"title": "Tavily 入门资料", "url": "https://example.edu/tavily",
+                                         "content": "循序渐进的学习摘要"}]})
+            return
         if self.path != "/chat/completions":
             self.send_error(404); return
         system = payload["messages"][0]["content"]
@@ -62,13 +72,66 @@ class FakeProvider(BaseHTTPRequestHandler):
                 "directions": ["先建立必要的基础词汇和直觉", "更多实践与动手练习" if "实践" in feedback else "再学习主要方法与应用"],
                 "sections": [{"title": f"第 {i} 节基础", "objective": f"理解第 {i} 步的核心概念"} for i in range(1, 5)],
             }, ensure_ascii=False)
+        elif "课程知识结构设计教师" in system:
+            content = json.dumps({"atoms": [{"id": f"a{n}", "section": n, "title": f"知识点 {n}",
+                "type": "concept", "summary": f"第 {n} 步核心定义", "why": "用于理解本节核心方法", "depth": 2}
+                for n in range(1, len(user["sections"]) + 1)],
+                "edges": [{"from": "a1", "to": "a2", "type": "prerequisite"}]}, ensure_ascii=False)
+        elif "MindOS课程助教回答规划教师" in system:
+            content=json.dumps({'need_search':False,'strategy':'生活例子与数学直觉','queries':['课程 最新版本'],'related_atom_ids':[]})
+        elif "MindOS课程智能助教" in system:
+            from block_fixture import make_blocks
+            ctx=user['learning_context'];current=ctx['current_context'];atoms=ctx['knowledge_atoms']
+            content=json.dumps({'blocks':make_blocks(ctx['teaching_action'],f"这是 {ctx['course']['title']} 的问题。可以把它想成按需要挑选信息。先理解定义，再看原因。当前正在学习 {current['section_title']}。"),
+                                'related_atom_ids':[a['id'] for a in atoms[:2]]},ensure_ascii=False)
+        elif "课程搜索任务规划教师" in system:
+            content=json.dumps({'tasks':[{'requirement_index':i,'knowledge_target':gap['title'],
+                'purpose':gap['reason'],'search_intent':'补充缺失知识','queries':[gap.get('query') or gap['title']+' 教材'],
+                'preferred_sources':['公开教材'],'priority':i+1} for i,gap in enumerate(user['gaps'])]},ensure_ascii=False)
+        elif "课程知识需求规划教师" in system:
+            documents=user['documents']
+            evidence=[]
+            if documents:
+                document=next((d for d in documents if any(len(b['text'])>=20 for b in d['blocks'])),None)
+                if document:
+                    block=next(b for b in document['blocks'] if len(b['text'])>=20)
+                    evidence=[{'document_id':document['id'],'block_id':block['id'],'quote':block['text'][:100]}]
+            requirements=[{'title':'基础概念','section':1,'aspect':'definition','reason':'先检查课程资料是否提供基础定义','evidence':evidence,'query':'基础概念 直观解释 实例'}]
+            if self.discovery_demo:
+                requirements=([requirements[0]] if evidence else [])+[{'title':'矩阵乘法前置','section':1,'aspect':'prerequisite','reason':'缺少矩阵乘法的直观前置说明','evidence':[],'query':'矩阵乘法 行列 直观说明'}]
+            content=json.dumps({'requirements':requirements},ensure_ascii=False)
+        elif "资料冲突检查教师" in system:
+            conflicts=[]
+            if self.discovery_demo:
+                uploaded=next((d for d in user['documents'] if d['origin']=='user_upload'),None)
+                public=next((d for d in user['documents'] if d['origin']=='web_search'),None)
+                if uploaded and public:
+                    def ref(doc):
+                        block=next(b for b in doc['blocks'] if 'Softmax output' in b['text'])
+                        return {'document_id':doc['id'],'block_id':block['id'],'quote':block['text']}
+                    conflicts=[{'topic':'Softmax','description':'两个来源对权重的符号与总和存在明显不同表述，需要核对原文。','source_a':ref(uploaded),'source_b':ref(public)}]
+            content=json.dumps({'conflicts':conflicts})
+        elif "资料理解与知识抽取教师" in system:
+            blocks = user["structured_blocks"]
+            block = next(b for b in blocks if len(b["text"]) >= 20)
+            content = json.dumps({"understanding":"这份资料保留了章节与定义，主要解释一个基础概念的含义。",
+                "candidates":[{"id":"c1","title":"资料知识点","type":"concept","summary":"资料中的基础概念定义",
+                    "why":"用于理解课程的基础问题","depth":2,"evidence":[{"block_id":block["id"],"quote":block["text"][:100]}]}],
+                "relations":[]},ensure_ascii=False)
         elif "独立小测出题教师" in system:
             previous_count = len(user["previous_questions"])
-            content = json.dumps({"questions": [{"prompt": f"第 {previous_count // 4 + 1} 次测试：关于本节概念 {i}，哪种解释正确？",
+            atoms = user.get("atoms", user.get("knowledge_atoms", []))
+            context = ("基础摸底" if user.get("diagnostic") else "原子" if "atoms" in user else "章节")
+            content = json.dumps({"questions": [{"prompt": f"{context}第 {previous_count // 4 + 1} 次测试：关于本节概念 {i}，哪种解释正确？",
                   "choices": {"a": "错误解释", "b": "正确解释", "c": "另一错误解释", "d": "无关解释"},
-                  "answer": "b", "explanation": "选项 b 符合本节讲解。"} for i in range(1, 5)]}, ensure_ascii=False)
+                  "answer": "b", "explanation": "选项 b 符合本节讲解。", "assessment_type":['concept','application','reasoning','math'][i-1],
+                  **({"atom_ids": [atoms[(i-1) % len(atoms)]["id"]]} if atoms else {})} for i in range(1, 5)]}, ensure_ascii=False)
         elif "连接测试助手" in system:
             content = "OK"
+        elif "MindOS结构化教学内容生成教师" in system:
+            from block_fixture import make_blocks
+            if user['mode']=='lesson':self.lesson_payloads.append(user)
+            content=json.dumps({'blocks':make_blocks(user['teaching_action'],'从零开始：这是 '+user['course']+' 的本节详细讲解，先建立直觉，再看例子与误区。')},ensure_ascii=False)
         elif "现在只讲当前这一小节" in system:
             self.lesson_payloads.append(user)
             content = "## 从零开始\n本节详细讲解：先建立直觉，再看例子与误区。\n\n## 例子\n一步一步说明。"
@@ -106,6 +169,7 @@ class PrototypeTests(unittest.TestCase):
         PublicSourceSearch.GITHUB_ENDPOINT = f"http://127.0.0.1:{cls.provider.server_port}/search/repositories"
         cls.data_path = Path(cls.directory.name) / "mindos.sqlite3"
         cls.server = MindOSServer(0, cls.data_path)
+        cls.server.discovery_provider_factory=lambda course: type('EmptyProvider',(),{'search':lambda self,q: []})()
         cls.server.secrets = SecretStore(Path(cls.directory.name) / "master.key")
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
@@ -113,6 +177,7 @@ class PrototypeTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
+        for worker in cls.server.discovery_engine.threads:worker.join(timeout=5)
         cls.server.shutdown(); cls.server.server_close(); cls.thread.join(timeout=2)
         cls.provider.shutdown(); cls.provider.server_close(); cls.provider_thread.join(timeout=2)
         WebSearch.ENDPOINT = cls.original_search_endpoint
@@ -147,7 +212,7 @@ class PrototypeTests(unittest.TestCase):
         self.assertTrue(result["search_ready"])
         self.assertNotIn("search-test-private-key", json.dumps(result))
         with sqlite3.connect(self.data_path) as db:
-            encrypted = db.execute("SELECT encrypted_api_key FROM search_settings WHERE session_id=?",
+            encrypted = db.execute("SELECT encrypted_api_key FROM search_profiles WHERE session_id=? AND provider='brave'",
                                    (self.session_id(),)).fetchone()[0]
         self.assertNotIn("search-test-private-key", encrypted)
         self.assertEqual(self.server.secrets.decrypt(encrypted), "search-test-private-key")
@@ -257,6 +322,11 @@ class PrototypeTests(unittest.TestCase):
         status, result = self.call("/api/courses/draft", {"title": "只有模型的课程"})
         self.assertEqual(status, 200)
         self.assertTrue(result["draft"]["sources"])
+        report = result["draft"]["search_report"]
+        self.assertEqual(report["mode"], "public")
+        self.assertEqual(len(report["sources"]), 3)
+        restored = self.call(f"/api/draft?draft_id={result['draft']['id']}")[1]["draft"]
+        self.assertEqual(restored["search_report"], report)
         self.assertTrue({source["provider"] for source in result["draft"]["sources"]} &
                         {"Wikipedia zh", "Wikipedia en", "GitHub"})
         self.assertFalse(self.call("/api/bootstrap")[1]["search_ready"])
@@ -293,6 +363,177 @@ class PrototypeTests(unittest.TestCase):
         self.assertEqual(status, 503)
         self.assertIn("检索暂时不可用", failed["error"])
         self.assertEqual(self.call("/api/bootstrap")[1]["drafts"], [])
+
+    def test_tavily_settings_and_review_flow(self) -> None:
+        self.configure()
+        address = f"http://127.0.0.1:{self.provider.server_port}"
+        status, saved = self.call("/api/search/save", {"provider": "tavily", "api_url": address,
+                                                     "api_key": "tavily-test-private-key"})
+        self.assertEqual(status, 200)
+        self.assertNotIn("tavily-test-private-key", json.dumps(saved))
+        config = self.server.storage.search_profile(self.session_id(), "tavily")
+        self.assertEqual(config["api_url"], address + "/search")
+        self.assertNotIn("tavily-test-private-key", config["encrypted_api_key"])
+        self.assertEqual(self.server.secrets.decrypt(config["encrypted_api_key"]), "tavily-test-private-key")
+        self.assertEqual(self.call("/api/search/save", {"provider": "tavily", "api_key": ""})[0], 200)
+        reloaded = Storage(self.data_path).search_profile(self.session_id(), "tavily")
+        self.assertEqual(reloaded, config)
+        self.assertEqual(self.call("/api/search/save", {"provider": "tavily",
+            "api_url": "https://different.example/search", "api_key": ""})[0], 400)
+        status, result = self.call("/api/courses/draft", {"title": "Tavily 课程", "search_mode": "tavily"})
+        self.assertEqual(status, 200)
+        draft = result["draft"]
+        self.assertEqual(draft["sources"][0]["provider"], "Tavily")
+        self.assertEqual(draft["sources"][0]["description"], "循序渐进的学习摘要")
+        status, revised = self.call("/api/courses/draft", {"draft_id": draft["id"], "revision": 1,
+            "title": draft["title"], "goal": draft["goal"], "feedback": "更多实践", "search_mode": "tavily"})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.call("/api/courses/confirm", {"draft_id": draft["id"], "revision": 2})[0], 200)
+        other = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        profiles = self.call("/api/bootstrap", client=other)[1]["search_profiles"]
+        self.assertFalse(next(p for p in profiles if p["provider"] == "tavily")["has_key"])
+        status, cleared = self.call("/api/search/save", {"provider": "tavily", "clear": True})
+        self.assertEqual(status, 200)
+        self.assertFalse(cleared["search_profiles"][1]["has_key"])
+        self.assertTrue(cleared["search_profiles"][0]["has_key"])
+        self.assertEqual(self.call("/api/courses/draft", {"title": "缺少密钥课程", "search_mode": "tavily"})[0], 503)
+
+    def test_legacy_search_key_and_invalid_settings(self) -> None:
+        self.call("/api/bootstrap")
+        encrypted = self.server.secrets.encrypt("search-test-private-key")
+        self.server.storage.save_search_key(self.session_id(), encrypted)
+        self.assertTrue(self.call("/api/bootstrap")[1]["search_ready"])
+        self.assertEqual(self.call("/api/search/save", {"api_key": ""})[0], 200)
+        self.assertEqual(self.server.storage.search_profile(self.session_id(), "brave")["encrypted_api_key"], encrypted)
+        for address in ("http://example.com/search", "https://user:secret@example.com/search",
+                        "https://example.com/search?api_key=secret", "https://example.com/#secret",
+                        "https://example.com:bad/search"):
+            self.assertEqual(self.call("/api/search/save", {"provider": "tavily", "api_url": address,
+                                                           "api_key": "test"})[0], 400)
+        for provider in ("unknown", [], None):
+            self.assertEqual(self.call("/api/search/save", {"provider": provider, "api_key": "test"})[0], 400)
+
+    def test_knowledge_modes_share_evidence_and_keep_course_boundaries(self) -> None:
+        self.configure()
+        course_id = self.draft_and_confirm("知识地图课程", "从零开始")
+        self.assertEqual(self.call("/api/knowledge/build", {"course_id": course_id})[0], 200)
+        state = self.call(f"/api/course?course_id={course_id}")[1]["knowledge"]
+        self.assertEqual(state["total"], 4)
+        self.assertEqual(state["tested_count"], 0)
+        self.assertTrue(all(a["rate"] is None for a in state["atoms"]))
+        self.assertEqual(self.call("/api/atoms/lesson", {"course_id": course_id, "atom_id": "a2"})[0], 400)
+        self.assertEqual(self.call("/api/knowledge/diagnostic", {"course_id": course_id})[0], 200)
+        data = self.call(f"/api/course?course_id={course_id}")[1]
+        diagnostic = data["knowledge"]["diagnostics"][0]
+        self.assertNotIn("answer", json.dumps(diagnostic))
+        self.assertEqual(self.call("/api/quizzes/submit", {"course_id": course_id,
+            "quiz_id": diagnostic["id"], "answers": ["b","b","a","a"]})[0], 200)
+        self.call("/api/sections/lesson", {"course_id": course_id, "ordinal": 1})
+        self.assertTrue(FakeProvider.lesson_payloads[-1]["knowledge_atoms"])
+        before = self.call(f"/api/course?course_id={course_id}")[1]["knowledge"]["atoms"][0]
+        self.assertEqual(before["rate"], 50)
+        self.assertFalse(before["read"])
+        self.call("/api/sections/read", {"course_id": course_id, "ordinal": 1})
+        self.call("/api/atoms/lesson", {"course_id": course_id, "atom_id": "a1", "mode": "quick"})
+        self.call("/api/atoms/ask", {"course_id": course_id, "atom_id": "a1", "question": "再解释一下"})
+        after = self.call(f"/api/course?course_id={course_id}")[1]["knowledge"]["atoms"][0]
+        self.assertTrue(after["read"])
+        self.assertEqual(after["rate"], 50)
+        self.assertEqual(after["evidence_count"], 4)
+        detail = self.call("/api/atoms/quiz", {"course_id": course_id, "atom_id": "a1"})[1]
+        self.assertIn("quick", detail["content"])
+        self.assertEqual(len(detail["turns"]), 2)
+        quiz = detail["quizzes"][0]
+        self.assertNotIn("answer", json.dumps(quiz))
+        self.assertEqual(self.call("/api/atoms/quiz", {"course_id": course_id, "atom_id": "a1"})[1]["quizzes"][0]["id"], quiz["id"])
+        self.call("/api/quizzes/submit", {"course_id": course_id, "quiz_id": quiz["id"], "answers": ["b"]*4})
+        chapter = self.call("/api/sections/quiz", {"course_id": course_id, "ordinal": 1})[1]
+        self.assertEqual(len(chapter["quizzes"]), 1)
+        self.assertTrue(chapter["quizzes"][0]["questions"][0]["atom_ids"])
+        chapter_quiz = chapter["quizzes"][0]
+        self.call("/api/quizzes/submit", {"course_id": course_id, "quiz_id": chapter_quiz["id"], "answers": ["b"]*4})
+        updated = self.call(f"/api/course?course_id={course_id}")[1]
+        self.assertEqual(updated["knowledge"]["atoms"][0]["rate"], 100)
+        self.assertEqual(updated["mastery"]["sections"][0]["test_count"], 1)
+        self.assertEqual(updated["course"]["current_ordinal"], 1)
+        self.assertEqual(Storage(self.data_path).knowledge_state(self.session_id(), course_id)["atoms"][0]["rate"], 100)
+        other_id = self.draft_and_confirm("独立知识课程", "独立目标")
+        self.call("/api/knowledge/build", {"course_id": other_id})
+        other_state = self.call(f"/api/course?course_id={other_id}")[1]["knowledge"]
+        self.assertIsNone(other_state["atoms"][0]["rate"])
+        self.assertFalse(other_state["atoms"][0]["read"])
+        other = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        self.assertEqual(self.call(f"/api/knowledge?course_id={course_id}", client=other)[0], 400)
+        self.assertEqual(self.call(f"/api/atom?course_id={course_id}&atom_id=a1", client=other)[0], 400)
+        self.assertEqual(self.call("/api/atoms/lesson", {"course_id": course_id, "atom_id": "a1"}, other)[0], 400)
+        self.assertEqual(self.call("/api/quizzes/submit", {"course_id": other_id, "quiz_id": quiz["id"], "answers": ["b"]*4})[0], 400)
+
+    def test_create_with_material_policy_preserves_structure_and_starts_discovery(self):
+        import base64,time
+        self.configure()
+        text='# Attention\n\nAttention uses QKV and Softmax to produce weighted representations.\n\n## QKV\n\nQuery, Key and Value are three representations used in attention.'
+        status,result=self.call('/api/courses/draft',{'title':'注意力课程','goal':'从零理解','learner_level':'了解一些基础',
+            'source_policy':'user_material_first','search_mode':'public','uploads':[{'filename':'讲义.md','content_base64':base64.b64encode(text.encode()).decode()}]})
+        self.assertEqual(status,200,result);draft=result['draft']
+        self.assertEqual([s['title'] for s in draft['plan']['sections']],['Attention','QKV'])
+        status,result=self.call('/api/courses/confirm',{'draft_id':draft['id'],'revision':draft['revision']})
+        self.assertEqual(status,200,result);cid=result['course_id']
+        self.assertEqual(result['course']['course']['source_policy'],'user_material_first')
+        self.assertEqual(result['course']['course']['learner_level'],'了解一些基础')
+        for worker in self.server.discovery_engine.threads:worker.join(timeout=5)
+        sources=self.call(f'/api/sources?course_id={cid}')[1]
+        self.assertIn(sources['discovery']['status'],('complete','partial'),sources)
+        self.assertTrue(sources['batches']);self.assertEqual(len(sources['sources']),1)
+        self.assertFalse(self.call(f'/api/knowledge?course_id={cid}')[1]['ready'])
+        run_id=sources['discovery']['id']
+        self.call('/api/courses/confirm',{'draft_id':draft['id'],'revision':draft['revision']})
+        self.assertEqual(self.call(f'/api/sources?course_id={cid}')[1]['discovery']['id'],run_id)
+        self.assertEqual(self.call('/api/courses/source-policy',{'course_id':cid,'source_policy':'balanced'})[0],200)
+        self.assertEqual(self.call('/api/courses/source-policy',{'course_id':cid,'source_policy':[]})[0],400)
+        self.assertEqual(self.call('/api/courses/draft',{'title':'错误课程','source_policy':[]})[0],400)
+        fresh=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        self.assertEqual(self.call('/api/discovery/start',{'course_id':cid},client=fresh)[0],400)
+
+    def test_source_pipeline_review_provenance_and_course_isolation(self):
+        import base64
+        self.configure()
+        course=self.draft_and_confirm("资料课程", "理解概念")
+        cid=course
+        self.call('/api/knowledge/build', {'course_id':cid})
+        original=self.server.storage.graph(self.session_id(),cid)
+        status,data=self.call('/api/sources/upload',{'course_id':cid,'filename':'课堂.md',
+            'content_base64':base64.b64encode(('# 定义\n\n定义：概念是一类事物的共同属性，使用实例能够帮助初学者逐步理解。\n\n'+ '例子：观察生活中的物品并描述其共同属性。\n\n'*200).encode()).decode()})
+        self.assertEqual(status,200)
+        source=data['source'];self.assertEqual(source['origin'],'user_upload')
+        status,data=self.call('/api/sources/process',{'course_id':cid,'source_id':source['id'],'section':1})
+        self.assertEqual(status,200,data)
+        batch=data['batch'];self.assertEqual(batch['status'],'candidate')
+        self.assertEqual(original,self.server.storage.graph(self.session_id(),cid))
+        self.assertTrue(batch['result']['candidates'][0]['quality']['grounded'])
+        status,data=self.call('/api/sources/review',{'course_id':cid,'batch_id':batch['id'],'action':'verify','selected':['c1'],'feedback':'已核对原文'})
+        self.assertEqual(status,200,data)
+        atom=next(a for a in data['knowledge']['atoms'] if a['title']=='资料知识点')
+        self.assertEqual(atom['source_reference'][0]['document_id'],source['id'])
+        self.assertIsNone(atom['rate'])
+        self.assertEqual(data['knowledge']['tested_count'],0)
+        self.assertEqual(self.call('/api/sources/review',{'course_id':cid,'batch_id':batch['id'],'action':'verify','selected':['c1']})[0],400)
+        other=self.draft_and_confirm('另外课程','分别学习')
+        self.assertEqual(self.call(f'/api/sources?course_id={other}')[1]['sources'],[])
+        self.assertEqual(self.call(f'/api/source?course_id={other}&source_id={source["id"]}')[0],400)
+        fresh=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        self.assertEqual(self.call(f'/api/sources?course_id={cid}',client=fresh)[0],400)
+        self.assertEqual(self.call('/api/sources/url',{'course_id':cid,'url':'http://127.0.0.1/'})[0],400)
+
+    def test_existing_draft_survives_search_report_migration(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "legacy.sqlite3"
+            store = Storage(path)
+            draft = store.save_draft("owner", "课程", "", "", {"sections": []}, [])
+            with sqlite3.connect(path) as db:
+                db.execute("ALTER TABLE course_drafts DROP COLUMN search_report_json")
+            restored = Storage(path).draft("owner", draft["id"])
+            self.assertEqual(restored["title"], "课程")
+            self.assertEqual(restored["search_report"], {})
 
     def test_old_data_migrates_with_backup_and_preserves_model_profile(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

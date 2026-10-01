@@ -1,0 +1,112 @@
+/* AssistantButton, AssistantPanel, ChatMessage, ChatInput and DraggableAssistant. */
+const CourseAssistant=(()=>{
+ let courseId=null, contextKey='', generation=0, expanded=false, messages=[], hasMore=false, loadingHistory=false;
+ let position=null, pointer=null, suppressClick=false,nextFeedback=null,nextContext=null;const pending=new Set(),positions=new Map();
+ const root=$('course-assistant'),toggle=$('assistant-toggle'),panel=$('assistant-panel');
+ async function request(cid,suffix,method='GET',body){
+  const response=await fetch(`/api/courses/${encodeURIComponent(cid)}/assistant/${suffix}`,body===undefined?{method}:{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await response.json();if(!response.ok)throw new Error(data.error || '助教暂时不可用');return data;
+ }
+ function current(){
+  if(!state.data || $('course-view').hidden)return null;
+  const atom=state.courseMode==='map' && !$('atom-panel').hidden?state.atomDetail?.atom:null;
+  return {section_ordinal:atom?.section || state.data.section.ordinal,knowledge_atom_id:atom?.id || null,atom_mode:state.atomMode || 'quick'};
+ }
+ function label(){
+  const c=current();if(!c)return;
+  const section=state.data.course.sections.find(s=>s.ordinal===c.section_ordinal);
+  $('assistant-course').textContent=`当前课程：${state.data.course.title}`;
+  $('assistant-context').textContent=`当前小节：${section.title}`+(c.knowledge_atom_id?` · 知识点：${state.atomDetail.atom.title}`:'');
+ }
+ function error(text){$('assistant-error').textContent=text || '';toggle.title=text || '点击提问；拖动图标可调整位置';}
+ function clamp(point){return {x:Math.max(8,Math.min(point.x,Math.max(8,innerWidth-64))),y:Math.max(8,Math.min(point.y,Math.max(8,innerHeight-64)))};}
+ function DraggableAssistant(point){
+  position=clamp(point);toggle.style.left=`${position.x}px`;toggle.style.top=`${position.y}px`;
+  const width=Math.min(380,innerWidth-16),height=Math.min(580,innerHeight-100);
+  panel.style.width=`${width}px`;panel.style.maxHeight=`${height}px`;
+  panel.style.left=`${Math.max(8,Math.min(position.x+56-width,innerWidth-width-8))}px`;
+  panel.style.top=`${Math.max(8,Math.min(position.y-height-10,innerHeight-height-8))}px`;
+ }
+ async function savePosition(cid,point){
+  positions.set(cid,point);
+  try{await request(cid,'position','PUT',point);}catch(e){if(courseId===cid)error('助手位置未保存：'+e.message);}
+ }
+ function ChatMessage(message){
+  const item=node('article','',`assistant-chat-message ${message.role}`);item.dataset.messageId=message.id;
+  item.append(node('strong',message.role==='user'?'你的问题':'课程助教'));
+  const text=node('div','','assistant-message-content');
+  if(message.role==='assistant')MindOSTeaching.render(text,message.blocks?.length?message.blocks:MindOSTeaching.fromText(message.content),{action:message.teaching_action,onFeedback:feedback=>{
+   if($('assistant-question').disabled)return;
+   $('assistant-question').value=feedback.question+' 请参考这段讲解：'+message.content.slice(0,900);nextFeedback=feedback.kind;
+   nextContext=message.context?.section_ordinal?{section_ordinal:message.context.section_ordinal,knowledge_atom_id:message.context.knowledge_atom_id}:null;
+   $('assistant-chat-form').requestSubmit();
+  }});else text.textContent=message.content;item.append(text);
+  if(message.role==='assistant'){
+   if(message.context)item.append(node('p',`提问时：${message.context.section_title}${message.context.knowledge_title?' · '+message.context.knowledge_title:''}`,'muted'));
+   const related=node('div','','assistant-related');
+   (message.related_knowledge || []).forEach(atom=>{const button=node('button',atom.title,'atom-chip');button.type='button';button.dataset.atomId=atom.id;button.onclick=async()=>{const cid=courseId;panel.hidden=true;expanded=false;toggle.setAttribute('aria-expanded','false');setCourseMode('map');await openAtom(atom.id);if(courseId!==cid)return;};related.append(button);});
+   if(related.childElementCount)item.append(node('p','相关知识点'),related);
+   if(message.search?.note)item.append(node('p',message.search.note,'muted'));
+   (message.search?.sources || []).forEach(source=>{const link=node('a',source.title || source.url,'assistant-source');link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';item.append(link,node('p',source.description,'muted'));});
+  }
+  return item;
+ }
+ function AssistantPanel(scroll=true){
+  const history=$('assistant-messages');history.replaceChildren(...messages.map(ChatMessage));
+  if(!messages.length)history.append(node('p','哪里没理解，直接问我。我会结合这门课程和当前小节解释。','muted'));
+  $('assistant-history-more').hidden=!hasMore;
+  $('assistant-send').disabled=pending.has(courseId) || loadingHistory;$('assistant-question').disabled=pending.has(courseId) || loadingHistory;
+  if(scroll)history.scrollTop=history.scrollHeight;
+ }
+ function AssistantButton(){
+  if(!current()){root.hidden=true;panel.hidden=true;return;}
+  root.hidden=false;panel.hidden=!expanded;toggle.setAttribute('aria-expanded',String(expanded));label();
+ }
+ async function sync(){
+  const c=current();if(!c){generation++;courseId=null;root.hidden=true;panel.hidden=true;expanded=false;return;}
+  const cid=state.data.course.id;
+  if(cid===courseId){contextKey=JSON.stringify(c);AssistantButton();return;}
+  courseId=cid;const version=++generation;contextKey=JSON.stringify(c);expanded=false;messages=[];hasMore=false;loadingHistory=true;nextFeedback=null;nextContext=null;error('');$('assistant-question').value='';
+  DraggableAssistant(positions.get(cid) || {x:innerWidth-80,y:innerHeight-80});AssistantButton();AssistantPanel();
+  try{
+   const result=await request(cid,'history');if(courseId!==cid || version!==generation)return;
+   messages=result.messages;hasMore=result.has_more;
+   if(result.position){positions.set(cid,result.position);DraggableAssistant(result.position);}
+   AssistantPanel();
+  }catch(e){if(courseId===cid && version===generation)error(e.message);}
+  finally{if(courseId===cid && version===generation){loadingHistory=false;AssistantPanel();}}
+ }
+ toggle.addEventListener('click',()=>{if(suppressClick){suppressClick=false;return;}if(!courseId)return;expanded=!expanded;AssistantButton();if(expanded){AssistantPanel();$('assistant-question').focus();}});
+ $('assistant-close').addEventListener('click',()=>{expanded=false;AssistantButton();toggle.focus();});
+ toggle.addEventListener('pointerdown',event=>{if(event.button!==0 || !courseId)return;pointer={id:event.pointerId,cid:courseId,startX:event.clientX,startY:event.clientY,x:position.x,y:position.y,moved:false};toggle.setPointerCapture(event.pointerId);});
+ toggle.addEventListener('pointermove',event=>{if(!pointer || pointer.id!==event.pointerId)return;
+  const dx=event.clientX-pointer.startX,dy=event.clientY-pointer.startY;
+  if(Math.hypot(dx,dy)>5)pointer.moved=true;
+  if(pointer.moved){event.preventDefault();DraggableAssistant({x:pointer.x+dx,y:pointer.y+dy});}
+ });
+ toggle.addEventListener('pointerup',event=>{if(!pointer || pointer.id!==event.pointerId)return;const drag=pointer;pointer=null;suppressClick=drag.moved;if(drag.moved)savePosition(drag.cid,position);});
+ toggle.addEventListener('pointercancel',()=>{pointer=null;suppressClick=false;});
+ toggle.addEventListener('keydown',event=>{if(!courseId || !event.altKey || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();const dx=event.key==='ArrowLeft'?-20:event.key==='ArrowRight'?20:0;const dy=event.key==='ArrowUp'?-20:event.key==='ArrowDown'?20:0;DraggableAssistant({x:position.x+dx,y:position.y+dy});savePosition(courseId,position);});
+ panel.addEventListener('keydown',event=>{if(event.key==='Escape'){expanded=false;AssistantButton();toggle.focus();}});
+ async function ChatInput(event){
+  event.preventDefault();const cid=courseId,c=nextContext||current(),question=$('assistant-question').value.trim();if(!cid || !c || !question || pending.has(cid) || loadingHistory)return;
+  const version=generation,requestId=crypto.randomUUID();pending.add(cid);error('');$('assistant-send').textContent='正在解释…';AssistantPanel(false);
+  try{
+   const feedback=nextFeedback;nextFeedback=null;nextContext=null;
+   const result=await request(cid,'chat','POST',{message:question,request_id:requestId,current_context:c,...(feedback?{feedback}: {})});
+   if(cid===courseId && version===generation){messages.push(...result.messages);$('assistant-question').value='';AssistantPanel();}
+  }catch(e){if(cid===courseId && version===generation)error(e.message);}
+  finally{pending.delete(cid);if(cid===courseId){$('assistant-send').textContent='发送问题';AssistantPanel(false);$('assistant-question').focus();}}
+ }
+ $('assistant-question').addEventListener('input',()=>{nextFeedback=null;nextContext=null;});
+ $('assistant-chat-form').addEventListener('submit',ChatInput);
+ $('assistant-history-more').addEventListener('click',async()=>{
+  const cid=courseId,version=generation;if(!messages.length)return;
+  try{const result=await request(cid,'history?before='+messages[0].id);if(cid!==courseId || version!==generation)return;messages=[...result.messages,...messages];hasMore=result.has_more;AssistantPanel(false);}catch(e){if(courseId===cid)error(e.message);}
+ });
+ let scheduled=false;const observer=new MutationObserver(()=>{if(scheduled)return;scheduled=true;queueMicrotask(()=>{scheduled=false;sync();});});
+ for(const id of ['course-view','welcome','review-view','course-management','chapter-mode','map-mode','atom-panel'])observer.observe($(id),{attributes:true,attributeFilter:['hidden']});
+ for(const id of ['section-title','atom-title','course-title'])observer.observe($(id),{childList:true,subtree:true});
+ window.addEventListener('resize',()=>{if(position)DraggableAssistant(position);});sync();
+ return {sync};
+})();

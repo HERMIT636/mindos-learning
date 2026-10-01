@@ -1,0 +1,45 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const assert=require('node:assert/strict');
+(async()=>{
+ const browser=await chromium.launch({headless:true,channel:'msedge'});
+ try{
+  const page=await browser.newPage({viewport:{width:1440,height:960}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.context().addCookies([{name:'mindos_session',value:process.env.MINDOS_TEST_COOKIE,url:process.env.MINDOS_TEST_URL,httpOnly:true,sameSite:'Strict'}]);
+  const idle=()=>page.waitForFunction(()=>!state.busy && document.getElementById('notice').hidden);
+  const card=name=>page.locator('.manager-course-card').filter({has:page.getByRole('heading',{name,exact:true})});
+  const menu=async(name)=>{const c=card(name);await c.locator('summary').click();return c;};
+  await page.goto(process.env.MINDOS_TEST_URL);await page.locator('#course-manager-open').click();await idle();
+  assert.equal(await page.locator('.manager-course-card').count(),3);
+  await (await menu('图论课程')).getByRole('button',{name:'编辑课程',exact:true}).click();
+  await page.locator('#manager-edit-title').fill('图论复习课');await page.locator('#manager-edit-description').fill('期末基础复习');await page.locator('#manager-edit-goal').fill('理解定义并掌握解题方法');
+  await page.locator('#manager-edit-tags').fill('数学、期末');await page.locator('#manager-edit-level').selectOption('进阶');await page.locator('#manager-edit-save').click();await idle();
+  assert.match(await card('图论复习课').textContent(),/期末基础复习/);
+  await page.reload();await page.locator('#course-manager-open').click();await idle();assert.match(await card('图论复习课').textContent(),/进阶/);
+  await card('图论复习课').getByRole('button',{name:'下移',exact:true}).click();await idle();
+  assert.equal(await page.locator('.manager-course-card h2').first().textContent(),'代数课程');
+  await card('Python课程').locator('.manager-drag').dragTo(card('代数课程'));await idle();
+  assert.equal(await page.locator('.manager-course-card h2').first().textContent(),'Python课程');
+  await page.reload();await page.locator('#course-manager-open').click();await idle();assert.equal(await page.locator('.manager-course-card h2').first().textContent(),'Python课程');
+  await (await menu('图论复习课')).getByRole('button',{name:'归档',exact:true}).click();await idle();
+  assert.equal(await page.locator('#course-list').getByRole('button',{name:/图论复习课/}).count(),0);
+  await page.locator('#manager-filter').selectOption('archived');await idle();assert.equal(await page.locator('.manager-course-card').count(),1);
+  await (await menu('图论复习课')).getByRole('button',{name:'取消归档',exact:true}).click();await idle();await page.locator('#manager-filter').selectOption('all');await idle();
+  await (await menu('图论复习课')).getByRole('button',{name:'复制课程',exact:true}).click();await idle();
+  assert.equal(await page.locator('.manager-course-card').count(),4);assert.match(await card('图论复习课（副本）').textContent(),/学习进度 0%/);
+  await (await menu('图论复习课（副本）')).locator('.course-menu-actions').getByRole('button',{name:'进入学习',exact:true}).click();await page.waitForFunction(()=>state.data?.course.title==='图论复习课（副本）');
+  assert.equal(await page.evaluate(()=>state.data.course.current_ordinal),1);assert.equal(await page.evaluate(()=>state.data.mastery.overall_rate),null);
+  await page.locator('#course-manager-open').click();await idle();
+  await (await menu('图论复习课（副本）')).getByRole('button',{name:'删除课程',exact:true}).click();await page.locator('#manager-delete-submit').click();await idle();
+  await page.locator('#manager-filter').selectOption('deleted');await idle();assert.equal(await page.locator('.manager-course-card').count(),1);
+  await (await menu('图论复习课（副本）')).getByRole('button',{name:'恢复课程',exact:true}).click();await idle();assert.equal(await page.locator('.manager-course-card').count(),0);
+  await page.locator('#manager-filter').selectOption('all');await idle();await (await menu('图论复习课（副本）')).getByRole('button',{name:'删除课程',exact:true}).click();await page.locator('#manager-delete-submit').click();await idle();
+  await page.locator('#manager-filter').selectOption('deleted');await idle();await (await menu('图论复习课（副本）')).getByRole('button',{name:'永久删除',exact:true}).click();await page.locator('#manager-delete-input').fill('图论复习课（副本）');await page.locator('#manager-delete-submit').click();await idle();assert.equal(await page.locator('.manager-course-card').count(),0);
+  await page.locator('#manager-new').click();await page.locator('#course-title-input').fill('新建管理课程');await page.locator('#course-goal-input').fill('从零掌握基础');await page.locator('#course-search-mode').selectOption('brave');
+  await page.locator('#course-create').click();await idle();await page.locator('#review-confirm').click();await idle();
+  await page.waitForFunction(()=>document.getElementById('discovery-banner').textContent.includes('自动发现完成'));
+  await page.locator('#course-manager-open').click();await idle();await page.locator('#manager-filter').selectOption('all');await idle();assert.equal(await card('新建管理课程').count(),1);
+  await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await (await menu('新建管理课程')).getByRole('button',{name:'编辑课程',exact:true}).click();assert.equal(await page.locator('#course-editor').isVisible(),true);await page.locator('#manager-edit-cancel').click();
+  assert.deepEqual(errors,[]);console.log('PASS: manager edit, status/archive, button and drag order persistence, copy isolation, recycle/restore/permanent delete, existing creation flow, mobile');
+ } finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exit(1);});

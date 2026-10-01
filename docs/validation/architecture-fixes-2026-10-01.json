@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-01",
+  "audit_findings_fixed": [
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F07",
+    "F08",
+    "F09"
+  ],
+  "unit_tests": {
+    "root": {
+      "count": 117,
+      "seconds": 10.926,
+      "passed": true
+    },
+    "publish": {
+      "count": 117,
+      "seconds": 10.983,
+      "passed": true
+    }
+  },
+  "new_regression_tests": 15,
+  "browser_checks": [
+    {
+      "name": "ATIE teaching blocks and mobile",
+      "passed": true
+    },
+    {
+      "name": "Delayed navigation, definition review and content history",
+      "passed": true
+    },
+    {
+      "name": "Course management and mobile",
+      "passed": true
+    },
+    {
+      "name": "Floating course tutor and mobile",
+      "passed": true
+    }
+  ],
+  "syntax_checks": {
+    "python_modules": true,
+    "javascript_files": 12
+  },
+  "git_diff_check": true,
+  "scope": "Temporary databases and fake model/search services; no personal course data or real credentials modified. No live-provider quality or distributed-load validation.",
+  "hashes": {
+    "mindos/__init__.py": "9d318eec0679edc00ed4c6855e4364adc18b056b6c314da8d25724e30d091933",
+    "mindos/acquisition.py": "050fa021bb256494d7113c76bd07e010330f51f9a88d33b38899702a68f0936e",
+    "mindos/adaptive/__init__.py": "ad0a2467e33d748191b027b1ffdff0d9661524562d4a3bca81d5616eb7c24c7c",
+    "mindos/adaptive/atie_engine.py": "9e847de28f5399eb3a7d1b8b5a8747d6293cbc748239db7abcffa24ec325e22f",
+    "mindos/adaptive/content_generator.py": "831d2c76d54430743f4fee0e913fa484cf6e5c42841746476aeb877d0942b04c",
+    "mindos/adaptive/difficulty_controller.py": "21d8db8d6e6a4baef4c6830f4d37ac441f060cbf3e59bde0f2b4b3989abb70b3",
+    "mindos/adaptive/intervention_manager.py": "2bf4ac320715e0230eff4c2be54e1acc99de831f89d8c96fd19ac1bea704b42f",
+    "mindos/adaptive/presentation_controller.py": "580aa7a5d409bd6c897a6e1649317d8ed8a232188103ac3f9f9bbc7ea036c936",
+    "mindos/adaptive/teaching_state.py": "bdb0c3622978a7b454b2865a7228f0c21ebe72deaab538f45fafd42d728f1791",
+    "mindos/adaptive/teaching_strategy.py": "f3e6b64324a7e9e841e266acfdf97865b7de082ccd96832aa9b40e60eeac4fcb",
+    "mindos/context.py": "5a0168f2e7479339ae33a1ef0bd2da62dc6902e9a71a6bf881f1d290e12060bf",
+    "mindos/course_management.py": "a83a1278bbbd8f35c1147fde667e752fc56d4efc2ae3e7b9d79cc9f0731e617e",
+    "mindos/course_tutor.py": "c6d0600710c63c488bb0fff74354133f6f9fedaa2d01059205b7af20b67cf09d",
+    "mindos/discovery.py": "f6d45df0c4ff40518c08ea78dd067ef12518ed6cf8540c26953553ba9a31d3bc",
+    "mindos/knowledge.py": "46528b6fcfb5532fad7dffea1d0282a7ad13e9da02ee6708decef5959f6056a9",
+    "mindos/model.py": "9f72e30d40029f2aba359ac407d8b90c01bf0ff890ae0301f832211400795098",
+    "mindos/production.py": "e8c5773d74bba69eb994dfef043673dc58f95fee155468a1c939819d70533c19",
+    "mindos/quality.py": "e0f1bd4965802f2e41716fcd489188105b65bc0036e16b435490dd62f2b13832",
+    "mindos/revisions.py": "4103bbac529a272dd06f73a3fbb967a2cda1844f45e9caafb4a46769a90ce218",
+    "mindos/search_planning.py": "37c4c236f336c519475168459f01243e00e279a3cc07aa7861f2164894bdac37",
+    "mindos/secrets.py": "23a6e2db6e5746539a2579b6f5b4a4e64b4150523c1b64a19891a6fbabdc35be",
+    "mindos/server.py": "f5408694666d2430ff020d62b5a6f9f5f25cb0766c459db779275203ac0bfa79",
+    "mindos/storage.py": "c61a23cae4792d2de6efa8fbc04725a707a8433b933c5aecf6818621a49d3bb0",
+    "mindos/teaching.py": "e8dfb83fd6c46df10031a209042790902f32da8cccde8ed67530062673a5138f",
+    "mindos/web_search.py": "b10029771a755f4fb24fe512216d1db4e82d6ab8d12f4be18dd955ff2c678fc8",
+    "web/app.js": "58c5f1a5c84032e7dc854681df89cc97a07ef2b3a0c90b494ce44d6e64b6dcf5",
+    "web/components/CourseAssistant/course-assistant.js": "4495e1f457609ef2a3f10c20b665244d81a31930c622bdeb0aec1c547dd9e336",
+    "web/components/CourseManager/course-manager.js": "e60ba872d2ffc9844c52d6dfcb005d699afda3952d48097a1948ac47fd7dee1c",
+    "web/components/teaching/teaching-blocks.js": "0a36412d4110b8b18a68018ec1f709e9f72967a49fe4cfa0c2298d8d1ba83125",
+    "web/index.html": "5e92c1b7a2a4bde871943fae3dafdab65cf4fd4c9c5f796e50ecbe3fb043a704",
+    "web/production.js": "b12cd9577cab53e146d999615b0cdc36c6b58272b2d89a6174fc0bc0e695e51b",
+    "web/style.css": "c55db595508b57188fb6f2c04060b8213c4697dbd8c1b2745c38052913738714"
+  }
+}

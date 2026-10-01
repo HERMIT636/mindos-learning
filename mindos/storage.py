@@ -14,7 +14,16 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-class Storage:
+from .course_management import CourseManagementStorage, migrate_courses, validate_fields
+from .course_tutor import CourseTutorStorage, SCHEMA as ASSISTANT_SCHEMA
+from .teaching import migrate_teaching, metadata, TeachingOrchestrator, contains
+from .adaptive.teaching_state import AdaptiveStorage, migrate_adaptive
+from .knowledge import KnowledgeStorage, SCHEMA
+from .production import ProductionStorage, SCHEMA as PRODUCTION_SCHEMA
+from .discovery import DiscoveryStorage, SCHEMA as DISCOVERY_SCHEMA, POLICIES
+
+
+class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManagementStorage, CourseTutorStorage, AdaptiveStorage):
     def __init__(self, path: Path) -> None:
         self.path = path
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -41,6 +50,10 @@ class Storage:
                 );
                 CREATE TABLE IF NOT EXISTS search_settings (
                   session_id TEXT PRIMARY KEY, encrypted_api_key TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS search_profiles (
+                  session_id TEXT NOT NULL, provider TEXT NOT NULL, api_url TEXT NOT NULL,
+                  encrypted_api_key TEXT NOT NULL, PRIMARY KEY(session_id, provider)
                 );
                 CREATE TABLE IF NOT EXISTS course_drafts (
                   id TEXT PRIMARY KEY, session_id TEXT NOT NULL, title TEXT NOT NULL,
@@ -74,6 +87,35 @@ class Storage:
                 );
                 CREATE INDEX IF NOT EXISTS quizzes_scope ON quizzes(course_id, section_id, created_at);
             """)
+
+            columns = {row[1] for row in db.execute("PRAGMA table_info(course_drafts)")}
+            if "search_report_json" not in columns:
+                db.execute("ALTER TABLE course_drafts ADD COLUMN search_report_json TEXT NOT NULL DEFAULT '{}'")
+
+            if 'management_json' not in columns:
+                db.execute("ALTER TABLE course_drafts ADD COLUMN management_json TEXT NOT NULL DEFAULT '{}'")
+
+            for table in ('courses','course_drafts'):
+                columns={r[1] for r in db.execute(f'PRAGMA table_info({table})')}
+                for name,default in [('source_policy','balanced'),('learner_level','零基础'),('search_mode','public')]:
+                    if name not in columns:db.execute(f"ALTER TABLE {table} ADD COLUMN {name} TEXT NOT NULL DEFAULT '{default}'")
+            migrate_courses(db)
+            db.executescript(DISCOVERY_SCHEMA)
+            from .discovery import migrate_discovery
+            migrate_discovery(db)
+
+            db.executescript(SCHEMA)
+            db.executescript(PRODUCTION_SCHEMA)
+            db.executescript(ASSISTANT_SCHEMA)
+            migrate_teaching(db)
+            migrate_adaptive(db)
+            from .revisions import migrate_revisions
+            migrate_revisions(db)
+            columns = {row[1] for row in db.execute("PRAGMA table_info(quizzes)")}
+            if "scope" not in columns:
+                db.execute("ALTER TABLE quizzes ADD COLUMN scope TEXT NOT NULL DEFAULT 'section'")
+            if "target_atom_id" not in columns:
+                db.execute("ALTER TABLE quizzes ADD COLUMN target_atom_id TEXT NOT NULL DEFAULT ''")
 
     @contextmanager
     def connect(self):
@@ -129,11 +171,29 @@ class Storage:
             db.execute("INSERT OR REPLACE INTO search_settings VALUES(?,?)",
                        (session_id, encrypted_api_key))
 
+    def search_profile(self, session_id: str, provider: str) -> dict:
+        with self.connect() as db:
+            row = db.execute("SELECT api_url, encrypted_api_key FROM search_profiles "
+                             "WHERE session_id=? AND provider=?", (session_id, provider)).fetchone()
+        if row:
+            return {**dict(row), "saved": True}
+        return {"saved": False, "api_url": "", "encrypted_api_key": self.search_key(session_id) if provider == "brave" else ""}
+
+    def save_search_profile(self, session_id: str, provider: str, api_url: str, encrypted_api_key: str) -> None:
+        with self.connect() as db:
+            db.execute("INSERT OR REPLACE INTO search_profiles VALUES(?,?,?,?)",
+                       (session_id, provider, api_url, encrypted_api_key))
+            if provider == "brave":
+                db.execute("DELETE FROM search_settings WHERE session_id=?", (session_id,))
+
     @staticmethod
     def _draft_public(row: dict) -> dict:
         return {key: row[key] for key in ("id", "title", "goal", "feedback", "revision",
                                           "confirmed_course_id", "created_at", "updated_at")} | {
-            "plan": json.loads(row["plan_json"]), "sources": json.loads(row["sources_json"])}
+            "plan": json.loads(row["plan_json"]), "sources": json.loads(row["sources_json"]),
+            "search_report": json.loads(row.get("search_report_json", "{}")),
+            "course_info":json.loads(row.get("management_json","{}")),
+            "source_policy":row.get("source_policy","balanced"),"learner_level":row.get("learner_level","零基础"),"search_mode":row.get("search_mode","public")}
 
     def drafts(self, session_id: str) -> list[dict]:
         with self.connect() as db:
@@ -150,25 +210,26 @@ class Storage:
 
     def save_draft(self, session_id: str, title: str, goal: str, feedback: str,
                    plan: dict, sources: list[dict], draft_id: str | None = None,
-                   expected_revision: int | None = None) -> dict:
-        if draft_id is None:
-            draft_id = secrets.token_urlsafe(16)
-            with self.connect() as db:
-                db.execute("INSERT INTO course_drafts VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                           (draft_id, session_id, title, goal, feedback, 1,
-                            json.dumps(plan, ensure_ascii=False), json.dumps(sources, ensure_ascii=False),
-                            None, now(), now()))
-        else:
-            with self.connect() as db:
-                changed = db.execute("UPDATE course_drafts SET title=?,goal=?,feedback=?,revision=revision+1,"
-                                     "plan_json=?,sources_json=?,updated_at=? WHERE id=? AND session_id=? "
-                                     "AND revision=? AND confirmed_course_id IS NULL",
-                                     (title, goal, feedback, json.dumps(plan, ensure_ascii=False),
-                                      json.dumps(sources, ensure_ascii=False), now(), draft_id,
-                                      session_id, expected_revision)).rowcount
-                if not changed:
-                    raise ValueError("审查稿已经变化，请刷新后重新修改")
-        return self.draft(session_id, draft_id)
+                   expected_revision: int | None = None, search_report: dict | None = None, *,
+                   source_policy='balanced', learner_level='零基础', search_mode='public', documents=None, course_info=None) -> dict:
+        if not isinstance(source_policy,str) or source_policy not in POLICIES:raise ValueError('知识来源偏好无效')
+        manager_fields=validate_fields(course_info) if course_info is not None else None
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            if draft_id is None:
+                draft_id=secrets.token_urlsafe(16)
+                db.execute('INSERT INTO course_drafts(id,session_id,title,goal,feedback,revision,plan_json,sources_json,confirmed_course_id,created_at,updated_at,search_report_json,source_policy,learner_level,search_mode) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                    (draft_id,session_id,title,goal,feedback,1,json.dumps(plan,ensure_ascii=False),json.dumps(sources,ensure_ascii=False),None,now(),now(),json.dumps(search_report or {},ensure_ascii=False),source_policy,learner_level,search_mode))
+            else:
+                changed=db.execute('UPDATE course_drafts SET title=?,goal=?,feedback=?,revision=revision+1,plan_json=?,sources_json=?,search_report_json=?,updated_at=?,source_policy=?,learner_level=?,search_mode=? WHERE id=? AND session_id=? AND revision=? AND confirmed_course_id IS NULL',
+                    (title,goal,feedback,json.dumps(plan,ensure_ascii=False),json.dumps(sources,ensure_ascii=False),json.dumps(search_report or {},ensure_ascii=False),now(),source_policy,learner_level,search_mode,draft_id,session_id,expected_revision)).rowcount
+                if not changed:raise ValueError('审查稿已经变化，请刷新后重新修改')
+            if manager_fields is not None:
+                db.execute('UPDATE course_drafts SET management_json=? WHERE id=?',(json.dumps(manager_fields,ensure_ascii=False),draft_id))
+            if documents is not None:
+                db.execute('DELETE FROM draft_documents WHERE draft_id=?',(draft_id,))
+                for doc in documents:db.execute('INSERT INTO draft_documents VALUES(?,?,?)',(draft_id,doc['id'],json.dumps(doc,ensure_ascii=False)))
+        return self.draft(session_id,draft_id)
 
     def confirm_draft(self, session_id: str, draft_id: str, expected_revision: int) -> dict:
         with self.connect() as db:
@@ -183,15 +244,28 @@ class Storage:
                 if row["revision"] != expected_revision:
                     raise ValueError("审查稿已经变化，请先查看最新版再确认")
                 course_id = secrets.token_urlsafe(16)
-                db.execute("INSERT INTO courses VALUES(?,?,?,?,?,?)",
-                           (course_id, session_id, row["title"], row["goal"], 1, now()))
+                db.execute("INSERT INTO courses(id,session_id,title,goal,current_ordinal,created_at,source_policy,learner_level,search_mode) VALUES(?,?,?,?,?,?,?,?,?)",
+                           (course_id, session_id, row["title"], row["goal"], 1, now(),row["source_policy"],row["learner_level"],row["search_mode"]))
+                order=db.execute('SELECT COALESCE(MAX(sort_order),0)+1 FROM courses WHERE session_id=? AND id!=? AND deleted_at IS NULL',(session_id,course_id)).fetchone()[0]
+                db.execute('UPDATE courses SET sort_order=?,updated_at=? WHERE id=?',(order,now(),course_id))
+                info=json.loads(row['management_json'])
+                if info:db.execute('UPDATE courses SET '+','.join(k+'=?' for k in info)+' WHERE id=?',(*info.values(),course_id))
+                documents=db.execute("SELECT document_json FROM draft_documents WHERE draft_id=?",(draft_id,)).fetchall()
+                for document in documents:
+                    d=json.loads(document[0])
+                    db.execute("INSERT INTO source_documents VALUES(?,?,?,?,?,?,?,?,?)",(d["id"],course_id,d["title"],d["source_type"],d["origin"],d["content"],json.dumps(d["metadata"],ensure_ascii=False),d["created_time"],d["processing_status"]))
                 for ordinal, item in enumerate(json.loads(row["plan_json"])["sections"], 1):
-                    db.execute("INSERT INTO sections VALUES(?,?,?,?,?,?,?)",
+                    db.execute("INSERT INTO sections(id,course_id,ordinal,title,objective,lesson,created_at) VALUES(?,?,?,?,?,?,?)",
                                (secrets.token_urlsafe(16), course_id, ordinal,
                                 item["title"], item["objective"], None, now()))
+                    meta = metadata(item, info)
+                    db.execute('UPDATE sections SET ' + ','.join(k+'=?' for k in meta) + ' WHERE course_id=? AND ordinal=?',
+                               (*[json.dumps(v,ensure_ascii=False) if isinstance(v,list) else v for v in meta.values()],course_id,ordinal))
                 db.execute("UPDATE course_drafts SET confirmed_course_id=?,updated_at=? WHERE id=?",
                            (course_id, now(), draft_id))
-        return self.course(session_id, course_id)
+        course=self.course(session_id,course_id)
+        if not course:raise ValueError('课程已进入回收站，请先恢复课程')
+        return course
 
     def confirmed_review(self, session_id: str, course_id: str) -> dict | None:
         with self.connect() as db:
@@ -200,19 +274,24 @@ class Storage:
         return self._draft_public(dict(row)) if row else None
 
     def courses(self, session_id: str) -> list[dict]:
-        with self.connect() as db:
-            rows = db.execute("SELECT id,title,goal,current_ordinal,created_at FROM courses "
-                              "WHERE session_id=? ORDER BY created_at DESC,id DESC", (session_id,)).fetchall()
-        return [dict(row) for row in rows]
+        return self.managed_courses(session_id)
 
     def course(self, session_id: str, course_id: str) -> dict | None:
         with self.connect() as db:
-            course = db.execute("SELECT * FROM courses WHERE id=? AND session_id=?",
+            course = db.execute("SELECT * FROM courses WHERE id=? AND session_id=? AND deleted_at IS NULL",
                                 (course_id, session_id)).fetchone()
             if not course:
                 return None
             sections = db.execute("SELECT * FROM sections WHERE course_id=? ORDER BY ordinal", (course_id,)).fetchall()
-        return {**dict(course), "sections": [dict(s) for s in sections]}
+        return {**dict(course), "sections": [{**dict(s), **metadata(dict(s), dict(course)),
+                 'lesson_stale':bool(s['lesson'] and s['lesson_revision']!=course['content_revision']),
+                 'lesson_blocks':json.loads(s['lesson_blocks_json']),'teaching_action':json.loads(s['teaching_action_json'])} for s in sections]}
+
+    def content_versions(self,session_id,course_id,kind,identifier):
+        self._knowledge_course(session_id,course_id)
+        with self.connect() as db:
+            rows=db.execute('SELECT revision,snapshot_json,created_at FROM content_history WHERE course_id=? AND object_type=? AND object_id=? ORDER BY id DESC LIMIT 5',(course_id,kind,identifier)).fetchall()
+        return [{'revision':r['revision'],'snapshot':json.loads(r['snapshot_json']),'created_at':r['created_at']} for r in rows]
 
     def section(self, session_id: str, course_id: str, ordinal: int) -> dict | None:
         course = self.course(session_id, course_id)
@@ -220,56 +299,82 @@ class Storage:
             return None
         return course["sections"][ordinal - 1]
 
-    def save_lesson(self, session_id: str, course_id: str, section_id: str, lesson: str) -> bool:
+    def save_lesson(self, session_id: str, course_id: str, section_id: str, lesson: str,
+                    teaching_context: dict | None = None, validation: dict | None = None, teaching_package: dict | None = None, *, expected_revision=None, regenerate=False) -> bool:
+        course = self.course(session_id, course_id)
+        if not course or not any(s['id'] == section_id and s['ordinal'] <= course['current_ordinal'] for s in course['sections']):
+            return False
+        teaching_context = teaching_context or TeachingOrchestrator(self).context(session_id,course_id,section_id)
         with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            revision=db.execute('SELECT content_revision FROM courses WHERE id=?',(course_id,)).fetchone()[0]
+            if expected_revision is not None and revision!=expected_revision:raise ValueError('课程依据已更新，请重新生成本节讲解')
+            if regenerate:
+                old=db.execute('SELECT * FROM sections WHERE id=? AND course_id=?',(section_id,course_id)).fetchone()
+                if old and old['lesson']:
+                    from .revisions import archive
+                    archive(db,course_id,'lesson',section_id,old['lesson_revision'],dict(old))
             row = db.execute("SELECT 1 FROM sections s JOIN courses c ON c.id=s.course_id "
-                             "WHERE s.id=? AND s.course_id=? AND c.session_id=? AND s.ordinal<=c.current_ordinal",
+                             "WHERE s.id=? AND s.course_id=? AND c.session_id=? AND c.deleted_at IS NULL AND s.ordinal<=c.current_ordinal",
                              (section_id, course_id, session_id)).fetchone()
             if not row:
                 return False
             # First successful generation wins; repeat requests never overwrite the learner's history.
-            changed = db.execute("UPDATE sections SET lesson=? WHERE id=? AND lesson IS NULL",
-                                 (lesson, section_id)).rowcount
+            changed = db.execute("UPDATE sections SET lesson=?,lesson_revision=? WHERE id=?"+("" if regenerate else " AND lesson IS NULL"),
+                                 (lesson, revision, section_id)).rowcount
             if changed:
+                if teaching_package:
+                    blocks=json.dumps(teaching_package['blocks'],ensure_ascii=False);decision=json.dumps(teaching_package['teaching_action'],ensure_ascii=False)
+                    db.execute('UPDATE sections SET lesson_blocks_json=?,teaching_action_json=? WHERE id=?',(blocks,decision,section_id))
+                    self.record_teaching_action(db,session_id,course_id,section_id,None,teaching_package)
                 db.execute("INSERT INTO tutor_turns(course_id,section_id,role,content,created_at) "
                            "VALUES(?,?,?,?,?)", (course_id, section_id, "assistant", lesson, now()))
+                if teaching_package:db.execute('UPDATE tutor_turns SET blocks_json=?,action_json=? WHERE id=last_insert_rowid()',(blocks,decision))
+                covered = [name for name in teaching_context['core_atoms'] if contains(lesson, name)]
+                db.execute('INSERT INTO lesson_teaching_records(user_id,course_id,lesson_id,covered_atoms,created_time,context_json,validation_json) VALUES(?,?,?,?,?,?,?)',
+                           (session_id,course_id,section_id,json.dumps(covered,ensure_ascii=False),now(),
+                            json.dumps(teaching_context,ensure_ascii=False),json.dumps(validation or {'method':'not_checked'},ensure_ascii=False)))
         return True
 
     def tutor_turns(self, session_id: str, course_id: str, section_id: str) -> list[dict]:
         with self.connect() as db:
-            owned = db.execute("SELECT 1 FROM courses WHERE id=? AND session_id=?", (course_id, session_id)).fetchone()
+            owned = db.execute("SELECT 1 FROM courses WHERE id=? AND session_id=? AND deleted_at IS NULL", (course_id, session_id)).fetchone()
             if not owned:
                 return []
-            rows = db.execute("SELECT role,content,created_at FROM tutor_turns "
+            rows = db.execute("SELECT role,content,created_at,blocks_json,action_json FROM tutor_turns "
                               "WHERE course_id=? AND section_id=? ORDER BY id", (course_id, section_id)).fetchall()
-        return [dict(r) for r in rows]
+        return [{**dict(r),'blocks':json.loads(r['blocks_json']),'teaching_action':json.loads(r['action_json'])} for r in rows]
 
     def add_tutor_exchange(self, session_id: str, course_id: str, section_id: str,
-                           question: str, answer: str) -> None:
+                           question: str, answer: str, teaching_package: dict | None = None) -> None:
         with self.connect() as db:
             owned = db.execute("SELECT 1 FROM sections s JOIN courses c ON c.id=s.course_id "
-                               "WHERE s.id=? AND s.course_id=? AND c.session_id=?",
+                               "WHERE s.id=? AND s.course_id=? AND c.session_id=? AND c.deleted_at IS NULL",
                                (section_id, course_id, session_id)).fetchone()
             if not owned:
                 raise ValueError("小节不存在")
             db.executemany("INSERT INTO tutor_turns(course_id,section_id,role,content,created_at) "
                            "VALUES(?,?,?,?,?)", [(course_id, section_id, role, content, now())
                                                for role, content in (("user", question), ("assistant", answer))])
+            if teaching_package:
+                db.execute('UPDATE tutor_turns SET blocks_json=?,action_json=? WHERE id=(SELECT MAX(id) FROM tutor_turns WHERE course_id=? AND section_id=?)',
+                           (json.dumps(teaching_package['blocks'],ensure_ascii=False),json.dumps(teaching_package['teaching_action'],ensure_ascii=False),course_id,section_id))
+                self.record_teaching_action(db,session_id,course_id,section_id,None,teaching_package)
 
     def advance(self, session_id: str, course_id: str, expected: int) -> bool:
         with self.connect() as db:
             changed = db.execute("UPDATE courses SET current_ordinal=current_ordinal+1 "
-                                 "WHERE id=? AND session_id=? AND current_ordinal=? "
+                                 "WHERE id=? AND session_id=? AND deleted_at IS NULL AND current_ordinal=? "
                                  "AND current_ordinal<(SELECT COUNT(*) FROM sections WHERE course_id=?)",
                                  (course_id, session_id, expected, course_id)).rowcount
         return bool(changed)
 
     def section_quizzes(self, session_id: str, course_id: str, section_id: str) -> list[dict]:
         with self.connect() as db:
-            owned = db.execute("SELECT 1 FROM courses WHERE id=? AND session_id=?", (course_id, session_id)).fetchone()
+            owned = db.execute("SELECT 1 FROM courses WHERE id=? AND session_id=? AND deleted_at IS NULL", (course_id, session_id)).fetchone()
             if not owned:
                 return []
-            rows = db.execute("SELECT * FROM quizzes WHERE course_id=? AND section_id=? ORDER BY rowid",
+            rows = db.execute("SELECT * FROM quizzes WHERE course_id=? AND section_id=? AND scope='section' ORDER BY rowid",
                               (course_id, section_id)).fetchall()
         return [self._quiz_public(dict(r)) for r in rows]
 
@@ -289,16 +394,16 @@ class Storage:
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             owned = db.execute("SELECT 1 FROM sections s JOIN courses c ON c.id=s.course_id "
-                               "WHERE s.id=? AND s.course_id=? AND c.session_id=? AND s.lesson IS NOT NULL "
+                               "WHERE s.id=? AND s.course_id=? AND c.session_id=? AND c.deleted_at IS NULL AND s.lesson IS NOT NULL "
                                "AND s.ordinal<=c.current_ordinal", (section_id, course_id, session_id)).fetchone()
             if not owned:
                 raise ValueError("请先完成当前小节讲解")
             pending = db.execute("SELECT * FROM quizzes WHERE course_id=? AND section_id=? "
-                                 "AND submitted_at IS NULL ORDER BY rowid DESC LIMIT 1",
+                                 "AND scope='section' AND submitted_at IS NULL ORDER BY rowid DESC LIMIT 1",
                                  (course_id, section_id)).fetchone()
             if pending:
                 return self._quiz_public(dict(pending))
-            db.execute("INSERT INTO quizzes VALUES(?,?,?,?,?,?,?,?,?)",
+            db.execute("INSERT INTO quizzes(id,course_id,section_id,questions_json,answers_json,user_answers_json,score,created_at,submitted_at) VALUES(?,?,?,?,?,?,?,?,?)",
                        (quiz_id, course_id, section_id, json.dumps(questions, ensure_ascii=False),
                         json.dumps(answers, ensure_ascii=False), None, None, now(), None))
         return {"id": quiz_id, "questions": questions, "score": None}
@@ -307,7 +412,7 @@ class Storage:
                     user_answers: list[str]) -> dict:
         with self.connect() as db:
             row = db.execute("SELECT q.* FROM quizzes q JOIN courses c ON c.id=q.course_id "
-                             "WHERE q.id=? AND q.course_id=? AND c.session_id=?",
+                             "WHERE q.id=? AND q.course_id=? AND c.session_id=? AND c.deleted_at IS NULL",
                              (quiz_id, course_id, session_id)).fetchone()
             if not row:
                 raise ValueError("测试不存在")
@@ -332,7 +437,7 @@ class Storage:
             raise ValueError("课程不存在")
         with self.connect() as db:
             rows = db.execute("SELECT section_id,score,answers_json FROM quizzes "
-                              "WHERE course_id=? AND submitted_at IS NOT NULL ORDER BY rowid",
+                              "WHERE course_id=? AND scope='section' AND submitted_at IS NOT NULL ORDER BY rowid",
                               (course_id,)).fetchall()
         by_section: dict[str, list[float]] = {}
         for row in rows:

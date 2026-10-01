@@ -1,0 +1,46 @@
+// Optional browser regression against the local fake-provider fixture.
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const assert = require('node:assert/strict');
+(async()=>{
+  const browser=await chromium.launch({headless:true,channel:'msedge'});
+  const page=await browser.newPage({viewport:{width:1440,height:960}});
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.context().addCookies([{name:'mindos_session',value:process.env.MINDOS_TEST_COOKIE,
+    url:process.env.MINDOS_TEST_URL,httpOnly:true,sameSite:'Strict'}]);
+  const idle=()=>page.waitForFunction(()=>!state.busy && document.getElementById('notice').hidden);
+  await page.goto(process.env.MINDOS_TEST_URL);
+  await page.locator('#course-list button').first().click();
+  await page.locator('#mode-map').click();
+  await page.locator('#graph-build').click();await idle();
+  assert.equal(await page.locator('.map-node').count(),4);
+  await page.locator('#mode-course').click();
+  await page.locator('#lesson-generate').click();await idle();
+  await page.locator('#section-read').click();await idle();
+  assert.match(await page.locator('#knowledge-progress').textContent(),/阅读记录 1\/4/);
+  await page.locator('#section-atoms button').first().click();
+  await page.locator('#atom-panel').waitFor({state:'visible'});
+  await page.locator('#atom-test').click();await idle();
+  for(let i=0;i<4;i++)await page.locator(`#atom-tests input[name="answer-${i}"][value="b"]`).check();
+  await page.locator('#atom-tests button[type="submit"]').click();await idle();
+  assert.match(await page.locator('#knowledge-progress').textContent(),/已测 1\/4/);
+  assert.match(await page.locator('#atom-state').textContent(),/4 道/);
+  await page.locator('#atom-quick').click();await idle();
+  await page.locator('#atom-question').fill('这个知识点为什么重要？');
+  await page.locator('#atom-ask-form button').click();await idle();
+  assert.equal(await page.locator('#atom-conversation .conversation-turn').count(),2);
+  await page.reload();await page.locator('#course-list button').first().click();
+  await page.locator('#course-view').waitFor({state:'visible'});
+  assert.match(await page.locator('#knowledge-progress').textContent(),/阅读记录 1\/4.*已测 1\/4/);
+  await page.locator('#mode-map').click();
+  await page.locator('#knowledge-sections button').first().click();
+  await page.locator('#atom-panel').waitFor({state:'visible'});
+  assert.match(await page.locator('#atom-content').textContent(),/继续解释/);
+  await page.setViewportSize({width:390,height:844});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
+  await page.locator('#atom-return').click();
+  await page.locator('#chapter-mode').waitFor({state:'visible'});
+  assert.match(await page.locator('#course-counter').textContent(),/第 1 节/);
+  assert.deepEqual(errors,[]);
+  console.log('Browser passed: map, shared progress, atom test, follow-up, reload, mobile layout, manual chapter advancement.');
+  await browser.close();
+})().catch(error=>{console.error(error);process.exit(1);});

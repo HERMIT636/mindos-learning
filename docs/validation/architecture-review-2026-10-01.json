@@ -1,0 +1,97 @@
+{
+  "date": "2026-10-01",
+  "environment": "独立临时课程数据库与浏览器；未修改个人课程；未调用外部模型和搜索服务",
+  "storage_and_teaching_probes": {
+    "unreviewed_graph_consumed": {
+      "quality_status": "candidate",
+      "references": [],
+      "teaching_core": [
+        "Attention"
+      ],
+      "state_atom_count": 1
+    },
+    "duplicate_import_semantics": {
+      "approved_summary": "Attention 根据不同信息与当前问题的相关程度分配权重，不必把所有权重设置为相等。",
+      "stored_summary": "原有定义：本课程把所有信息的权重都当成相等。",
+      "stored_quality_status": "verified",
+      "attached_quote": "Attention 根据不同信息与当前问题的相关程度分配权重，不必把所有权重设置为相等。"
+    },
+    "edit_keeps_stale_content": {
+      "new_goal": "改为学习另一种应用",
+      "new_level": "高级",
+      "old_lesson": "原目标下的讲解",
+      "section_difficulty": "beginner",
+      "old_review_goal": "理解概念"
+    },
+    "conceptual_depth_allows_formula": {
+      "scope_depth": "conceptual",
+      "action": "DEEPEN",
+      "allowed_depth": "conceptual",
+      "allow_formulas": true,
+      "block_types": [
+        "question",
+        "concept",
+        "formula",
+        "example",
+        "checkpoint"
+      ],
+      "validator_passed": true
+    },
+    "backtrack_vs_exposure": {
+      "action": "BACKTRACK",
+      "targets": [
+        "Attention"
+      ],
+      "exposure": [
+        {
+          "knowledge": "Attention",
+          "level": 1
+        }
+      ],
+      "validator_passed": false,
+      "issues": [
+        {
+          "code": "overexposure",
+          "knowledge": "Attention",
+          "message": "对「Attention」的讲解包含详细步骤、公式或过长段落，应缩为简短介绍"
+        }
+      ]
+    },
+    "material_first_assistant_drops_upload": {
+      "uploaded_id": "CXSe0rUcwC1LyJIpYLw3_A",
+      "policy": "user_material_first",
+      "assistant_material_origins": [
+        "web_search",
+        "web_search",
+        "web_search"
+      ],
+      "upload_selected": false
+    },
+    "storage_initialization_changes_jobs": {
+      "before": "running",
+      "after": "interrupted",
+      "second_job_allowed": true
+    }
+  },
+  "model_destination_probe": {
+    "status": 200,
+    "changed_provider_host": true,
+    "old_encrypted_key_retained": true,
+    "external_request_sent": false
+  },
+  "browser_probe": {
+    "selected_course_while_request_running": "架构检查课程乙",
+    "displayed_after_old_response": "架构检查课程甲",
+    "stale_response_overwrote_navigation": true
+  },
+  "manual_search_probe": {
+    "query": "AI",
+    "status": 400,
+    "error": "请输入 3—250 字的资料检索词"
+  },
+  "existing_tests": {
+    "passed": 102,
+    "failed": 0
+  },
+  "business_code_changed": false
+}

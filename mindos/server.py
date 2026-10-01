@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import json
 import logging
 import os
@@ -14,7 +16,15 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+from .search_planning import build_search_plan, course_context
+from .course_tutor import CourseTutorService
+from .teaching import TeachingOrchestrator, generate_lesson
+from .adaptive import ContentGenerator, LearningStateManager
+from .course_management import validate_fields
 from .model import ModelGateway, ModelUnavailable
+from .acquisition import DirectInputProvider, UploadProvider, WebSearchProvider, fetch_public_document
+from .production import normalize_candidate_result
+from .discovery import DiscoveryEngine, POLICIES, produce_source, selected_blocks, teaching_blocks
 from .secrets import SecretStore
 from .storage import Storage
 from .web_search import PublicSourceSearch, SearchUnavailable, WebSearch
@@ -23,7 +33,11 @@ ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
 LOGGER = logging.getLogger("mindos")
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
+          "/components/teaching/teaching-blocks.js": ("components/teaching/teaching-blocks.js", "text/javascript; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+          "/components/CourseManager/course-manager.js": ("components/CourseManager/course-manager.js", "text/javascript; charset=utf-8"),
+          "/components/CourseAssistant/course-assistant.js": ("components/CourseAssistant/course-assistant.js", "text/javascript; charset=utf-8"),
+          "/production.js": ("production.js", "text/javascript; charset=utf-8"),
           "/style.css": ("style.css", "text/css; charset=utf-8")}
 ENV_KEYS = {"MINDOS_MODEL_BASE_URL", "MINDOS_CHAT_MODEL", "MINDOS_MODEL_API_KEY",
             "MINDOS_BRAVE_SEARCH_API_KEY", "MINDOS_DATA_PATH"}
@@ -35,6 +49,12 @@ class MindOSServer(ThreadingHTTPServer):
     def __init__(self, port: int, data_path: Path) -> None:
         self.storage = Storage(data_path)
         self.model = ModelGateway()
+        self.discovery_engine = DiscoveryEngine(self.storage)
+        self.course_tutor = CourseTutorService(self.storage)
+        self.teaching = TeachingOrchestrator(self.storage)
+        self.content_generator = ContentGenerator(self.storage)
+        self.assistant_search_factory = None
+        self.discovery_provider_factory = None
         self.secrets = SecretStore()
         super().__init__(("127.0.0.1", port), MindOSHandler)
 
@@ -61,7 +81,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
-        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'")
+        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'")
         self._session()
         if self._new_session:
             self.send_header("Set-Cookie", f"mindos_session={self._session_value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000")
@@ -71,20 +91,20 @@ class MindOSHandler(BaseHTTPRequestHandler):
     def _json(self, status: HTTPStatus, payload: dict) -> None:
         self._send(status, json.dumps(payload, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
 
-    def _request_json(self) -> dict:
+    def _request_json(self, limit: int = 8192, *, array=False) -> dict:
         if self.headers.get_content_type() != "application/json":
             raise ValueError("请使用 JSON 请求")
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError as exc:
             raise ValueError("请求长度无效") from exc
-        if not 0 < length <= 8192:
+        if not 0 < length <= limit:
             raise ValueError("请求内容过大或为空")
         try:
             payload = json.loads(self.rfile.read(length))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise ValueError("JSON 格式无效") from exc
-        if not isinstance(payload, dict):
+        if not isinstance(payload, list if array else dict):
             raise ValueError("请求格式无效")
         return payload
 
@@ -122,26 +142,39 @@ class MindOSHandler(BaseHTTPRequestHandler):
                     | {"has_key": bool(p["encrypted_api_key"]), "key_usable": self._profile_key_usable(p)}
                     for p in self.server.storage.model_profiles()]
         active = next((p for p in profiles if p["id"] == selected), None)
-        saved_search = self.server.storage.search_key(self._session())
-        try:
-            search_usable = bool(self.server.secrets.decrypt(saved_search)) if saved_search else bool(
-                os.getenv("MINDOS_BRAVE_SEARCH_API_KEY", ""))
-        except ValueError:
-            search_usable = False
+        search_profiles = []
+        for provider in WebSearch.PROVIDERS:
+            config = self._search_config(provider)
+            encrypted = config["encrypted_api_key"]
+            has_key = bool(encrypted or config["env_key"])
+            try:
+                usable = bool(self.server.secrets.decrypt(encrypted) if encrypted else config["env_key"])
+            except ValueError:
+                usable = False
+            search_profiles.append({"provider": provider, "api_url": config["api_url"],
+                                    "has_key": has_key, "key_usable": usable})
         return {"profiles": profiles, "selected_id": selected or ("env" if self.server.model.chat_ready else None),
                 "env_available": self.server.model.chat_ready,
                 "model_ready": bool(active and active["key_usable"] or not selected and self.server.model.chat_ready),
-                "search_has_key": bool(saved_search or os.getenv("MINDOS_BRAVE_SEARCH_API_KEY", "")),
-                "search_ready": search_usable}
+                "search_has_key": search_profiles[0]["has_key"],
+                "search_ready": search_profiles[0]["key_usable"], "search_profiles": search_profiles}
+
+    def _search_config(self, provider: str) -> dict:
+        WebSearch.endpoint(provider)
+        saved = self.server.storage.search_profile(self._session(), provider)
+        api_url = WebSearch.endpoint(provider, saved["api_url"])
+        # Never forward a legacy environment key to a custom address.
+        env_key = os.getenv("MINDOS_BRAVE_SEARCH_API_KEY", "") if (
+            provider == "brave" and not saved["saved"] and api_url == WebSearch.endpoint("brave")) else ""
+        return {**saved, "api_url": api_url, "env_key": env_key}
 
     def _search(self, mode: str) -> PublicSourceSearch | WebSearch:
         if mode == "public":
             return PublicSourceSearch()
-        if mode != "brave":
-            raise ValueError("请选择有效的资料检索方式")
-        encrypted = self.server.storage.search_key(self._session())
-        api_key = self.server.secrets.decrypt(encrypted) if encrypted else os.getenv("MINDOS_BRAVE_SEARCH_API_KEY", "")
-        return WebSearch(api_key)
+        config = self._search_config(mode)
+        encrypted = config["encrypted_api_key"]
+        api_key = self.server.secrets.decrypt(encrypted) if encrypted else config["env_key"]
+        return WebSearch(api_key, mode, config["api_url"])
 
     def _owned_course(self, course_id: str) -> dict:
         if not isinstance(course_id, str) or len(course_id) > 80:
@@ -151,6 +184,25 @@ class MindOSHandler(BaseHTTPRequestHandler):
             raise ValueError("课程不存在")
         review = self.server.storage.confirmed_review(self._session(), course_id)
         course["review_plan"] = review["plan"] if review else None
+        course["source_conflicts"] = self.server.storage.conflicts(self._session(),course_id)
+        from .context import course_materials
+        course['teaching_materials']=course_materials(self.server.storage,self._session(),course)
+        return course
+
+    def _start_discovery(self,course):
+        model=self._model()
+        factory=self.server.discovery_provider_factory
+        try:provider=factory(course) if factory else WebSearchProvider(self._search(course['search_mode']),course['search_mode'])
+        except (ValueError,SearchUnavailable) as exc:
+            message=str(exc)
+            class UnavailableProvider:
+                def search(self,query):raise SearchUnavailable(message)
+            provider=UnavailableProvider()
+        return self.server.discovery_engine.start(self._session(),course['id'],model,provider)
+
+    def _section_materials(self,course,section):
+        from .context import course_materials
+        course['teaching_materials']=course_materials(self.server.storage,self._session(),course,section['title'])
         return course
 
     def _unlocked_section(self, course: dict, ordinal: object) -> dict:
@@ -163,12 +215,18 @@ class MindOSHandler(BaseHTTPRequestHandler):
         course = self._owned_course(course_id)
         current = course["sections"][course["current_ordinal"] - 1]
         viewed = self._unlocked_section(course, ordinal or course["current_ordinal"])
-        return {"course": {key: value for key, value in course.items() if key != "review_plan"},
+        learning_state,knowledge_context=LearningStateManager(self.server.storage).read(self._session(),course_id,viewed['ordinal'])
+        scope=self.server.teaching.context(self._session(),course_id,viewed['id'])
+        return {"course": {key: value for key, value in course.items() if key not in ("review_plan","teaching_materials")},
                 "mastery": self.server.storage.mastery(self._session(), course_id),
                 "current_section": current, "section": viewed,
+                "lesson_history":self.server.storage.content_versions(self._session(),course_id,'lesson',viewed["id"]),
                 "review": self.server.storage.confirmed_review(self._session(), course_id),
                 "turns": self.server.storage.tutor_turns(self._session(), course_id, viewed["id"]),
-                "quizzes": self.server.storage.section_quizzes(self._session(), course_id, viewed["id"])}
+                "quizzes": self.server.storage.section_quizzes(self._session(), course_id, viewed["id"]),
+                "knowledge": self.server.storage.knowledge_state(self._session(), course_id),
+                "learning_state":learning_state,
+                "next_teaching_action":self.server.content_generator.engine.decide(learning_state,knowledge_context,scope)}
 
     def do_GET(self) -> None:
         self._safe_call(self._get)
@@ -176,23 +234,98 @@ class MindOSHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         self._safe_call(self._post)
 
+    def do_PUT(self) -> None:
+        self._safe_call(self._manage_mutation)
+
+    def do_DELETE(self) -> None:
+        self._safe_call(self._manage_mutation)
+
+    def _manage_mutation(self) -> None:
+        self._check_local_request()
+        path=urlsplit(self.path).path;session=self._session();store=self.server.storage
+        assistant=re.fullmatch(r'/api/courses/([A-Za-z0-9_-]+)/assistant/position',path)
+        preferences=re.fullmatch(r'/api/courses/([A-Za-z0-9_-]+)/teaching-preferences',path)
+        if preferences and self.command=='PUT':
+            self._json(HTTPStatus.OK,{'preferences':store.save_teaching_preferences(session,preferences[1],self._request_json())});return
+        if assistant and self.command=='PUT':
+            payload=self._request_json()
+            self._json(HTTPStatus.OK,{'position':store.save_assistant_position(session,assistant[1],payload.get('x'),payload.get('y'))});return
+        if path=='/api/courses/order' and self.command=='PUT':
+            self._json(HTTPStatus.OK,{'courses':store.order_courses(session,self._request_json(100000,array=True))});return
+        match=re.fullmatch(r'/api/courses/([A-Za-z0-9_-]+)(?:/(status|restore|copy|permanent))?',path)
+        if not match:self._json(HTTPStatus.NOT_FOUND,{'error':'课程接口不存在'});return
+        cid,operation=match.groups()
+        if self.command=='PUT' and operation in (None,'status'):
+            payload=self._request_json()
+            if operation=='status':payload={'status':payload.get('status')}
+            result=store.update_course(session,cid,payload)
+        elif self.command=='DELETE' and operation is None:result=store.recycle_course(session,cid)
+        elif self.command=='DELETE' and operation=='permanent':
+            store.purge_course(session,cid,self._request_json().get('confirm_title'))
+            self._json(HTTPStatus.OK,{'deleted':True});return
+        elif self.command=='POST' and operation=='restore':result=store.restore_course(session,cid)
+        elif self.command=='POST' and operation=='copy':
+            payload=self._request_json();result=store.copy_course(session,cid,payload.get('title',payload.get('name')))
+        else:self._json(HTTPStatus.NOT_FOUND,{'error':'课程接口不存在'});return
+        self._json(HTTPStatus.OK,{'course':result})
+
     def _get(self) -> None:
         parsed = urlsplit(self.path)
         if parsed.path in STATIC:
             name, content_type = STATIC[parsed.path]
             self._send(HTTPStatus.OK, (WEB / name).read_bytes(), content_type)
+        elif re.fullmatch(r'/api/lessons/[A-Za-z0-9_-]+/teaching-context',parsed.path):
+            lesson_id = parsed.path.split('/')[3]
+            with self.server.storage.connect() as db:
+                row = db.execute('SELECT s.course_id FROM sections s JOIN courses c ON c.id=s.course_id WHERE s.id=? AND c.session_id=? AND c.deleted_at IS NULL',
+                                 (lesson_id,self._session())).fetchone()
+            if not row:raise ValueError('小节不存在')
+            self._json(HTTPStatus.OK,self.server.teaching.context(self._session(),row['course_id'],lesson_id))
+        elif re.fullmatch(r'/api/courses/[A-Za-z0-9_-]+/learning-state',parsed.path):
+            cid=parsed.path.split('/')[3];course=self._owned_course(cid);query=parse_qs(parsed.query)
+            value=query.get('ordinal',[str(course['current_ordinal'])])[0]
+            if not value.isdigit():raise ValueError('小节编号无效')
+            state,knowledge=LearningStateManager(self.server.storage).read(self._session(),cid,int(value),query.get('atom_id',[None])[0])
+            self._json(HTTPStatus.OK,{'learning_state':state,'knowledge_context':knowledge})
         elif parsed.path == "/api/health":
             self._json(HTTPStatus.OK, {"status": "ok"})
         elif parsed.path == "/api/bootstrap":
             self._json(HTTPStatus.OK, {**self._models_public(),
                 "courses": self.server.storage.courses(self._session()),
                 "drafts": self.server.storage.drafts(self._session())})
+        elif parsed.path == '/api/courses':
+            query=parse_qs(parsed.query)
+            self._json(HTTPStatus.OK,{'courses':self.server.storage.managed_courses(self._session(),query.get('status',[None])[0],query.get('deleted',['false'])[0]=='true')})
+        elif re.fullmatch(r'/api/courses/[A-Za-z0-9_-]+',parsed.path):
+            self._json(HTTPStatus.OK,{'course':self.server.storage.managed_course(self._session(),parsed.path.rsplit('/',1)[1])})
+        elif re.fullmatch(r'/api/courses/[A-Za-z0-9_-]+/assistant/history',parsed.path):
+            before=parse_qs(parsed.query).get('before',[None])[0]
+            if before is not None and not before.isdigit():raise ValueError('历史记录页码无效')
+            self._json(HTTPStatus.OK,self.server.storage.assistant_history(self._session(),parsed.path.split('/')[3],int(before) if before else None))
         elif parsed.path == "/api/draft":
             draft_id = parse_qs(parsed.query).get("draft_id", [""])[0]
             draft = self.server.storage.draft(self._session(), draft_id)
             if not draft:
                 raise ValueError("课程审查稿不存在")
             self._json(HTTPStatus.OK, {"draft": draft})
+        elif parsed.path == "/api/sources":
+            course_id = parse_qs(parsed.query).get("course_id", [""])[0]
+            self._json(HTTPStatus.OK, {"sources": self.server.storage.sources(self._session(),course_id),
+                                      "batches": self.server.storage.batches(self._session(),course_id),
+                                      "conflicts":self.server.storage.conflicts(self._session(),course_id),
+                                      "discovery":self.server.storage.discovery(self._session(),course_id)})
+        elif parsed.path == "/api/source":
+            course_id = parse_qs(parsed.query).get("course_id", [""])[0]
+            source_id = parse_qs(parsed.query).get("source_id", [""])[0]
+            self._json(HTTPStatus.OK, {"source": self.server.storage.source(self._session(),course_id,source_id)})
+        elif parsed.path == "/api/knowledge":
+            course_id = parse_qs(parsed.query).get("course_id", [""])[0]
+            self._owned_course(course_id)
+            self._json(HTTPStatus.OK, self.server.storage.knowledge_state(self._session(), course_id))
+        elif parsed.path == "/api/atom":
+            course_id = parse_qs(parsed.query).get("course_id", [""])[0]
+            atom_id = parse_qs(parsed.query).get("atom_id", [""])[0]
+            self._json(HTTPStatus.OK, self.server.storage.atom_detail(self._session(), course_id, atom_id))
         elif parsed.path == "/api/course":
             course_id = parse_qs(parsed.query).get("course_id", [""])[0]
             ordinal = parse_qs(parsed.query).get("ordinal", [""])[0]
@@ -202,8 +335,19 @@ class MindOSHandler(BaseHTTPRequestHandler):
 
     def _post(self) -> None:
         self._check_local_request()
-        payload = self._request_json()
         path = urlsplit(self.path).path
+        assistant=re.fullmatch(r'/api/courses/([A-Za-z0-9_-]+)/assistant/chat',path)
+        if assistant:
+            payload=self._request_json(15000)
+            factory=self.server.assistant_search_factory or self._search
+            self._json(HTTPStatus.OK,self.server.course_tutor.chat(self._session(),assistant[1],payload,self._model(),factory));return
+        if re.fullmatch(r'/api/courses/[A-Za-z0-9_-]+/(restore|copy)',path):
+            self._manage_mutation();return
+        payload = self._request_json(9_000_000 if path in ("/api/sources/upload","/api/courses/draft","/api/courses") else
+                                     450_000 if path == "/api/sources/text" else 8192)
+        if path=='/api/courses':
+            payload={**payload,'title':payload.get('title',payload.get('name',''))}
+            path='/api/courses/confirm' if payload.get('confirm') is True else '/api/courses/draft'
         if path == "/api/models/save":
             profile_id = payload.get("id")
             old = None
@@ -223,10 +367,14 @@ class MindOSHandler(BaseHTTPRequestHandler):
             api_key = payload.get("api_key", "")
             if not isinstance(api_key, str) or len(api_key) > 4096 or "\n" in api_key or "\r" in api_key:
                 raise ValueError("API 密钥格式无效")
-            if not api_key and old and old["encrypted_api_key"] and not self._profile_key_usable(old):
+            clear_key=payload.get("clear_key",False)
+            if type(clear_key) is not bool:raise ValueError("清除密钥选项无效")
+            if old and old["encrypted_api_key"] and not api_key and not clear_key and fields["base_url"].rstrip("/")!=old["base_url"].rstrip("/"):
+                raise ValueError("API 地址已改变，请重新输入该地址的密钥，或明确清除旧密钥")
+            if not api_key and not clear_key and old and old["encrypted_api_key"] and not self._profile_key_usable(old):
                 raise ValueError("旧密钥无法解密，请重新输入密钥后保存")
             ModelGateway({"base_url": fields["base_url"], "chat_model": fields["chat_model"], "api_key": api_key})
-            encrypted = self.server.secrets.encrypt(api_key) if api_key else old["encrypted_api_key"] if old else ""
+            encrypted = self.server.secrets.encrypt(api_key) if api_key else "" if clear_key else old["encrypted_api_key"] if old else ""
             profile = {"id": profile_id or secrets.token_urlsafe(12), **fields,
                        "embedding_model": "", "encrypted_api_key": encrypted}
             self.server.storage.save_model_profile(profile)
@@ -256,17 +404,25 @@ class MindOSHandler(BaseHTTPRequestHandler):
             if (not isinstance(api_key, str) or len(api_key) > 4096 or "\n" in api_key or
                     "\r" in api_key or not isinstance(clear, bool) or (clear and api_key)):
                 raise ValueError("网页搜索密钥格式无效")
-            if api_key:
-                self.server.storage.save_search_key(self._session(), self.server.secrets.encrypt(api_key))
-            elif clear:
-                self.server.storage.save_search_key(self._session(), "")
-            else:
-                raise ValueError("请输入 Brave Search API 密钥")
+            provider = payload.get("provider", "brave")
+            old = self._search_config(provider)
+            api_url = WebSearch.endpoint(provider, payload.get("api_url", old["api_url"]))
+            if not api_key and not clear and api_url != old["api_url"] and (old["encrypted_api_key"] or old["env_key"]):
+                raise ValueError("更换 API 地址时请重新填写密钥，避免将旧密钥发送到新地址")
+            encrypted = (self.server.secrets.encrypt(api_key) if api_key else
+                         "" if clear else old["encrypted_api_key"] or self.server.secrets.encrypt(old["env_key"]))
+            if not encrypted and not clear and not old["env_key"]:
+                raise ValueError("请输入网页搜索密钥")
+            self.server.storage.save_search_profile(self._session(), provider, api_url, encrypted)
             self._json(HTTPStatus.OK, self._models_public())
         elif path == "/api/courses/draft":
             title, goal = payload.get("title"), payload.get("goal", "")
             search_mode = payload.get("search_mode", "public")
-            if search_mode not in ("public", "brave"):
+            source_policy=payload.get('source_policy','balanced')
+            learner_level=payload.get('learner_level','零基础')
+            if not isinstance(source_policy,str) or source_policy not in POLICIES:raise ValueError('知识来源偏好无效')
+            if not isinstance(learner_level,str) or not 1<=len(learner_level)<=200:raise ValueError('请填写当前水平，最多200字')
+            if search_mode not in ("public", "brave", "tavily"):
                 raise ValueError("请选择有效的资料检索方式")
             if not isinstance(title, str) or not 2 <= len(title.strip()) <= 100:
                 raise ValueError("请输入 2 至 100 字的课程名称")
@@ -287,22 +443,57 @@ class MindOSHandler(BaseHTTPRequestHandler):
                     raise ValueError("课程审查稿不存在或已确认")
                 if previous["revision"] != revision:
                     raise ValueError("审查稿已经变化，请刷新后重新修改")
-                previous_mode = "brave" if any(source.get("provider", "Brave") == "Brave"
-                                               for source in previous["sources"]) else "public"
+                previous_mode = next((source.get("provider", "Brave").lower() for source in previous["sources"]
+                                      if source.get("provider", "Brave") in WebSearch.PROVIDERS.values()), "public")
                 if (not feedback.strip() and title.strip() == previous["title"] and
                         goal.strip() == previous["goal"] and search_mode == previous_mode):
                     raise ValueError("请填写想修改的学习方向")
             elif len(self.server.storage.drafts(self._session())) >= 20:
                 raise ValueError("最多保留 20 份未确认审查稿")
+            documents=self.server.storage.draft_documents(self._session(),draft_id) if previous else []
+            uploads=payload.get('uploads')
+            if uploads is not None:
+                if not isinstance(uploads,list) or len(uploads)>3:raise ValueError('创建课程最多上传3份资料，总计6 MB')
+                documents=[];total=0
+                for upload in uploads:
+                    if not isinstance(upload,dict) or not isinstance(upload.get('content_base64'),str):raise ValueError('上传格式无效')
+                    try:data=base64.b64decode(upload['content_base64'],validate=True)
+                    except (ValueError,binascii.Error) as exc:raise ValueError('上传编码无效') from exc
+                    total+=len(data)
+                    if total>6*1024*1024:raise ValueError('创建课程上传资料总计最多6 MB')
+                    documents.append(UploadProvider().acquire(filename=upload.get('filename'),data=data).to_dict())
+            if previous:
+                source_policy=payload.get('source_policy',previous['source_policy'])
+                learner_level=payload.get('learner_level',previous['learner_level'])
+            if not documents:source_policy='balanced'
             model = self._model()
-            search = self._search(search_mode)
-            queries = model.search_queries(title.strip(), goal.strip(), feedback.strip(),
-                                           previous["plan"] if previous else None)
-            sources = search.search(queries)
-            plan = model.plan_course_review(title.strip(), goal.strip(), feedback.strip(),
-                                            previous["plan"] if previous else None, sources)
-            draft = self.server.storage.save_draft(self._session(), title.strip(), goal.strip(),
-                feedback.strip(), plan, sources, draft_id, revision)
+            planning_course=course_context(title.strip(),goal.strip(),learner_level,source_policy,
+                previous['plan'] if previous else None,feedback.strip())
+            selections={d['id']:[b['id'] for b in selected_blocks(d,8000)] for d in documents}
+            discovery_plan=build_search_plan(model,planning_course,documents,selections,{'atoms':[],'edges':[]},[])
+            queries=[q['query'] for q in discovery_plan['queries']]
+            sources=[];search_report={}
+            if queries:
+                search=self._search(search_mode)
+                sources=search.search(queries,topic=title.strip()) if search_mode=='public' else search.search(queries)
+                search_report=search.report if search_mode=='public' else {}
+            search_report={**search_report,'discovery_plan':discovery_plan}
+            context={'source_policy':source_policy,'learner_level':learner_level,
+                'documents':[{'title':d['title'],'blocks':selected_blocks(d,8000)} for d in documents]}
+            plan=model.plan_course_review(title.strip(),goal.strip(),feedback.strip(),previous['plan'] if previous else None,sources,context)
+            if source_policy=='user_material_first':
+                headings=[]
+                for doc in documents:
+                    for block in doc['metadata']['blocks']:
+                        if block['kind']=='heading' and block.get('level',1)<=2 and len(block['text'])>=2:
+                            value=block['text'][:80]
+                            if value not in headings:headings.append(value)
+                if headings:
+                    plan['sections']=[{'title':h,'objective':'按照上传资料理解本节概念、术语与重点，并补充必要前置与实例。'} for h in headings[:16]]
+                    plan['material_structure_note']='沿用上传资料的标题顺序；最多16节，完整原文保存在课程资料中。'
+            draft=self.server.storage.save_draft(self._session(),title.strip(),goal.strip(),feedback.strip(),plan,sources,draft_id,revision,search_report,
+                source_policy=source_policy,learner_level=learner_level,search_mode=search_mode,documents=documents,
+                course_info={k:v for k,v in payload.items() if k in ('description','cover','tags','level','status')} or None)
             self._json(HTTPStatus.OK, {"draft": draft})
         elif path == "/api/courses/confirm":
             draft_id, revision = payload.get("draft_id"), payload.get("revision")
@@ -310,31 +501,188 @@ class MindOSHandler(BaseHTTPRequestHandler):
                     isinstance(revision, bool)):
                 raise ValueError("课程审查稿编号无效")
             course = self.server.storage.confirm_draft(self._session(), draft_id, revision)
+            if not self.server.storage.discovery(self._session(),course['id']):
+                self._start_discovery(course)
             self._json(HTTPStatus.OK, {"course_id": course["id"], "course": self._course_public(course["id"])})
+        elif path in ("/api/sources/text", "/api/sources/upload", "/api/sources/url"):
+            course = self._owned_course(payload.get("course_id"))
+            if path == "/api/sources/text":
+                source = DirectInputProvider().acquire(title=payload.get("title"),text=payload.get("text"))
+            elif path == "/api/sources/upload":
+                encoded = payload.get("content_base64")
+                if not isinstance(encoded,str):
+                    raise ValueError("文件内容格式无效")
+                try:
+                    data = base64.b64decode(encoded,validate=True)
+                except (ValueError,binascii.Error) as exc:
+                    raise ValueError("文件传输编码无效") from exc
+                source = UploadProvider().acquire(filename=payload.get("filename"),data=data)
+            else:
+                mode = payload.get("search_mode", "direct")
+                title = payload.get("title", "")
+                if not isinstance(title,str) or len(title)>150:
+                    raise ValueError("资料名称最多 150 字")
+                if mode == "direct":
+                    source = fetch_public_document(payload.get("url"),title)
+                elif mode in ("public", "brave", "tavily"):
+                    source = WebSearchProvider(self._search(mode),mode).acquire(url=payload.get("url"),title=title)
+                else:
+                    raise ValueError("网页获取方式无效")
+            saved = self.server.storage.save_source(self._session(),course["id"],source)
+            self._json(HTTPStatus.OK, {"source":saved})
+        elif path == "/api/sources/search":
+            course = self._owned_course(payload.get("course_id"))
+            mode = payload.get("search_mode", "tavily")
+            if mode not in ("public", "brave", "tavily"):
+                raise ValueError("检索方式无效")
+            query = payload.get("query")
+            from .search_planning import normalize_queries
+            if not isinstance(query,str) or len(query)>250 or not normalize_queries([query]):
+                raise ValueError("请输入有效的资料检索词，最多250字")
+            query=normalize_queries([query])[0]
+            provider = WebSearchProvider(self._search(mode),mode)
+            results = provider.search(query.strip())
+            self._json(HTTPStatus.OK, {"results":results,"search_mode":mode,
+                "note":"以下是索引标题与摘要；选择获取正文后，才进入资料理解与抽取流程"})
+        elif path == "/api/sources/process":
+            course = self._owned_course(payload.get("course_id"))
+            source = self.server.storage.source(self._session(),course["id"],payload.get("source_id"))
+            section = payload.get("section")
+            if not isinstance(section,int) or isinstance(section,bool) or not 1 <= section <= len(course["sections"]):
+                raise ValueError("请选择本课程的目标章节")
+            selected = payload.get("block_ids")
+            blocks = source["metadata"]["blocks"]
+            if selected is not None:
+                if not isinstance(selected,list) or not selected or any(not isinstance(i,str) for i in selected):
+                    raise ValueError("请选择资料结构块")
+                blocks = [b for b in blocks if b["id"] in selected]
+                if len(blocks)!=len(set(selected)):
+                    raise ValueError("资料结构块编号无效")
+            if sum(len(b["text"]) for b in blocks)>24_000:
+                raise ValueError("本次理解最多 2.4 万字；请按章节、页码或幻灯片选择需要处理的结构块，不会截断全文")
+            batch=produce_source(self.server.storage,self._session(),course,self._model(),source,section,blocks)
+            self._json(HTTPStatus.OK, {"batch":batch})
+        elif path == "/api/sources/review":
+            course = self._owned_course(payload.get("course_id"))
+            batch = self.server.storage.review_batch(self._session(),course["id"],payload.get("batch_id"),
+                payload.get("action"),payload.get("selected",[]),payload.get("feedback",""),payload.get("merge_choices"))
+            self._json(HTTPStatus.OK, {"batch":batch,"knowledge":self.server.storage.knowledge_state(self._session(),course["id"])})
+        elif path == '/api/discovery/start':
+            course=self._owned_course(payload.get('course_id'))
+            self._start_discovery(course)
+            self._json(HTTPStatus.OK,{'discovery':self.server.storage.discovery(self._session(),course['id'])})
+        elif path == '/api/courses/source-policy':
+            course=self._owned_course(payload.get('course_id'))
+            self.server.storage.policy(self._session(),course['id'],payload.get('source_policy'))
+            self._json(HTTPStatus.OK,self._course_public(course['id']))
+        elif path == '/api/conflicts/confirm':
+            course=self._owned_course(payload.get('course_id'))
+            conflicts=self.server.storage.confirm_conflict(self._session(),course['id'],payload.get('conflict_id'),payload.get('teaching_expression'))
+            self._json(HTTPStatus.OK,{'conflicts':conflicts})
+        elif path == "/api/knowledge/build":
+            course = self._owned_course(payload.get("course_id"))
+            existing=self.server.storage.graph(self._session(),course["id"])
+            covered={a["section"] for a in (existing or {}).get("atoms",[]) if a.get("quality_status")!="deprecated"}
+            if covered!=set(range(1,len(course["sections"])+1)):
+                graph = self._model().build_knowledge_graph(course)
+                self.server.storage.complete_index(self._session(), course["id"], graph,existing)
+            self._json(HTTPStatus.OK, self._course_public(course["id"]))
+        elif path == "/api/sections/read":
+            course = self._owned_course(payload.get("course_id"))
+            section = self._unlocked_section(course, payload.get("ordinal"))
+            self._section_materials(course,section)
+            if not section["lesson"]:
+                raise ValueError("请先生成并阅读本节讲解")
+            graph = self.server.storage.graph(self._session(), course["id"])
+            if not graph:
+                raise ValueError("请先生成课程知识地图")
+            ids = [a["id"] for a in graph["atoms"] if a["section"] == section["ordinal"]]
+            self.server.storage.learning_event(self._session(), course["id"], ids, "read")
+            self._json(HTTPStatus.OK, self._course_public(course["id"], section["ordinal"]))
+        elif path in ("/api/atoms/lesson", "/api/atoms/ask", "/api/atoms/quiz", "/api/atoms/read"):
+            course = self._owned_course(payload.get("course_id"))
+            atom_id = payload.get("atom_id")
+            detail = self.server.storage.atom_detail(self._session(), course["id"], atom_id)
+            atom = detail["atom"]
+            section = course["sections"][atom["section"] - 1]
+            self._section_materials(course,section)
+            if path == "/api/atoms/lesson":
+                mode = payload.get("mode", "quick")
+                if mode not in ("quick", "deep"):
+                    raise ValueError("请选择快速复习或深入理解")
+                if mode not in detail["content"] or payload.get("regenerate") is True:
+                    state = self.server.storage.knowledge_state(self._session(), course["id"])
+                    context = {key: state[key] for key in ("atoms", "edges", "queue", "rule")}
+                    content = self._model().teach_atom(course, atom, context, mode)
+                    self.server.storage.save_atom_content(self._session(), course["id"], atom_id, mode, content,expected_revision=course["content_revision"],regenerate=payload.get("regenerate") is True)
+            elif path == "/api/atoms/ask":
+                question = payload.get("question")
+                if not isinstance(question, str) or not 2 <= len(question.strip()) <= 500:
+                    raise ValueError("请输入 2 至 500 字的问题")
+                if not detail["content"] and not section["lesson"]:
+                    raise ValueError("请先阅读章节讲解或原子讲解")
+                content = detail["content"] or {"section": section["lesson"]}
+                answer = self._model().answer_atom(course, atom, detail["turns"], content, question.strip())
+                self.server.storage.atom_exchange(self._session(), course["id"], atom_id, question.strip(), answer)
+            elif path == "/api/atoms/read":
+                if not detail["content"] and not section["lesson"]:
+                    raise ValueError("请先阅读章节讲解或原子讲解")
+                self.server.storage.learning_event(self._session(), course["id"], [atom_id], "review")
+            else:
+                previous = detail["quizzes"]
+                if not any(q["submitted_at"] is None for q in previous):
+                    if not detail["content"] and not section["lesson"]:
+                        raise ValueError("请先阅读章节或原子讲解；首次学习前可以使用基础摸底")
+                    prompts = [q["prompt"] for test in previous for q in test["questions"]]
+                    target_section = {**section, "lesson": "\n".join(detail["content"].values()) or section["lesson"]}
+                    questions, answers = self._model().knowledge_quiz(course, target_section, [atom], prompts)
+                    self.server.storage.create_knowledge_quiz(self._session(), course["id"], section["id"],
+                                                              questions, answers, "atom", atom_id)
+            self._json(HTTPStatus.OK, self.server.storage.atom_detail(self._session(), course["id"], atom_id))
+        elif path == "/api/knowledge/diagnostic":
+            course = self._owned_course(payload.get("course_id"))
+            state = self.server.storage.knowledge_state(self._session(), course["id"])
+            candidates = [a for a in state["atoms"] if a["section"] == 1]
+            if not candidates:
+                raise ValueError("请先生成课程知识地图")
+            if not any(q["submitted_at"] is None for q in state["diagnostics"]):
+                prompts = [q["prompt"] for quiz in state["diagnostics"] for q in quiz["questions"]]
+                section = course["sections"][0]
+                questions, answers = self._model().knowledge_quiz(course, section, candidates, prompts, diagnostic=True)
+                self.server.storage.create_knowledge_quiz(self._session(), course["id"], section["id"],
+                                                          questions, answers, "diagnostic")
+            self._json(HTTPStatus.OK, self._course_public(course["id"]))
         elif path == "/api/sections/lesson":
             course = self._owned_course(payload.get("course_id"))
             section = self._unlocked_section(course, payload.get("ordinal"))
-            if not section["lesson"]:
-                lesson = self._model().teach_section(
-                    course, section, self.server.storage.mastery(self._session(), course["id"]),
-                    self.server.storage.weak_points(self._session(), course["id"]))
-                self.server.storage.save_lesson(self._session(), course["id"], section["id"], lesson)
+            self._section_materials(course,section)
+            if not section["lesson"] or payload.get("regenerate") is True:
+                state = self.server.storage.knowledge_state(self._session(), course["id"])
+                section["knowledge_atoms"] = [a for a in state["atoms"] if a["section"] == section["ordinal"] and a.get('quality_status')!='deprecated']
+                section["atom_evidence"] = [a for a in state["atoms"] if a["section"] <= section["ordinal"] and a.get('quality_status')!='deprecated']
+                package,context = self.server.content_generator.lesson(self._session(),course,section,self._model(),
+                    self.server.storage.mastery(self._session(),course['id']),self.server.storage.weak_points(self._session(),course['id']))
+                self.server.storage.save_lesson(self._session(),course['id'],section['id'],package['content'],context,package['validation'],package,expected_revision=course['content_revision'],regenerate=payload.get('regenerate') is True)
             self._json(HTTPStatus.OK, self._course_public(course["id"], section["ordinal"]))
         elif path == "/api/sections/ask":
             course = self._owned_course(payload.get("course_id"))
             section = self._unlocked_section(course, payload.get("ordinal"))
+            self._section_materials(course,section)
             question = payload.get("question")
             if not section["lesson"]:
                 raise ValueError("请先生成本节讲解")
             if not isinstance(question, str) or not 2 <= len(question.strip()) <= 500:
                 raise ValueError("请输入 2 至 500 字的问题")
+            section["atom_evidence"] = [a for a in self.server.storage.knowledge_state(self._session(), course["id"])["atoms"]
+                                        if a["section"] <= section["ordinal"]]
             turns = self.server.storage.tutor_turns(self._session(), course["id"], section["id"])
-            answer = self._model().answer_question(course, section, turns, question.strip())
-            self.server.storage.add_tutor_exchange(self._session(), course["id"], section["id"], question.strip(), answer)
+            package=self.server.content_generator.followup(self._session(),course,section,self._model(),turns,question.strip(),payload.get('feedback'))
+            self.server.storage.add_tutor_exchange(self._session(),course['id'],section['id'],question.strip(),package['content'],package)
             self._json(HTTPStatus.OK, self._course_public(course["id"], section["ordinal"]))
         elif path == "/api/sections/quiz":
             course = self._owned_course(payload.get("course_id"))
             section = self._unlocked_section(course, payload.get("ordinal"))
+            self._section_materials(course,section)
             if not section["lesson"]:
                 raise ValueError("请先生成本节讲解")
             previous = self.server.storage.section_quizzes(self._session(), course["id"], section["id"])
@@ -346,7 +694,9 @@ class MindOSHandler(BaseHTTPRequestHandler):
                             for question, user_answer, result in zip(
                                 quiz["questions"], quiz["user_answers"], quiz["results"])
                             if user_answer != result["answer"]]
-            questions, answers = self._model().generate_quiz(course, section, prompts, weak_prompts)
+            questions, answers = self._model().generate_quiz(course, section, prompts, weak_prompts,
+                [a for a in self.server.storage.knowledge_state(self._session(), course["id"])["atoms"]
+                 if a["section"] == section["ordinal"]])
             self.server.storage.create_quiz(self._session(), course["id"], section["id"], questions, answers)
             self._json(HTTPStatus.OK, self._course_public(course["id"], section["ordinal"]))
         elif path == "/api/quizzes/submit":

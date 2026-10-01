@@ -22,6 +22,7 @@ from mindos.web_search import PublicSourceSearch, WebSearch
 
 class FakeProvider(BaseHTTPRequestHandler):
     discovery_demo = False
+    presentation_demo = False
     lesson_payloads: list[dict] = []
     search_queries: list[str] = []
 
@@ -132,6 +133,9 @@ class FakeProvider(BaseHTTPRequestHandler):
             from block_fixture import make_blocks
             if user['mode']=='lesson':self.lesson_payloads.append(user)
             content=json.dumps({'blocks':make_blocks(user['teaching_action'],'从零开始：这是 '+user['course']+' 的本节详细讲解，先建立直觉，再看例子与误区。')},ensure_ascii=False)
+            if self.presentation_demo:
+                from presentation_fixture import presentation_reply
+                content=json.dumps(presentation_reply(user),ensure_ascii=False)
         elif "现在只讲当前这一小节" in system:
             self.lesson_payloads.append(user)
             content = "## 从零开始\n本节详细讲解：先建立直觉，再看例子与误区。\n\n## 例子\n一步一步说明。"

@@ -1704,3 +1704,212 @@ fieldset {
 .quiz-question {
   border-bottom-color:var(--border)
 }
+/* Teaching reads as a continuous lesson, with focused callouts and real paragraphs. */
+.teaching-blocks {
+  max-width: 760px;
+  width: 100%;
+  margin-inline: auto;
+  gap: 8px;
+}
+.teaching-block {
+  min-width: 0;
+  padding: 20px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.teaching-block h3 {
+  margin: 0 0 14px;
+  font-size: 17px;
+  line-height: 1.6;
+  font-weight: 600;
+  color: #e2eaff;
+  letter-spacing: 0;
+}
+.teaching-prose {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.teaching-prose p, .teaching-prose li {
+  font-size: 15px;
+  line-height: 1.95;
+  color: #d0dbed;
+}
+.teaching-prose p {
+  margin: 0 0 16px;
+  white-space: pre-wrap;
+}
+.teaching-prose p:last-child {
+  margin-bottom: 0;
+}
+.teaching-prose-list {
+  padding-left: 25px;
+  margin: 12px 0 18px;
+}
+.teaching-prose-list li {
+  padding-left: 5px;
+  margin: 9px 0;
+}
+.teaching-prose-list li::marker {
+  color: #93ace1;
+}
+.teaching-question {
+  padding: 15px 0 24px;
+  border-bottom: 1px solid #344762;
+}
+.teaching-question h3 {
+  font-size: 13px;
+  color: #9aaff7;
+}
+.teaching-question .teaching-prose p {
+  font-size: 18px;
+  line-height: 1.85;
+  color: #e1e9fa;
+}
+.teaching-concept + .teaching-concept,
+.teaching-text + .teaching-text {
+  padding-top: 10px;
+}
+.teaching-analogy, .teaching-example {
+  background: #15263a90;
+  border-left: 2px solid #678aab;
+  border-radius: 0 10px 10px 0;
+  padding: 20px 24px;
+  margin-block: 6px;
+}
+.teaching-analogy h3, .teaching-example h3 {
+  color: #a7cadf;
+  font-size: 14px;
+}
+.teaching-diagram, .teaching-flow, .teaching-comparison, .teaching-equation {
+  margin: 18px 0 12px;
+}
+.teaching-diagram svg {
+  max-height: 520px;
+}
+.teaching-relations {
+  font-size: 13px;
+  line-height: 1.85;
+  color: #a4b8d8;
+}
+.teaching-checkpoint {
+  margin-top: 14px;
+  border: 1px solid #35535b;
+  border-radius: 12px;
+  background: #172c3280;
+  padding: 23px 25px;
+}
+.teaching-checkpoint h3 {
+  font-size: 15px;
+  color: #b4d5d0;
+}
+.teaching-checkpoint-form {
+  gap: 12px;
+  margin-top: 18px;
+}
+.teaching-checkpoint-form label {
+  font-size: 12px;
+  color: #a5b6cd;
+}
+.teaching-checkpoint-form textarea {
+  width: 100%;
+  min-height: 85px;
+  margin-top: 8px;
+  font-size: 14px;
+  padding: 12px 14px;
+}
+.teaching-checkpoint-form .button {
+  justify-self: start;
+  width: auto;
+  min-height: 38px;
+}
+.teaching-response-footer {
+  display: grid;
+  gap: 9px;
+  padding: 16px 0 12px;
+  margin-top: 6px;
+  border-top: 1px solid #2b3f59;
+}
+.teaching-feedback-label {
+  font-size: 11px;
+  color: #96a9c7;
+}
+.teaching-response-footer .teaching-feedback {
+  margin: 0;
+  gap: 8px;
+  padding: 0;
+}
+.teaching-feedback .button {
+  font-size: 12px;
+  min-height: 38px;
+  border-color: #3c5272;
+  background: #17263a;
+  color: #c0d1ed;
+}
+.teaching-strategy-note {
+  font-size: 11px;
+  color: #8ca3c9;
+  padding: 4px 0;
+}
+.teaching-strategy-note summary {
+  cursor: pointer;
+}
+.teaching-strategy-note p {
+  font-size: 12px;
+  margin: 9px 0;
+}
+.conversation-turn.assistant {
+  padding: 25px 0 12px;
+  border: 0;
+  border-top: 1px solid #344560;
+}
+.conversation-turn > strong {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: #95acce;
+}
+.conversation-turn.user {
+  border: 0;
+  background: #1e2b4280;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+.assistant-message-content .teaching-block {
+  padding: 12px 0;
+}
+.assistant-message-content .teaching-analogy,
+.assistant-message-content .teaching-example,
+.assistant-message-content .teaching-checkpoint {
+  padding: 14px;
+}
+.assistant-message-content .teaching-block h3 {
+  font-size: 13px;
+}
+.assistant-message-content .teaching-prose p,
+.assistant-message-content .teaching-prose li {
+  font-size: 13px;
+  line-height: 1.85;
+}
+@media (max-width: 600px) {
+  .teaching-block {
+    padding: 16px 0;
+  }
+  .teaching-block h3 {
+    font-size: 16px;
+  }
+  .teaching-prose p, .teaching-prose li {
+    font-size: 15px;
+  }
+  .teaching-question .teaching-prose p {
+    font-size: 17px;
+  }
+  .teaching-analogy, .teaching-example, .teaching-checkpoint {
+    padding: 18px 16px;
+  }
+  .teaching-feedback .button {
+    min-height: 40px;
+    font-size: 11px;
+    padding: 8px 10px;
+  }
+}

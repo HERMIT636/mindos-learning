@@ -3,6 +3,19 @@
  const titles={question:'先想一个问题',analogy:'换个角度理解',concept:'简单理解',flow:'一步一步看',diagram:'看图理解',comparison:'放在一起比较',formula:'公式与推导',example:'具体例子',checkpoint:'口头自查'};
  const el=(tag,text='',className='')=>{const n=document.createElement(tag);n.textContent=text;n.className=className;return n;};
  const svg=(tag,attrs={})=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,String(v));return n;};
+ function prose(value){
+  const box=el('div','','teaching-prose');const source=String(value||'').replace(/\r\n?/g,'\n')
+   .replace(/([。；！？])\s*(?=(?:第[一二三四五六七八九十]+[，、：:]|\d+[.、．）)]))/g,'$1\n')
+   .replace(/\s+(?=\d+[.、．）)]\s+(?!\d))/g,'\n');
+  let list=null;
+  for(const line of source.split(/\n+/).filter(v=>v.trim())){
+   const item=line.match(/^\s*(?:(\d+)(?:[.．](?!\s*\d)\s*|[、）)]\s*)|[-•●]\s+)(.+)$/);
+   if(item){const type=item[1]?'ol':'ul';if(!list||list.tagName.toLowerCase()!==type){list=el(type,'','teaching-prose-list');box.append(list);}const row=el('li',item[2]);if(item[1])row.value=Number(item[1]);list.append(row);continue;}
+   list=null;const sentences=line.match(/.*?[。！？]+[”’」』]?|.+$/g)||[line];let paragraph='';
+   for(const sentence of sentences){paragraph+=sentence;if(paragraph.length>=180){box.append(el('p',paragraph));paragraph='';}}
+   if(paragraph)box.append(el('p',paragraph));
+  }return box;
+ }
  function FlowBlock(block){const list=el('ol','','teaching-flow');for(const step of block.data.steps){const item=el('li');item.append(el('strong',step.label));if(step.description)item.append(el('p',step.description));list.append(item);}return list;}
  function DiagramBlock(block){
   const {nodes,edges}=block.data;const box=el('div','','teaching-diagram');const height=Math.ceil(nodes.length/2)*90+40;
@@ -15,13 +28,13 @@
  }
  function ComparisonBlock(block){const wrap=el('div','','teaching-table-wrap');const table=el('table','','teaching-comparison');const head=el('tr');head.append(el('th',block.data.label_header||'比较方面'));for(const c of block.data.columns)head.append(el('th',c));const thead=el('thead');thead.append(head);table.append(thead);const body=el('tbody');for(const r of block.data.rows){const row=el('tr');row.append(el('th',r.label));for(const v of r.values)row.append(el('td',v));body.append(row);}table.append(body);wrap.append(table);return wrap;}
  function FormulaBlock(block){const box=el('div');box.append(el('pre',block.content,'teaching-equation'));const symbols=el('dl');for(const s of block.data?.symbols||[]){symbols.append(el('dt',s.symbol),el('dd',s.meaning));}box.append(symbols);const list=el('ol');for(const s of block.data?.steps||[])list.append(el('li',s));box.append(list);return box;}
- function CheckpointBlock(block,onFeedback){const box=el('div');box.append(el('p',block.content),el('small','口头自查，不计入掌握记录。独立小测仍在原来的入口。','muted'));if(onFeedback){const form=el('form','','teaching-checkpoint-form');const label=el('label','用自己的话试着回答');const input=el('textarea');input.rows=2;input.maxLength=160;input.required=true;input.setAttribute('aria-label','口头自查回答');label.append(input);const button=el('button','请老师帮我看思路','button secondary');form.append(label,button);form.addEventListener('submit',e=>{e.preventDefault();onFeedback({kind:'rephrase',question:`这是我的口头自查回答。问题：${block.content.slice(0,180)}；回答：${input.value}。请解释我的思路，不作为独立测试评分。`,button});});box.append(form);}return box;}
- function TeachingBlock(block,onFeedback){const box=el('section','','teaching-block teaching-'+block.type);box.dataset.blockType=block.type;if(block.title||titles[block.type])box.append(el('h3',block.title||titles[block.type]));const special={flow:FlowBlock,diagram:DiagramBlock,comparison:ComparisonBlock,formula:FormulaBlock};if(special[block.type])box.append(special[block.type](block));else if(block.type==='checkpoint')box.append(CheckpointBlock(block,onFeedback));else box.append(el('p',block.content||''));return box;}
+ function CheckpointBlock(block,onFeedback){const box=el('div');box.append(prose(block.content),el('small','用自己的话想一想；不会改变掌握记录。','muted'));if(onFeedback){const form=el('form','','teaching-checkpoint-form');const label=el('label','试着回答');const input=el('textarea');input.rows=2;input.maxLength=160;input.required=true;input.setAttribute('aria-label','口头自查回答');input.placeholder='写下你的理解，老师会解释思路。';label.append(input);const button=el('button','帮我看看思路','button secondary');form.append(label,button);form.addEventListener('submit',e=>{e.preventDefault();onFeedback({kind:'rephrase',question:`这是我的口头自查回答。问题：${block.content.slice(0,180)}；回答：${input.value}。请解释我的思路，不作为独立测试评分。`,button});});box.append(form);}return box;}
+ function TeachingBlock(block,onFeedback){const box=el('section','','teaching-block teaching-'+block.type);box.dataset.blockType=block.type;if(block.title||titles[block.type])box.append(el('h3',block.title||titles[block.type]));const special={flow:FlowBlock,diagram:DiagramBlock,comparison:ComparisonBlock,formula:FormulaBlock};if(special[block.type]){if(block.content&&block.type!=='formula')box.append(prose(block.content));box.append(special[block.type](block));}else if(block.type==='checkpoint')box.append(CheckpointBlock(block,onFeedback));else box.append(prose(block.content));return box;}
  function fromText(value){return String(value||'').split(/\n\s*\n/).filter(v=>v.trim()).map(v=>({type:'text',content:v.replace(/^#{1,6}\s*/gm,'').replace(/\*\*([^*]+)\*\*/g,'$1').replace(/^```[^\n]*\n?|```$/gm,'').trim()})).filter(b=>b.content);}
  function render(target,blocks,{onFeedback=null,action=null}={}){
-  target.replaceChildren();target.classList.add('teaching-blocks');if(action?.reason)target.append(el('p',action.reason,'teaching-strategy-note'));
+  target.replaceChildren();target.classList.add('teaching-blocks');if(action?.presentation_reason||action?.reason){const details=el('details','','teaching-strategy-note');details.append(el('summary','本次讲法'),el('p',action.presentation_reason||action.reason));target.append(details);}
   for(const block of blocks||[])target.append(TeachingBlock(block,onFeedback));
-  if(onFeedback){const bar=el('div','','teaching-feedback');for(const [label,kind,question] of [['换个说法','rephrase','我还没理解，请换一种说法解释。'],['看个例子','example','请用一个具体例子解释当前知识。'],['看图理解','visual','请用图示解释当前知识。'],['公式没看懂','formula_confusing','公式我没看懂，请先用直觉和例子解释。']]){const button=el('button',label,'button secondary');button.type='button';button.addEventListener('click',()=>onFeedback({kind,question,button}));bar.append(button);}target.append(bar);}
+  if(onFeedback){const footer=el('div','','teaching-response-footer');footer.append(el('span','接着理解','teaching-feedback-label'));const bar=el('div','','teaching-feedback');bar.setAttribute('aria-label','调整这次讲解');for(const [label,kind,question] of [['换个说法','rephrase','我还没理解，请换一种说法解释。'],['看个例子','example','请用一个具体例子解释当前知识。'],['看图理解','visual','请用图示解释当前知识。'],['公式没看懂','formula_confusing','公式我没看懂，请先用直觉和例子解释。']]){const button=el('button',label,'button secondary');button.type='button';button.addEventListener('click',()=>onFeedback({kind,question,button}));bar.append(button);}footer.append(bar);target.append(footer);}
  }
- window.MindOSTeaching={render,fromText,TeachingBlock,FlowBlock,DiagramBlock,CheckpointBlock};
+ window.MindOSTeaching={render,fromText,TeachingBlock,FlowBlock,DiagramBlock,CheckpointBlock,prose};
 })();

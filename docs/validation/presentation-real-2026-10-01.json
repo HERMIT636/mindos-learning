@@ -1,0 +1,149 @@
+{
+  "date": "2026-10-01",
+  "model": "deepseek-flash",
+  "environment": "临时课程；只读读取本机模型配置；未修改个人课程；非真实用户学习效果",
+  "elapsed_seconds": 3.28,
+  "baseline_presentation": [
+    "question",
+    "concept",
+    "example",
+    "checkpoint"
+  ],
+  "selected_action": {
+    "action": "INTRODUCE",
+    "goal": "理解集合、有序对和关系，能用学生选课的实例识别关系",
+    "depth": "beginner",
+    "presentation": [
+      "question",
+      "concept",
+      "diagram",
+      "example",
+      "checkpoint"
+    ],
+    "need_check": true,
+    "structure_level": 3,
+    "allow_formulas": false,
+    "allowed_depth": "detailed",
+    "forbidden_topics": [
+      "图论",
+      "顶点",
+      "边",
+      "图论基础"
+    ],
+    "core_atoms": [
+      "集合",
+      "有序对",
+      "关系"
+    ],
+    "related_atoms": [],
+    "backtrack_targets": [],
+    "reason": "先建立直觉与本节学习目标",
+    "exploring_future": false,
+    "policy_version": "atie_rules_v1",
+    "evidence_source": "no_evidence",
+    "presentation_policy": {
+      "selection": "model",
+      "required_types": [
+        "question",
+        "checkpoint"
+      ],
+      "required_any": [
+        [
+          "example",
+          "analogy"
+        ],
+        [
+          "concept",
+          "text"
+        ]
+      ],
+      "max_structure_level": 3,
+      "fallback": [
+        "question",
+        "concept",
+        "example",
+        "checkpoint"
+      ],
+      "rule": "按知识内容选表达形式，不改变教学动作、难度、公式许可、来源与小节范围"
+    },
+    "presentation_source": "model_content_plan",
+    "presentation_intent": "relationship",
+    "presentation_reason": "用关系图展示集合、有序对、关系之间的联系，并配合具体例子帮助零基础学生建立直觉。"
+  },
+  "blocks": [
+    {
+      "type": "question",
+      "title": "先想一想",
+      "content": "如果我说“小明选了数学课”，你觉得这句话里包含了哪些信息？能不能把它拆成更简单的部件？"
+    },
+    {
+      "type": "concept",
+      "title": "集合：一堆明确的东西",
+      "content": "集合就是把一些确定的对象放在一起，看成整体。比如你的班级同学可以组成一个集合，所有选修课可以组成一个集合。集合里的每个东西叫元素。\n\n集合的关键是：一个东西要么在这个集合里，要么不在，不会模糊。"
+    },
+    {
+      "type": "concept",
+      "title": "有序对：有先后顺序的两个东西",
+      "content": "有序对就是两个东西按固定顺序写在一起，通常写成（第一个，第二个）。\n\n比如（小明，数学课）和（数学课，小明）是不同的有序对，因为顺序变了。有序对常用来表示“谁和谁有关系”。"
+    },
+    {
+      "type": "concept",
+      "title": "关系：一堆有序对组成的规矩",
+      "content": "关系就是一组有序对的集合。它规定了哪些东西之间有关系。\n\n比如“学生选课”这个关系，可以看成所有（学生，课程）这样的有序对放在一起。如果小明选了数学课，那么（小明，数学课）就在这个关系里。"
+    },
+    {
+      "type": "diagram",
+      "title": "三者的联系",
+      "data": {
+        "nodes": [
+          {
+            "id": "n1",
+            "label": "集合：元素的整体"
+          },
+          {
+            "id": "n2",
+            "label": "有序对：（a, b）"
+          },
+          {
+            "id": "n3",
+            "label": "关系：有序对的集合"
+          }
+        ],
+        "edges": [
+          {
+            "from": "n1",
+            "to": "n2",
+            "label": "元素可组成有序对"
+          },
+          {
+            "from": "n2",
+            "to": "n3",
+            "label": "有序对可组成关系"
+          }
+        ]
+      }
+    },
+    {
+      "type": "example",
+      "title": "用选课例子识别关系",
+      "content": "假设有三位学生：小明、小红、小刚。有三门课：数学、英语、物理。\n\n选课情况：小明选了数学和英语，小红选了英语，小刚选了物理。\n\n用有序对表示：\n（小明，数学）、（小明，英语）、（小红，英语）、（小刚，物理）。\n\n这些有序对放在一起，就构成了“学生选课”这个关系。以后看到“谁选了哪门课”，就可以写成这样的有序对。"
+    },
+    {
+      "type": "checkpoint",
+      "title": "口头自查",
+      "content": "1. 集合里的元素有什么特点？\n2. （小明，数学）和（数学，小明）一样吗？为什么？\n3. 你能用自己的话举一个“关系”的例子吗？"
+    }
+  ],
+  "validation": {
+    "passed": true,
+    "score": 100,
+    "issues": [],
+    "method": "heuristic_scope_v1",
+    "boundary": "仅检测明显超纲信号，不代表完整语义检查或事实认证",
+    "repair_attempts": 0,
+    "initial_issues": [],
+    "normalizations": []
+  },
+  "current_ordinal": 1,
+  "overall_rate": null
+}

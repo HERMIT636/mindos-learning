@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-01",
+  "change": "按实际内容选择教学展示形式；每次追问均可反馈；连续阅读与分段",
+  "tests": {
+    "project_root": {
+      "passed": 140,
+      "seconds": 13.073
+    },
+    "publish_checkout": {
+      "passed": 140,
+      "seconds": 14.107
+    },
+    "added": 9
+  },
+  "browser": {
+    "engine": "Microsoft Edge / Playwright",
+    "temporary_fixtures": true,
+    "passed_suites": [
+      "presentation",
+      "atie",
+      "tutor",
+      "architecture",
+      "universe"
+    ],
+    "presentation_rechecked_after_final_paragraph_changes": true,
+    "checks": [
+      "默认概念课无需点击图示即可展示关系图",
+      "每条追问有反馈按钮和可提交的自查",
+      "引用由服务端从当前课程小节读取",
+      "刷新持久化",
+      "段落、编号和小数呈现",
+      "安全文本",
+      "移动端无横向溢出",
+      "掌握率和手动章节推进保持不变"
+    ]
+  },
+  "real_provider": {
+    "model": "deepseek-flash",
+    "successful_sample": "presentation-real-2026-10-01.json",
+    "automatic_diagram": true,
+    "repair_attempts_in_success": 0,
+    "other_trial": "一次试验及其修订因内容块文字为空或过长失败，未保存；原文未保留，具体字段无法确认",
+    "boundary": "临时测试，不代表全部生成成功或真实学习效果"
+  },
+  "screenshots": {
+    "desktop": "presentation-desktop.png",
+    "followup": "presentation-followup.png",
+    "mobile": "presentation-mobile.png",
+    "boundary": "临时模拟课程演示，不是个人课程或真实模型输出截图"
+  },
+  "source_sha256": {
+    "mindos/adaptive/presentation_controller.py": "ee1062f9c7846e9bf898b8e9cbe7ca4e51dbc226741a69c12b4f4d8debd55e2a",
+    "mindos/adaptive/atie_engine.py": "53f4bbaf34958cc0b467b5b9a2ce944500771a14dd38ca64e12f4a7d9b902030",
+    "mindos/adaptive/content_generator.py": "027fe759087fb891c1b84d4ea8bcc61097fd0b1acbc2415c5554d28f1310899c",
+    "mindos/model.py": "1b41d14f05c8bc88043ae2b3884f991c87023fe188c6f5ec1e169239a7936e19",
+    "mindos/server.py": "b15231cbc1a7c59e45921381da520a52ef5423b40507f2835a14a91cbf8cee2c",
+    "web/app.js": "d44f5da6c6fa0e70d934b3df5eeeeec2f680761faf21b6b34e5b2d4c8b7735c5",
+    "web/components/teaching/teaching-blocks.js": "f6fbb79715858f831c89c5104fb3bdffd0ea6e60dfe9858fd4bb2ca2c97bc7e4",
+    "web/universe.css": "483a03b27f269d2fed88572881c8df5fd7d8e3ba6c4ca54eb4ff5e4e56d7eb95",
+    "tests/test_presentation.py": "a5ac0fdef2567f1ec817abbe68cbf98c220458def6e432e2922967e05887cb54",
+    "tests/browser_presentation.cjs": "c09779a2c6d181e3bed7582e179a7c2f16fbe2be7cb8d6af7bc51b33c9bdf5be"
+  }
+}

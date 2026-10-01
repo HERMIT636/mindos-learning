@@ -685,7 +685,14 @@ class MindOSHandler(BaseHTTPRequestHandler):
             section["atom_evidence"] = [a for a in self.server.storage.knowledge_state(self._session(), course["id"])["atoms"]
                                         if a["section"] <= section["ordinal"]]
             turns = self.server.storage.tutor_turns(self._session(), course["id"], section["id"])
-            package=self.server.content_generator.followup(self._session(),course,section,self._model(),turns,question.strip(),payload.get('feedback'))
+            reference=''
+            reference_turn=payload.get('reference_turn')
+            if reference_turn is not None:
+                if (not isinstance(reference_turn,int) or isinstance(reference_turn,bool) or not 0<=reference_turn<len(turns)
+                        or turns[reference_turn]['role']!='assistant'):
+                    raise ValueError('引用的讲解不存在，请刷新后重试')
+                reference=turns[reference_turn]['content'][:6000]
+            package=self.server.content_generator.followup(self._session(),course,section,self._model(),turns,question.strip(),payload.get('feedback'),reference)
             self.server.storage.add_tutor_exchange(self._session(),course['id'],section['id'],question.strip(),package['content'],package)
             self._json(HTTPStatus.OK, self._course_public(course["id"], section["ordinal"]))
         elif path == "/api/sections/quiz":

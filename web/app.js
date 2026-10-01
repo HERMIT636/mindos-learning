@@ -220,12 +220,13 @@ function renderOutline(data) {
 
 function renderConversation(turns) {
   const box = $('conversation'); box.replaceChildren();
+  const context={courseId:state.courseId,ordinal:state.data.section.ordinal};
   // The first assistant turn is the saved lesson already shown above.
-  turns.slice(1).forEach(turn => {
+  turns.slice(1).forEach((turn,index) => {
     const item = node('div', '', `conversation-turn ${turn.role}`);
     item.append(node('strong', turn.role === 'user' ? '你的问题' : 'AI 教师'));
     if(turn.role==='assistant'){
-      const content=node('div');MindOSTeaching.render(content,turn.blocks?.length?turn.blocks:MindOSTeaching.fromText(turn.content),{action:turn.teaching_action});item.append(content);
+      const content=node('div');MindOSTeaching.render(content,turn.blocks?.length?turn.blocks:MindOSTeaching.fromText(turn.content),{action:turn.teaching_action,onFeedback:feedback=>respondToTeaching({...feedback,...context,referenceTurn:index+1})});item.append(content);
     }else item.append(node('p',turn.content));
     box.append(item);
   });
@@ -315,7 +316,7 @@ function renderCourse(data) {
   renderContentHistory($('lesson-history'),data.lesson_history||[],true);
   $('ask-area').hidden = !data.section.lesson;
   $('quiz-card').hidden = !data.section.lesson;
-  if (data.section.lesson) MindOSTeaching.render($('lesson-content'),data.section.lesson_blocks?.length?data.section.lesson_blocks:MindOSTeaching.fromText(data.section.lesson),{action:data.section.teaching_action,onFeedback:respondToTeaching});
+  if (data.section.lesson) MindOSTeaching.render($('lesson-content'),data.section.lesson_blocks?.length?data.section.lesson_blocks:MindOSTeaching.fromText(data.section.lesson),{action:data.section.teaching_action,onFeedback:feedback=>respondToTeaching({...feedback,courseId:data.course.id,ordinal:data.section.ordinal,referenceTurn:0})});
   else $('lesson-content').textContent = '本节讲解尚未生成。点击下方按钮，AI 会从基础开始讲解。';
   renderConversation(data.turns); renderQuiz(data); renderOutline(data); renderSidebar(); renderKnowledge(data);
   const preferences=data.learning_state?.preferences||{};
@@ -331,10 +332,11 @@ function renderCourse(data) {
   MindOSUniverse.renderCourse(data);
 }
 
-function respondToTeaching({kind,question,button}){
- const cid=state.courseId,ordinal=state.data.section.ordinal;
+function respondToTeaching({kind,question,button,referenceTurn,courseId=state.courseId,ordinal=state.data?.section.ordinal}){
+ const cid=courseId;
+ if(state.courseId!==cid||state.data?.section.ordinal!==ordinal)return;
  action(button,'正在换一种讲法…',async()=>{
-  const data=await api('/api/sections/ask',{course_id:cid,ordinal,question,feedback:kind});
+  const data=await api('/api/sections/ask',{course_id:cid,ordinal,question,feedback:kind,reference_turn:referenceTurn});
   if(state.courseId===cid&&state.data?.section.ordinal===ordinal)renderCourse(data);
  });
 }

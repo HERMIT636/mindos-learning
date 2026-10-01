@@ -6,6 +6,7 @@ from ..teaching import TeachingOrchestrator, ContentValidator
 from .atie_engine import ATIEEngine
 from .teaching_state import LearningStateManager
 from .intervention_manager import feedback_from_message
+from .presentation_controller import resolve_presentation
 
 BLOCK_TYPES={'text','question','analogy','concept','flow','diagram','comparison','formula','example','checkpoint'}
 ROW_HEADERS={'性质','比较方面','比较项','对比项','方面','项目','维度','指标','特征','特点','属性','条目','名称','类型','术语','知识点','字段',
@@ -144,7 +145,9 @@ class ContentGenerator:
                 packet,changes=normalize_blocks(packet)
                 normalizations.extend(changes)
                 if changes and hasattr(model,'_diagnostic'):model._diagnostic({'stage':'atie_normalization','attempt':attempt+1,'changes':changes})
-                try:blocks,validation=self.validate(packet,action,scope);break
+                try:
+                    effective_action=resolve_presentation(packet,action)
+                    blocks,validation=self.validate(packet,effective_action,scope);break
                 except (ValueError,TypeError,KeyError,AttributeError) as exc:
                     repair_reason=str(exc);failure=exc
             failures.append(repair_reason)
@@ -153,7 +156,10 @@ class ContentGenerator:
         related=packet.get('related_atom_ids',[])
         content=flatten_blocks(blocks)
         if len(content)>30000:raise ModelUnavailable('教学内容过长，请重试生成')
-        return {'blocks':blocks,'content':content,'teaching_action':action,
+        if hasattr(model,'_diagnostic'):model._diagnostic({'stage':'atie_presentation','source':effective_action['presentation_source'],
+            'forms':effective_action['presentation'],'intent':effective_action.get('presentation_intent'),
+            'reason':effective_action.get('presentation_reason')})
+        return {'blocks':blocks,'content':content,'teaching_action':effective_action,
                 'learning_state':payload['learning_state'],'related_atom_ids':related,
                 'validation':{**validation,'repair_attempts':len(failures),'initial_issues':failures,'normalizations':normalizations}}
 
@@ -169,10 +175,10 @@ class ContentGenerator:
         package=self.execute(model,payload,decision,scope,lambda:model.generate_teaching_blocks(payload))
         return package,scope
 
-    def followup(self,user,course,section,model,turns,question,feedback=None):
+    def followup(self,user,course,section,model,turns,question,feedback=None,reference=""):
         state,knowledge,scope,decision=self.prepare(user,course['id'],section,question,mode='followup',feedback=feedback)
         payload={'mode':'followup','course':course['title'],'section_title':section['title'],'question':question,
-                 'history':turns[-8:],'teaching_action':decision,'teaching_context':scope,'learning_state':state,'knowledge_context':knowledge,
+                 'reference_explanation':reference,'history':turns[-8:],'teaching_action':decision,'teaching_context':scope,'learning_state':state,'knowledge_context':knowledge,
                  'source_policy':course['source_policy'],'source_conflicts':course.get('source_conflicts',[]),
                  'course_materials':course.get('teaching_materials',[])}
         return self.execute(model,payload,decision,scope,lambda:model.generate_teaching_blocks(payload))

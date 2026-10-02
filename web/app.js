@@ -265,6 +265,7 @@ function renderQuiz(data) {
       input.type = 'radio'; input.name = `question-${index}`; input.value = key; input.required = true;
       label.append(input, document.createTextNode(`${key.toUpperCase()}. ${text}`)); group.append(label);
     });
+    MindOSLearningLoop.answerInputs(group,index,active,data.course.id);
     form.append(group);
   });
   const submit = node('button', '提交小测并更新掌握记录', 'button primary'); submit.type = 'submit';
@@ -274,7 +275,7 @@ function renderQuiz(data) {
     const answers = active.questions.map((_, index) => form.querySelector(`input[name="question-${index}"]:checked`)?.value);
     if (answers.some(value => !value)) { showNotice('请完成全部 4 道题后提交'); return; }
     action(submit, '正在保存测试结果…', async () => {
-      await api('/api/quizzes/submit', { course_id: data.course.id, quiz_id: active.id, answers });
+      await api('/api/quizzes/submit', { course_id: data.course.id, quiz_id: active.id, answers,...MindOSLearningLoop.answerMetadata(form,active.questions.length) });
       await openCourse(data.course.id, data.section.ordinal);
     });
   });
@@ -330,14 +331,23 @@ function renderCourse(data) {
     : data.section.lesson ? '准备好了再由你选择进入下一节；系统不会自动跳转。'
     : '先学习当前小节，再决定是否进入下一节。';
   MindOSUniverse.renderCourse(data);
+  MindOSLearningLoop.render(data);
 }
 
-function respondToTeaching({kind,question,button,referenceTurn,courseId=state.courseId,ordinal=state.data?.section.ordinal}){
+function respondToTeaching({kind,question,button,referenceTurn,selfExplanation,checkQuestion,courseId=state.courseId,ordinal=state.data?.section.ordinal}){
  const cid=courseId;
+ const candidates=(state.data?.knowledge.atoms||[]).filter(a=>a.section===ordinal&&a.quality_status!=='deprecated');
+ const named=candidates.filter(a=>checkQuestion?.includes(a.title));
+ const target=named.length===1?named[0]:candidates.length===1?candidates[0]:null;
  if(state.courseId!==cid||state.data?.section.ordinal!==ordinal)return;
  action(button,'正在换一种讲法…',async()=>{
   const data=await api('/api/sections/ask',{course_id:cid,ordinal,question,feedback:kind,reference_turn:referenceTurn});
   if(state.courseId===cid&&state.data?.section.ordinal===ordinal)renderCourse(data);
+  if(selfExplanation&&target&&state.courseId===cid){
+   try{await api(`/api/courses/${encodeURIComponent(cid)}/loop/self-explanation`,{atom_id:target.id,answer:selfExplanation});
+    if(state.courseId===cid&&state.data?.section.ordinal===ordinal)renderCourse(await api('/api/course?'+new URLSearchParams({course_id:cid,ordinal})));
+   }catch(_){/* Candidate analysis must not undo the saved explanation. */}
+  }
  });
 }
 
@@ -356,10 +366,16 @@ async function openCourse(id, ordinal,view='learn') {
   state.courseView=view;
   invalidateNavigation();
   const version=navigationVersion;
+  state.page='loading';state.data=null;state.courseId=null;$('course-view').hidden=true;
   try {
     const query = new URLSearchParams({ course_id: id });
     if (ordinal) query.set('ordinal', String(ordinal));
-    renderCourse(await api(`/api/course?${query}`));
+    const data=await api(`/api/course?${query}`);
+    if(version!==navigationVersion)return;
+    const returning=await api(`/api/courses/${encodeURIComponent(id)}/loop/enter`,{return_context:{section_ordinal:data.section.ordinal,view,scroll_y:0}});
+    if(version!==navigationVersion)return;
+    if(returning?.status==='pending'){data.knowledge.learning_loop=data.knowledge.learning_loop||{};data.knowledge.learning_loop.returning_session=returning;}
+    renderCourse(data);
   } catch (error) { if(version===navigationVersion)showNotice(error.message); }
 }
 
@@ -567,7 +583,8 @@ function renderAtom(detail) {
   $('atom-meta').textContent=`第 ${atom.section} 节 · ${atomTypes[atom.type]} · 要求深度：${depthLabels[atom.depth]}`;
   if(Object.values(detail.content_metadata||{}).some(m=>m.stale))$('atom-meta').textContent+=' · 讲解依据已更新，可重新生成；历史记录保留';
   $('atom-summary').textContent=atom.summary; $('atom-why').textContent=`为什么需要：${atom.why}`;
-  $('atom-state').textContent=current ? `${current.status} · ${current.evidence_count} 道已提交题目的记录` : '未测';
+  MindOSLearningLoop.stateDetail(state.courseId,atom.id);
+  $('atom-state').textContent=current ? `${MindOSLearningLoop.labels[current.knowledge_state?.state]||current.status} · ${current.evidence_count} 道已提交题目的记录` : '未测';
   const relations=$('atom-relations'); relations.replaceChildren();
   state.data.knowledge.edges.filter(e=>e.from===atom.id||e.to===atom.id).forEach(e=>{
     const other=state.data.knowledge.atoms.find(a=>a.id===(e.from===atom.id?e.to:e.from));
@@ -598,12 +615,12 @@ function renderKnowledgeTests(target, tests, refresh) {
     const group=node('fieldset','', 'quiz-question'); group.append(node('legend',`${index+1}. ${q.prompt}`));
     Object.entries(q.choices).forEach(([key,text])=>{const label=node('label','', 'option'); const input=document.createElement('input');
       input.type='radio'; input.name=`answer-${index}`; input.value=key; input.required=true; label.append(input,document.createTextNode(`${key.toUpperCase()}. ${text}`));group.append(label);});
-    form.append(group);
+    MindOSLearningLoop.answerInputs(group,index,active,state.courseId);form.append(group);
   });
   const button=node('button','提交测试，保存证据','button primary');button.type='submit';form.append(button);
   form.addEventListener('submit',event=>{event.preventDefault();const answers=active.questions.map((_,i)=>form.querySelector(`input[name="answer-${i}"]:checked`)?.value);
     if(answers.some(a=>!a)){showNotice('请完成全部题目。');return;}
-    action(button,'正在保存测试证据…',async()=>{await api('/api/quizzes/submit',{course_id:state.data.course.id,quiz_id:active.id,answers});await refresh();});
+    action(button,'正在保存测试证据…',async()=>{await api('/api/quizzes/submit',{course_id:state.data.course.id,quiz_id:active.id,answers,...MindOSLearningLoop.answerMetadata(form,active.questions.length)});await refresh();});
   });target.append(form);
 }
 

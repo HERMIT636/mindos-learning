@@ -169,7 +169,7 @@ class ContentGenerator:
         payload={'mode':'lesson','course':course['title'],'goal':course['goal'],'section_title':section['title'],
                  'section_objective':section['objective'],'section_number':section['ordinal'],'learner_level':course['learner_level'],
                  'teaching_context':scope,'teaching_action':decision,'learning_state':state,'knowledge_context':knowledge,
-                 'knowledge_atoms':section.get('knowledge_atoms',[]),'atom_evidence':section.get('atom_evidence',[]),
+                 'learning_loop':state.get('learning_loop',{}),'knowledge_atoms':section.get('knowledge_atoms',[]),'atom_evidence':section.get('atom_evidence',[]),
                  'earlier_missed_questions':weak,'mastery':mastery,'source_policy':course['source_policy'],
                  'source_conflicts':course.get('source_conflicts',[]),'course_materials':course.get('teaching_materials',[])}
         package=self.execute(model,payload,decision,scope,lambda:model.generate_teaching_blocks(payload))

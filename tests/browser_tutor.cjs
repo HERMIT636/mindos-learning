@@ -4,7 +4,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');const as
  try{
  const page=await browser.newPage({viewport:{width:1440,height:960}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.context().addCookies([{name:'mindos_session',value:process.env.MINDOS_TEST_COOKIE,url:process.env.MINDOS_TEST_URL,httpOnly:true,sameSite:'Strict'}]);
- const open=async(name)=>{await page.locator('#course-list').getByRole('button',{name:new RegExp(name)}).click();await page.locator('#assistant-toggle').waitFor({state:'visible'});};
+ const open=async(name)=>{await page.locator('#course-list').getByRole('button',{name:new RegExp(name)}).click();await page.waitForFunction(name=>state.page==='course'&&state.data?.course.title===name,name);await page.waitForFunction(()=>!document.getElementById('assistant-question').disabled);};
  const chat=async(text)=>{await page.locator('#assistant-question').fill(text);await page.locator('#assistant-send').click();await page.waitForFunction(()=>!document.getElementById('assistant-send').disabled);assert.equal(await page.locator('#assistant-error').textContent(),'');};
  await page.goto(process.env.MINDOS_TEST_URL);await page.locator('#assistant-toggle').waitFor({state:'visible'});
  await open('Attention课程');const firstCid=await page.evaluate(()=>state.courseId);

@@ -63,7 +63,10 @@ class FakeProvider(BaseHTTPRequestHandler):
         system = payload["messages"][0]["content"]
         user = json.loads(payload["messages"][-1]["content"]) if len(payload["messages"]) > 1 and \
             payload["messages"][-1]["content"].startswith("{") else {}
-        if "课程调研助手" in system:
+        if 'MindOS短时独立检测教师' in system:
+            atom=user['atom'];purpose=user['purpose']
+            content=json.dumps({'questions':[{'prompt':f'第{i+1}个新情境中，{atom["title"]}的正确角色是什么？','choices':{'a':'按任务匹配相应角色','b':'将查询和键的角色互换','c':'忽略问题条件','d':'所有角色完全相同'},'answer':'a','explanation':'查询表示需要，键用于匹配，值提供内容。','atom_ids':[atom['id']],'assessment_type':'transfer' if purpose=='transfer' else 'concept' if i==0 else 'application','misconceptions':{'b':{'code':'QK_ROLE_CONFUSION','description':'把查询和键的角色反过来了'}}} for i in range(2)]},ensure_ascii=False)
+        elif "课程调研助手" in system:
             content = json.dumps({"queries": ["入门课程 大纲 教程", "核心知识 先修 路线"]}, ensure_ascii=False)
         elif "课程规划教师" in system:
             feedback = user.get("latest_revision_request", "")

@@ -37,7 +37,7 @@ class DashboardTests(unittest.TestCase):
         a=self.create('A');b=self.create('B');self.quiz(a);self.quiz(b,('a','a'))
         result=self.service.read('owner',a['id']);expected,_=LearningStateManager(self.store).read('owner',a['id'],1)
         self.assertEqual(result['learning_state'],expected)
-        dims=result['learning_state']['assessment_dimensions'];self.assertEqual(dims['concept']['rate'],1);self.assertEqual(dims['application']['rate'],0);self.assertNotIn('transfer',dims)
+        dims=result['learning_state']['assessment_dimensions'];self.assertEqual(dims['concept']['rate'],1);self.assertEqual(dims['application']['rate'],0);self.assertEqual(dims['transfer']['attempts'],0);self.assertIsNone(dims['transfer']['rate'])
         self.assertEqual(self.service.read('owner',b['id'])['learning_state']['assessment_dimensions']['application']['rate'],1)
     def test_timeline_scoped_redacted_and_excludes_pending_tests(self):
         a=self.create('A');b=self.create('B');foreign=self.create('PRIVATE','other');self.quiz(a);self.quiz(b);self.quiz(foreign,user='other')

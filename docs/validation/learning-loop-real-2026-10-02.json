@@ -1,0 +1,170 @@
+{
+  "date": "2026-10-02",
+  "fixture": "Synthetic QKV and Multi Head course; no personal course contents sent",
+  "checks": {
+    "short_assessment": {
+      "passed": true,
+      "questions": [
+        {
+          "prompt": "在注意力机制中，哪个角色负责‘提出当前要找什么信息’？",
+          "choices": {
+            "a": "查询（Query）",
+            "b": "键（Key）",
+            "c": "值（Value）",
+            "d": "位置编码"
+          },
+          "assessment_type": "concept",
+          "atom_ids": [
+            "qkv"
+          ]
+        },
+        {
+          "prompt": "某系统把每个位置的内容向量与查询算相似度来决定取多少信息，这个被匹配的向量对应 QKV 中哪个角色？",
+          "choices": {
+            "a": "查询（Query）",
+            "b": "键（Key）",
+            "c": "值（Value）",
+            "d": "输出投影"
+          },
+          "assessment_type": "application",
+          "atom_ids": [
+            "qkv"
+          ]
+        }
+      ],
+      "answers": [
+        {
+          "answer": "a",
+          "explanation": "查询表达当前需求，用来与键匹配；键用于被匹配，值提供内容。"
+        },
+        {
+          "answer": "b",
+          "explanation": "键参与匹配，决定查询与各位置的相关程度；值才是最终被加权取用的内容。"
+        }
+      ]
+    },
+    "micro_remediation": {
+      "passed": true,
+      "model_content": true,
+      "blocks": [
+        {
+          "type": "question",
+          "title": "先想一个问题",
+          "content": "到图书馆找书时，你会对管理员说“我想找讲恐龙的书”。请问：\n\n“我想找讲恐龙的书”这句话，更像是查询，还是像是被匹配的东西？\n\n先别急着答，记住你现在的判断，看完下面的例子再回头对照。"
+        },
+        {
+          "type": "example",
+          "title": "用找书例子区分三个角色",
+          "content": "把一次找书过程拆开看：\n\n查询，就是你提的要求：“我想找讲恐龙的书。”它表达的是需求。\n\n键，是每本书身上贴的标签摘要，比如“恐龙·科普”“植物·图鉴”。它被拿来和你的要求做比对，看哪本最相关。\n\n值，是书里真正的内容。一旦某本书的标签和你的要求匹配上了，你真正拿走阅读的，是它的内容，而不是那张标签。\n\n所以角色分工是：查询负责表达想要什么，键负责被比对，值负责提供实际内容。"
+        },
+        {
+          "type": "concept",
+          "title": "一句话记住三者",
+          "content": "查询表达需求，键用于匹配，值提供内容。\n\n容易颠倒的地方在于：被匹配的是键，不是查询。查询是主动发问的一方，键是等待被比对的标签。如果反过来说“键在发问、查询被匹配”，方向就反了。"
+        },
+        {
+          "type": "diagram",
+          "title": "三者关系图",
+          "data": {
+            "nodes": [
+              {
+                "id": "q",
+                "label": "查询：表达需求"
+              },
+              {
+                "id": "k",
+                "label": "键：等待被比对"
+              },
+              {
+                "id": "v",
+                "label": "值：提供内容"
+              }
+            ],
+            "edges": [
+              {
+                "from": "q",
+                "to": "k",
+                "label": "拿需求去和标签比对"
+              },
+              {
+                "from": "k",
+                "to": "v",
+                "label": "匹配成功后取出对应内容"
+              }
+            ]
+          }
+        },
+        {
+          "type": "checkpoint",
+          "title": "自查一下",
+          "content": "用点餐来想：你说“我要一碗不辣的牛肉面”，这是查询、键还是值？\n\n再说出菜单上“牛肉面·微辣”这行字属于哪一个，以及最后端上来的那碗面又属于哪一个。\n\n如果你的第一反应是把“菜单上的字”当成发问的一方，那就说明查询和键的位置还需要再顺一遍。"
+        }
+      ],
+      "note": ""
+    },
+    "open_answer_candidate": {
+      "passed": true,
+      "candidate": {
+        "misconception_detected": true,
+        "code": "QKV_ROLE_SWAP",
+        "confidence": 1,
+        "reason": "用户将查询与内容的角色完全颠倒，误认为Q提供内容而V提出查询。",
+        "supporting_evidence": [
+          "Q是用来提供内容的",
+          "V是用来提出查询的"
+        ]
+      },
+      "boundary": "Candidate only; cannot confirm misconception or change mastery"
+    }
+  },
+  "diagnostics": [
+    {
+      "stage": "learning_check",
+      "raw": "{\"questions\":[{\"prompt\":\"在注意力机制中，哪个角色负责‘提出当前要找什么信息’？\",\"choices\":{\"a\":\"查询（Query）\",\"b\":\"键（Key）\",\"c\":\"值（Value）\",\"d\":\"位置编码\"},\"answer\":\"a\",\"explanation\":\"查询表达当前需求，用来与键匹配；键用于被匹配，值提供内容。\",\"atom_ids\":[\"qkv\"],\"assessment_type\":\"concept\"},{\"prompt\":\"某系统把每个位置的内容向量与查询算相似度来决定取多少信息，这个被匹配的向量对应 QKV 中哪个角色？\",\"choices\":{\"a\":\"查询（Query）\",\"b\":\"键（Key）\",\"c\":\"值（Value）\",\"d\":\"输出投影\"},\"answer\":\"b\",\"explanation\":\"键参与匹配，决定查询与各位置的相关程度；值才是最终被加权取用的内容。\",\"atom_ids\":[\"qkv\"],\"assessment_type\":\"application\"}]}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "learning_check"
+    },
+    {
+      "stage": "learning_check",
+      "raw": "{\"questions\":[{\"prompt\":\"注意力机制中，Q、K、V 分别承担的核心角色是？\",\"choices\":{\"a\":\"Q 匹配、K 表达需求、V 提供内容\",\"b\":\"Q 表达需求、K 匹配、V 提供内容\",\"c\":\"Q 提供内容、K 匹配、V 表达需求\",\"d\":\"Q 表达需求、K 提供内容、V 匹配\"},\"answer\":\"b\",\"explanation\":\"查询 Q 表达当前要什么，键 K 用于与查询匹配并给出权重，值 V 提供被聚合的实际内容。\",\"atom_ids\":[\"qkv\"],\"assessment_type\":\"concept\"},{\"prompt\":\"检索式问答场景：用问题去比对各条文档摘要，再按相关度汇总信息。哪个部件对应“问题”？\",\"choices\":{\"a\":\"Q\",\"b\":\"K\",\"c\":\"V\",\"d\":\"无需 QKV\"},\"answer\":\"a\",\"explanation\":\"问题代表“要什么”，对应查询 Q；摘要用于匹配，对应键 K；被汇总的信息对应值 V。\",\"atom_ids\":[\"qkv\"],\"assessment_type\":\"application\"}],\"misconceptions\":{\"a\":{\"code\":\"QKV_SWAP_Q\",\"description\":\"把 Q 与 K 的角色颠倒：Q 不是被匹配项，而是主动表达需求的一方。\"},\"c\":{\"code\":\"QKV_SWAP_ALL\",\"description\":\"将 Q、K、V 三者角色整体错位，把值当作需求或把查询当作内容。\"},\"d\":{\"code\":\"QKV_SWAP_KV\",\"description\":\"把 K 与 V 的职责混淆：K 用于匹配而非提供内容，V 提供内容而非匹配。\"}}}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "learning_check"
+    },
+    {
+      "stage": "learning_check_validation",
+      "attempt": 1,
+      "failure": "Additional properties are not allowed ('misconceptions' was unexpected)\n\nFailed validating 'additionalProperties' in schema:\n    {'additionalProperties': False,\n     'properties': {'questions': {'items': {'additionalProperties': False,\n                                            'properties': {'answer': {'enum': ['a',\n                                                                               'b',\n                                                                               'c',\n                                                                               'd']},\n                                                           'assessment_type': {'enum': ['concept',\n                                                                                        'application',\n                                                                                        'reasoning',\n                                                                                        'math',\n                                                                                        'transfer']},\n                                                           'atom_ids': {'items': {'type': 'string'},\n                                                                        'maxItems': 2,\n                                                                        'minItems': 1,\n                                                                        'type': 'array'},\n                                                           'choices': {'additionalProperties': False,\n                                                                       'properties': {'a': {'maxLength': 1000,\n                                                                                            'minLength': 1,\n                                                                                            'type': 'string'},\n                                                                                      'b': {'maxLength': 1000,\n                                                                                            'minLength': 1,\n                                                                                            'type': 'string'},\n                                                                                      'c': {'maxLength': 1000,\n                                                                                            'minLength': 1,\n                                                                                            'type': 'string'},\n                                                                                      'd': {'maxLength': 1000,\n                                                                                            'minLength': 1,\n                                                                                            'type': 'string'}},\n                                                                       'required': ['a',\n                                                                                    'b',\n                                                                                    'c',\n                                                                                    'd'],\n                                                                       'type': 'object'},\n                                                           'explanation': {'maxLength': 2000,\n                                                                           'minLength': 1,\n                                                                           'type': 'string'},\n                                                           'misconceptions': {'additionalProperties': {'additionalProperties': False,\n                                                                                                       'properties': {'code': {'pattern': '^[A-Z][A-Z0-9_]{2,60}$',\n                                                                                                                               'type': 'string'},\n                                                                                                                      'description': {'maxLength': 400,\n                                                                                                                                      'minLength': 1,\n                                                                                                                                      'type': 'string'}},\n                                                                                                       'required': ['code',\n                                                                                                                    'description'],\n                                                                                                       'type': 'object'},\n                                                                              'maxProperties': 3,\n                                                                              'type': 'object'},\n                                                           'prompt': {'maxLength': 800,\n                                                                      'minLength': 8,\n                                                                      'type': 'string'}},\n                                            'required': ['prompt',\n                                                         'choices',\n                                                         'answer',\n                                                         'explanation',\n                                                         'atom_ids',\n                                                         'assessment_type'],\n                                            'type': 'object'},\n                                  'maxItems': 2,\n                                  'minItems': 2,\n                                  'type': 'array'}},\n     'required': ['questions'],\n     'type': 'object'}\n\nOn instance:\n    {'misconceptions': {'a': {'code': 'QKV_SWAP_Q',\n                              'description': '把 Q 与 K 的角色颠倒：Q '\n                                             '不是被匹配项，而是主动表达需求的一方。'},\n                        'c': {'code': 'QKV_SWAP_ALL',\n                              'description': '将 Q、K、V '\n                                             '三者角色整体错位，把值当作需求或把查询当作内容。'},\n                        'd': {'code': 'QKV_SWAP_KV',\n                              'description': '把 K 与 V 的职责混淆：K 用于匹配而非提供内容，V '\n                                             '提供内容而非匹配。'}},\n     'questions': [{'answer': 'b',\n                    'assessment_type': 'concept',\n                    'atom_ids': ['qkv'],\n                    'choices': {'a': 'Q 匹配、K 表达需求、V 提供内容',\n                                'b': 'Q 表达需求、K 匹配、V 提供内容',\n                                'c': 'Q 提供内容、K 匹配、V 表达需求',\n                                'd': 'Q 表达需求、K 提供内容、V 匹配'},\n                    'explanation': '查询 Q 表达当前要什么，键 K 用于与查询匹配并给出权重，值 V '\n                                   '提供被聚合的实际内容。',\n                    'prompt': '注意力机制中，Q、K、V 分别承担的核心角色是？'},\n                   {'answer': 'a',\n                    'assessment_type': 'application',\n                    'atom_ids': ['qkv'],\n                    'choices': {'a': 'Q',\n                                'b': 'K',\n                                'c': 'V',\n                                'd': '无需 QKV'},\n                    'explanation': '问题代表“要什么”，对应查询 Q；摘要用于匹配，对应键 '\n                                   'K；被汇总的信息对应值 V。',\n                    'prompt': '检索式问答场景：用问题去比对各条文档摘要，再按相关度汇总信息。哪个部件对应“问题”？'}]}"
+    },
+    {
+      "stage": "learning_check",
+      "raw": "{\"questions\":[{\"prompt\":\"在注意力机制里，Q、K、V 各自最核心的作用是？\",\"choices\":{\"a\":\"Q 匹配、K 表达需求、V 提供内容\",\"b\":\"Q 表达需求、K 匹配、V 提供内容\",\"c\":\"Q 提供内容、K 匹配、V 表达需求\",\"d\":\"Q 表达需求、K 提供内容、V 匹配\"},\"answer\":\"b\",\"explanation\":\"查询 Q 表达当前要找什么；键 K 用来与查询做匹配并产生权重；值 V 提供被加权汇总的实际内容。\",\"atom_ids\":[\"qkv\"],\"assessment_type\":\"concept\",\"misconceptions\":{\"a\":{\"code\":\"QKV_SWAP_Q\",\"description\":\"把 Q 与 K 的角色颠倒，误以为 Q 是被匹配的一方，而 K 主动表达需求。\"},\"c\":{\"code\":\"QKV_SWAP_ALL\",\"description\":\"把 Q、K、V 的角色整体错位，误把 Q 当作内容、V 当作需求。\"},\"d\":{\"code\":\"QKV_SWAP_KV\",\"description\":\"混淆 K 与 V 的职责，误以为 K 提供内容、V 用于匹配。\"}}},{\"prompt\":\"用一个问题去比对各条文档摘要，再按相关度汇总正文信息。与“问题”对应的部件是？\",\"choices\":{\"a\":\"Q\",\"b\":\"K\",\"c\":\"V\",\"d\":\"无需 QKV 参与\"},\"answer\":\"a\",\"explanation\":\"“问题”代表要什么，对应查询 Q；被比对的摘要对应键 K；被汇总的正文内容对应值 V。\",\"atom_ids\":[\"qkv\"],\"assessment_type\":\"application\",\"misconceptions\":{\"b\":{\"code\":\"QKV_SWAP_Q\",\"description\":\"把被匹配的摘要误当作问题，颠倒了查询与键的角色。\"},\"c\":{\"code\":\"QKV_SWAP_KV\",\"description\":\"把提供内容的值误当作表达需求的问题，混淆了 V 与 Q 的职责。\"},\"d\":{\"code\":\"QKV_ROLE_IGNORED\",\"description\":\"忽略 QKV 的角色分工，没有识别出“问题”应由查询 Q 承担。\"}}}]}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "learning_check"
+    },
+    {
+      "stage": "atie_content",
+      "raw": "{\"presentation_plan\":{\"intent\":\"relationship\",\"reason\":\"用身份分工的关系图加具体例子，区分查询、键和值三种角色，并以自查确认没有颠倒被匹配的一方和发问的一方\",\"forms\":[\"question\",\"example\",\"concept\",\"diagram\",\"checkpoint\"]},\"blocks\":[{\"type\":\"question\",\"title\":\"先想一个问题\",\"content\":\"到图书馆找书时，你会对管理员说“我想找讲恐龙的书”。请问：\\n\\n“我想找讲恐龙的书”这句话，更像是查询，还是像是被匹配的东西？\\n\\n先别急着答，记住你现在的判断，看完下面的例子再回头对照。\"},{\"type\":\"example\",\"title\":\"用找书例子区分三个角色\",\"content\":\"把一次找书过程拆开看：\\n\\n查询，就是你提的要求：“我想找讲恐龙的书。”它表达的是需求。\\n\\n键，是每本书身上贴的标签摘要，比如“恐龙·科普”“植物·图鉴”。它被拿来和你的要求做比对，看哪本最相关。\\n\\n值，是书里真正的内容。一旦某本书的标签和你的要求匹配上了，你真正拿走阅读的，是它的内容，而不是那张标签。\\n\\n所以角色分工是：查询负责表达想要什么，键负责被比对，值负责提供实际内容。\"},{\"type\":\"concept\",\"title\":\"一句话记住三者\",\"content\":\"查询表达需求，键用于匹配，值提供内容。\\n\\n容易颠倒的地方在于：被匹配的是键，不是查询。查询是主动发问的一方，键是等待被比对的标签。如果反过来说“键在发问、查询被匹配”，方向就反了。\"},{\"type\":\"diagram\",\"title\":\"三者关系图\",\"data\":{\"nodes\":[{\"id\":\"q\",\"label\":\"查询：表达需求\"},{\"id\":\"k\",\"label\":\"键：等待被比对\"},{\"id\":\"v\",\"label\":\"值：提供内容\"}],\"edges\":[{\"from\":\"q\",\"to\":\"k\",\"label\":\"拿需求去和标签比对\"},{\"from\":\"k\",\"to\":\"v\",\"label\":\"匹配成功后取出对应内容\"}]}},{\"type\":\"checkpoint\",\"title\":\"自查一下\",\"content\":\"用点餐来想：你说“我要一碗不辣的牛肉面”，这是查询、键还是值？\\n\\n再说出菜单上“牛肉面·微辣”这行字属于哪一个，以及最后端上来的那碗面又属于哪一个。\\n\\n如果你的第一反应是把“菜单上的字”当成发问的一方，那就说明查询和键的位置还需要再顺一遍。\"}]}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "atie_content"
+    },
+    {
+      "stage": "atie_presentation"
+    },
+    {
+      "stage": "misconception_candidate",
+      "raw": "{\"misconception_detected\":true,\"code\":\"QKV_ROLE_SWAP\",\"confidence\":1,\"reason\":\"用户将查询与内容的角色完全颠倒，误认为Q提供内容而V提出查询。\",\"supporting_evidence\":[\"Q是用来提供内容的\",\"V是用来提出查询的\"]}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "misconception_candidate"
+    }
+  ]
+}

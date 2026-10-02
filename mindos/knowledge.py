@@ -177,6 +177,8 @@ class KnowledgeStorage:
         with self.connect() as db:
             db.executemany('INSERT INTO learning_events(course_id,atom_id,kind,created_at) VALUES(?,?,?,?)',
                            [(course_id, a, kind, timestamp()) for a in dict.fromkeys(atom_ids)])
+            from .learning.service import LearningLoopService
+            LearningLoopService(self).signal(db,session_id,course_id,None,list(dict.fromkeys(atom_ids)),'self_explanation','read:'+str(db.execute('SELECT MAX(id) FROM learning_events').fetchone()[0]),{'activity':kind})
 
     def atom_detail(self, session_id, course_id, atom_id):
         atom = self.atom(session_id, course_id, atom_id, unlocked=True)
@@ -214,6 +216,10 @@ class KnowledgeStorage:
             db.executemany('INSERT INTO atom_turns(course_id,atom_id,role,content,created_at) VALUES(?,?,?,?,?)',
                            [(course_id, atom_id, role, text, timestamp()) for role, text in
                             [('user', question), ('assistant', answer)]])
+            from .learning.evidence import mark_help
+            from .learning.service import LearningLoopService
+            mark_help(db,course_id,atom=atom_id)
+            LearningLoopService(self).signal(db,session_id,course_id,None,[atom_id],'tutor_interaction','atom-turn:'+str(db.execute('SELECT MAX(id) FROM atom_turns').fetchone()[0]))
 
     def knowledge_state(self, session_id, course_id):
         course = self._knowledge_course(session_id, course_id)
@@ -239,6 +245,9 @@ class KnowledgeStorage:
             for identifier, answers in scores.items():
                 evidence[identifier].append({'rate': sum(answers) / len(answers), 'count': len(answers),
                                              'date': row['submitted_at'], 'scope': row['scope']})
+        from .learning.service import LearningLoopService
+        loop=LearningLoopService(self).snapshot(session_id,course_id)
+        states=loop['states']
         atoms = []
         queue = []
         for atom in graph['atoms']:
@@ -248,16 +257,16 @@ class KnowledgeStorage:
             status = ('未测' if rate is None else '需补强' if rate < 60 else
                       '正在掌握' if rate < 85 or len(trials) < 2 else '较稳固')
             last = max([t['date'] for t in trials] + [read.get(atom['id'], '')])
-            overdue = bool(last and (datetime.now(timezone.utc) - datetime.fromisoformat(last)).days >= 3)
+            overdue = any(r['atom_id']==atom['id'] for r in loop['review_queue'])
             public = {**atom, 'read': atom['id'] in read, 'rate': rate, 'status': status,
                       'test_count': len(trials), 'evidence_count': sum(t['count'] for t in trials),
-                      'last_activity': last or None, 'unlocked': atom['section'] <= course['current_ordinal']}
+                      'last_activity': last or None, 'knowledge_state':states.get(atom['id']), 'unlocked': atom['section'] <= course['current_ordinal']}
             atoms.append(public)
             if public['unlocked']:
                 if rate is not None and rate < 60:
                     reason, priority = '最近测试有错题，建议定点补强', 0
                 elif overdue:
-                    reason, priority = '距上次学习或测试已至少 3 天，建议复习', 1
+                    reason, priority = '到了回忆检测时间，建议先回忆再复习', 1
                 elif public['read'] and rate is None:
                     reason, priority = '已阅读但未测试，建议检查理解', 2
                 elif not public['read']:
@@ -274,7 +283,7 @@ class KnowledgeStorage:
                 'read_count': sum(a['read'] for a in atoms), 'tested_count': len(tested), 'total': len(atoms),
                 'overall_rate': round(sum(a['rate'] for a in tested) / len(tested)) if tested else None,
                 'diagnostics': [self._quiz_public(dict(row)) for row in diagnostics],
-                'rule': 'recent-two-tests-v1', 'review_rule': 'three-days-reminder-v1'}
+                'rule': 'recent-two-tests-v1', 'review_rule': loop['policy_version'], 'learning_loop':loop}
 
     def create_knowledge_quiz(self, session_id, course_id, section_id, questions, answers, scope, target=''):
         course = self._knowledge_course(session_id, course_id)

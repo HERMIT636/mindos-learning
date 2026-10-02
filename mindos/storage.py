@@ -116,6 +116,8 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
                 db.execute("ALTER TABLE quizzes ADD COLUMN scope TEXT NOT NULL DEFAULT 'section'")
             if "target_atom_id" not in columns:
                 db.execute("ALTER TABLE quizzes ADD COLUMN target_atom_id TEXT NOT NULL DEFAULT ''")
+            from .learning.evidence import migrate
+            migrate(db)
 
     @contextmanager
     def connect(self):
@@ -323,6 +325,8 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
             changed = db.execute("UPDATE sections SET lesson=?,lesson_revision=? WHERE id=?"+("" if regenerate else " AND lesson IS NULL"),
                                  (lesson, revision, section_id)).rowcount
             if changed:
+                from .learning.service import LearningLoopService
+                LearningLoopService(self).section_signal(db,session_id,course_id,section_id,'lesson_check','lesson:'+section_id+':'+str(revision))
                 if teaching_package:
                     blocks=json.dumps(teaching_package['blocks'],ensure_ascii=False);decision=json.dumps(teaching_package['teaching_action'],ensure_ascii=False)
                     db.execute('UPDATE sections SET lesson_blocks_json=?,teaching_action_json=? WHERE id=?',(blocks,decision,section_id))
@@ -360,6 +364,10 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
                 db.execute('UPDATE tutor_turns SET blocks_json=?,action_json=? WHERE id=(SELECT MAX(id) FROM tutor_turns WHERE course_id=? AND section_id=?)',
                            (json.dumps(teaching_package['blocks'],ensure_ascii=False),json.dumps(teaching_package['teaching_action'],ensure_ascii=False),course_id,section_id))
                 self.record_teaching_action(db,session_id,course_id,section_id,None,teaching_package)
+            from .learning.service import LearningLoopService
+            from .learning.evidence import mark_help
+            mark_help(db,course_id,section_id)
+            LearningLoopService(self).section_signal(db,session_id,course_id,section_id,'tutor_interaction','turn:'+str(db.execute('SELECT MAX(id) FROM tutor_turns').fetchone()[0]))
 
     def advance(self, session_id: str, course_id: str, expected: int) -> bool:
         with self.connect() as db:
@@ -382,7 +390,9 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
     def _quiz_public(row: dict) -> dict:
         questions = json.loads(row["questions_json"])
         public = {"id": row["id"], "questions": questions, "score": row["score"],
-                  "submitted_at": row["submitted_at"], "created_at": row["created_at"]}
+                  "submitted_at": row["submitted_at"], "created_at": row["created_at"],
+                  "assessment_kind":row.get('assessment_kind','chapter_quiz'),"hint_used":json.loads(row.get('hint_flags_json','[]')),
+                  "confidence":json.loads(row.get('confidence_json','[]'))}
         if row["submitted_at"]:
             public["user_answers"] = json.loads(row["user_answers_json"])
             public["results"] = json.loads(row["answers_json"])
@@ -409,8 +419,9 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
         return {"id": quiz_id, "questions": questions, "score": None}
 
     def submit_quiz(self, session_id: str, course_id: str, quiz_id: str,
-                    user_answers: list[str]) -> dict:
+                    user_answers: list[str], confidence=None, hint_used=None, response_time_ms=None) -> dict:
         with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
             row = db.execute("SELECT q.* FROM quizzes q JOIN courses c ON c.id=q.course_id "
                              "WHERE q.id=? AND q.course_id=? AND c.session_id=? AND c.deleted_at IS NULL",
                              (quiz_id, course_id, session_id)).fetchone()
@@ -418,15 +429,34 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
                 raise ValueError("测试不存在")
             if row["submitted_at"]:
                 raise ValueError("这次测试已经提交，请生成新测试继续复测")
+            if row['loop_session_id']:
+                table='repair_sessions' if row['assessment_kind']=='remediation' else 'returning_sessions'
+                task=db.execute(f'SELECT status FROM {table} WHERE id=? AND user_id=? AND course_id=?',(row['loop_session_id'],session_id,course_id)).fetchone()
+                if not task or task[0] not in {'diagnostic','teaching','checking','pending'}:
+                    raise ValueError('学习任务已结束，请刷新后重新选择检测')
             answers = json.loads(row["answers_json"])
             if len(user_answers) != len(answers) or any(a not in {"a", "b", "c", "d"} for a in user_answers):
                 raise ValueError("请完成全部题目后提交")
+            count=len(answers)
+            confidence=confidence if confidence is not None else [None]*count
+            times=response_time_ms if response_time_ms is not None else [None]*count
+            reported=hint_used if hint_used is not None else [False]*count
+            if (not isinstance(confidence,list) or len(confidence)!=count or any(v not in (None,'low','medium','high') for v in confidence)
+                    or not isinstance(reported,list) or len(reported)!=count or any(type(v) is not bool for v in reported)
+                    or not isinstance(times,list) or len(times)!=count or any(v is not None and (type(v) is not int or not 0<=v<=3600000) for v in times)):
+                raise ValueError('答题信心、提示或用时记录无效')
+            hints=json.loads(row['hint_flags_json']) or [False]*count
+            hints=[saved or offered for saved,offered in zip(hints,reported)]
             score = sum(a == item["answer"] for a, item in zip(user_answers, answers))
             changed = db.execute("UPDATE quizzes SET user_answers_json=?,score=?,submitted_at=? "
                                  "WHERE id=? AND submitted_at IS NULL",
                                  (json.dumps(user_answers), score, now(), quiz_id)).rowcount
             if not changed:
                 raise ValueError("这次测试已经提交，请生成新测试继续复测")
+            db.execute('UPDATE quizzes SET confidence_json=?,hint_flags_json=?,response_times_json=? WHERE id=?',(json.dumps(confidence),json.dumps(hints),json.dumps(times),quiz_id))
+            graded=db.execute('SELECT * FROM quizzes WHERE id=?',(quiz_id,)).fetchone()
+            from .learning.service import LearningLoopService
+            LearningLoopService(self).submitted(db,graded,confidence,hints,times)
         return {"id": quiz_id, "score": score, "total": len(answers),
                 "results": [{"correct": a == item["answer"], **item}
                             for a, item in zip(user_answers, answers)]}

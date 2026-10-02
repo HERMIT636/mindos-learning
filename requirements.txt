@@ -1,2 +1,3 @@
 cryptography>=46.0,<47
 pypdf>=6.0,<7
+jsonschema>=4.23,<5

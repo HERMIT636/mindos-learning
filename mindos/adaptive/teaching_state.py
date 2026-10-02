@@ -1,6 +1,7 @@
 """Read actual quiz evidence; keep preferences/feedback distinct from mastery."""
 import json
 import secrets
+from ..learning.policy import POLICY
 from datetime import datetime, timezone
 
 FEEDBACK = {'confused','formula_confusing','rephrase','visual','example','deepen','backtrack','check','review','challenge'}
@@ -101,7 +102,7 @@ class LearningStateManager:
             quizzes=[dict(r) for r in db.execute('SELECT q.* FROM quizzes q JOIN sections s ON s.id=q.section_id WHERE q.course_id=? AND s.ordinal<=? AND q.submitted_at IS NOT NULL ORDER BY q.submitted_at DESC,q.rowid DESC LIMIT 8',(cid,ordinal))]
             feedback=[r[0] for r in db.execute('SELECT kind FROM teaching_feedback WHERE user_id=? AND course_id=? AND section_id=? AND (atom_id IS NULL OR atom_id=?) ORDER BY rowid DESC LIMIT 8',(user,cid,section['id'],atom_id))]
             actions=[json.loads(r[0]) for r in db.execute('SELECT action_json FROM teaching_actions WHERE user_id=? AND course_id=? AND section_id=? AND (atom_id IS NULL OR atom_id=?) ORDER BY id DESC LIMIT 6',(user,cid,section['id'],atom_id))]
-        dimensions={k:{'correct':0,'attempts':0,'rate':None} for k in ['concept','application','reasoning','math','unknown']}
+        dimensions={k:{'correct':0,'attempts':0,'rate':None} for k in ['concept','application','reasoning','math','transfer','unknown']}
         for q in quizzes:
             for item,answer,given in zip(json.loads(q['questions_json']),json.loads(q['answers_json']),json.loads(q['user_answers_json'])):
                 kind=item.get('assessment_type','unknown');kind=kind if kind in dimensions else 'unknown'
@@ -112,19 +113,26 @@ class LearningStateManager:
         assessment={'rate':latest['score']/len(json.loads(latest['answers_json'])),'section_id':latest['section_id'],'scope':latest['scope'],'submitted_at':latest['submitted_at']} if latest else None
         measured=[a['rate']/100 for a in current if a.get('rate') is not None]
         rate=sum(measured)/len(measured) if measured else (assessment['rate'] if assessment and assessment['section_id']==section['id'] else None)
+        estimates=[a.get('knowledge_state') for a in current if a.get('knowledge_state',{}).get('mastery') is not None]
+        certainty=None
+        if estimates:
+            rate=sum(s['mastery'] for s in estimates)/len(estimates)
+            certainty=sum(s['confidence'] for s in estimates)/len(estimates)
         preferences=self.store.teaching_preferences(user,cid)
         state={'course':course['title'],'chapter':section['title'],'knowledge_atom':atom['title'] if atom else None,
                'learning_goal':course['goal'],'learner_level':course.get('learner_level','零基础'),
-               'cognitive_state':{'status':'unknown' if rate is None else 'weak' if rate<.6 else 'partial_understanding' if rate<.85 else 'strong',
-                                  'knowledge_level':rate,'confidence':None,'source':'independent_quiz' if rate is not None else 'no_evidence'},
+               'cognitive_state':{'status':'unknown' if rate is None else 'weak' if rate<.6 else 'partial_understanding' if rate<.85 else 'strong' if certainty is not None and certainty>=POLICY['mastered_confidence'] else 'partial_understanding',
+                                  'knowledge_level':rate,'confidence':certainty,'source':'weighted_evidence' if estimates else 'independent_quiz' if rate is not None else 'no_evidence'},
                'assessment_dimensions':dimensions,'recent_assessment':assessment,'previous_strategy':actions,
                'user_feedback':list(reversed(feedback)),'preferences':preferences,
                'next_target':course['sections'][ordinal]['title'] if ordinal<len(course['sections']) else None,
+               'learning_loop':knowledge.get('learning_loop',{}),
                'rule':'反馈和教学策略不写入掌握记录；正确率不是置信度，未知能力不填虚构分数'}
         fallback_type='operation' if any(t in section['title'] for t in ['步骤','流程','操作','算法']) else 'mechanism' if any(t in section['title'].lower() for t in ['机制','原理','attention','过程']) else 'concept'
         topic_type=atom['type'] if atom else next((kind for kind in ['operation','mechanism','relation','reason','skill'] if any(a['type']==kind for a in current)),fallback_type)
         context={'name':atom['title'] if atom else section['title'],'type':topic_type,
                  'atoms':current,'prerequisite':[a['title'] for a in prereqs],
                  'weak_prerequisite':[a['title'] for a in prereqs if a.get('rate') is not None and a['rate']<60],
-                 'common_mistakes':[]}
+                 'common_mistakes':[m['description'] for m in knowledge.get('learning_loop',{}).get('misconceptions',[]) if m['atom_id'] in ids],
+                 'repair_managed':True}
         return state,context

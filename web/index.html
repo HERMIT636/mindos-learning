@@ -12,6 +12,7 @@
   <script src="/components/teaching/teaching-blocks.js" defer></script>
   <script src="/app.js" defer></script>
   <script src="/production.js" defer></script>
+  <script src="/components/mindos/learning-loop.js" defer></script>
   <script src="/components/mindos/universe.js" defer></script>
   <script src="/components/CourseManager/course-manager.js" defer></script>
   <script src="/components/CourseAssistant/course-assistant.js" defer></script>
@@ -86,6 +87,7 @@
           </nav>
           <section id="course-universe" hidden aria-label="课程宇宙总览"></section>
           <p id="knowledge-progress" class="muted"></p>
+          <section id="learning-loop-panel" class="card" aria-label="学习建议与短检测" hidden></section>
           <div id="chapter-mode" class="study-grid">
             <aside class="card outline"><div class="section-head"><h2>星系导航</h2><span id="outline-count" class="badge"></span></div><p class="muted">只开放已进入的小节。点击旧小节可以回看和复测。</p><div id="section-list"></div></aside>
             <div class="study-column">
@@ -104,8 +106,8 @@
           <section id="course-history" hidden aria-label="课程学习记录"></section>
           <div id="map-mode" hidden>
             <section class="card"><div class="section-head"><div><p class="eyebrow">本课程知识地图</p><h2>把知识连成星图</h2></div><button id="graph-build" class="button primary" type="button">生成课程知识地图</button></div><p class="muted">地图与章节共享记录。箭头表示 AI 建议的前置关系，尚未经教师核验。生成地图只拆分知识结构，详细讲解按需生成。未来小节可查看名称与关系，主动进入对应小节后才能学习。</p><div id="star-galaxy-filter" class="star-galaxy-filter" aria-label="星系筛选"></div><div class="star-legend"><span class="star-new">未测 / 未读</span><span class="star-learning">学习中</span><span class="star-strong">较稳固</span><span class="star-weak">需补强</span></div><p class="muted">星光只反映阅读与独立测试记录；章节顺序线和知识关系线分别显示，不把阅读当作掌握。</p><div id="knowledge-map" class="knowledge-map"></div><div id="knowledge-sections" class="knowledge-sections"></div></section>
-            <div class="knowledge-panels"><section class="card"><h2>建议学习与复习</h2><p class="muted">建议来自错题、未测状态和距上次活动的天数。三天提醒是简单规则，不代表测量了遗忘概率；你自己决定顺序。</p><div id="learning-queue"></div></section><section class="card"><h2>基础摸底（可跳过）</h2><p class="muted">4 道题检查第一节的基础知识，不自动跳过或开放后续章节。</p><button id="diagnostic-new" class="button secondary" type="button">检查我的基础</button><div id="diagnostic-tests"></div></section></div>
-            <section id="atom-panel" class="card" hidden><div class="section-head"><div><p id="atom-meta" class="eyebrow"></p><h2 id="atom-title"></h2><p id="atom-summary" class="muted"></p></div><span id="atom-state" class="badge"></span></div><p id="atom-why"></p><div id="atom-sources"></div><div id="atom-relations" class="atom-chips"></div><div class="action-row"><button id="atom-quick" class="button secondary" type="button">快速复习</button><button id="atom-deep" class="button secondary" type="button">深入理解</button><button id="atom-test" class="button secondary" type="button">做独立小测</button><button id="atom-read" class="button secondary" type="button">已阅读 / 已复习</button><button id="atom-return" class="button quiet-button" type="button">返回对应章节</button></div><p class="muted">阅读、追问和自评只留下学习记录；测试后才有原子正确率。已有章节讲解时可直接做原子测试，无需重复学两遍。</p><div id="atom-content" class="lesson-content"></div><div id="atom-history"></div><div id="atom-conversation"></div><form id="atom-ask-form" class="ask-form"><textarea id="atom-question" rows="2" maxlength="500" placeholder="围绕这个知识点追问"></textarea><button class="button secondary" type="submit">发送问题</button></form><div id="atom-tests"></div></section>
+            <div class="knowledge-panels"><section class="card"><h2>建议学习与复习</h2><p class="muted">建议结合实际答题、未测状态和回忆间隔。记忆风险是规则估计，不是能力认证；你自己决定顺序。</p><div id="learning-queue"></div></section><section class="card"><h2>基础摸底（可跳过）</h2><p class="muted">4 道题检查第一节的基础知识，不自动跳过或开放后续章节。</p><button id="diagnostic-new" class="button secondary" type="button">检查我的基础</button><div id="diagnostic-tests"></div></section></div>
+            <section id="atom-panel" class="card" hidden><div class="section-head"><div><p id="atom-meta" class="eyebrow"></p><h2 id="atom-title"></h2><p id="atom-summary" class="muted"></p></div><span id="atom-state" class="badge"></span></div><p id="atom-why"></p><details id="atom-learning-details"><summary>为什么这样判断我的掌握情况？</summary><div id="atom-learning-state"></div></details><div id="atom-sources"></div><div id="atom-relations" class="atom-chips"></div><div class="action-row"><button id="atom-quick" class="button secondary" type="button">快速复习</button><button id="atom-deep" class="button secondary" type="button">深入理解</button><button id="atom-test" class="button secondary" type="button">做独立小测</button><button id="atom-read" class="button secondary" type="button">已阅读 / 已复习</button><button id="atom-return" class="button quiet-button" type="button">返回对应章节</button></div><p class="muted">阅读、追问和自评只留下学习记录；测试后才有原子正确率。已有章节讲解时可直接做原子测试，无需重复学两遍。</p><div id="atom-content" class="lesson-content"></div><div id="atom-history"></div><div id="atom-conversation"></div><form id="atom-ask-form" class="ask-form"><textarea id="atom-question" rows="2" maxlength="500" placeholder="围绕这个知识点追问"></textarea><button class="button secondary" type="submit">发送问题</button></form><div id="atom-tests"></div></section>
           </div>
         </section>
       </div>

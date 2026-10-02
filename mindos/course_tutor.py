@@ -66,6 +66,10 @@ class CourseTutorStorage:
                     db.execute('UPDATE assistant_message SET blocks_json=?,action_json=? WHERE id=last_insert_rowid()',
                                (json.dumps(teaching_package['blocks'],ensure_ascii=False),json.dumps(teaching_package['teaching_action'],ensure_ascii=False)))
                     self.record_teaching_action(db,session,cid,context['section_id'],atom_id,teaching_package)
+            from .learning.service import LearningLoopService
+            from .learning.evidence import mark_help
+            mark_help(db,cid,context.get('section_id'),atom_id)
+            LearningLoopService(self).signal(db,session,cid,context.get('section_id'),[atom_id] if atom_id else [],'tutor_interaction','assistant:'+exchange_id)
         return self.assistant_exchange(session,cid,exchange_id)
 
     def save_assistant_position(self,session,cid,x,y):
@@ -119,11 +123,11 @@ class CourseTutorService:
                  'sections':[{'ordinal':s['ordinal'],'title':s['title'],'objective':s['objective'],'unlocked':s['ordinal']<=course['current_ordinal']} for s in course['sections']],
                  'knowledge_atoms':selected,'knowledge_relations':[e for e in related_edges if e['from'] in available_ids and e['to'] in available_ids],
                  'learner_state':{'mastery':self.store.mastery(session,cid),'read_knowledge':[a['title'] for a in atoms if a['read']],
-                                  'mastered_knowledge':[a['title'] for a in atoms if a['status']=='较稳固'],
+                                  'mastered_knowledge':[a['title'] for a in atoms if (a.get('knowledge_state') or {}).get('state')=='mastered'],
                                   'weak_knowledge':[a['title'] for a in atoms if a['rate'] is not None and a['rate']<60],
                                   'recent_learning_events':recent,'recent_learning_content':recent_content,'rule':'阅读和聊天不是掌握证据；正确率只来自独立测试'},
                  'course_materials':materials,'source_conflicts':self.store.conflicts(session,cid),
-                 'pending_quiz_questions':pending}
+                 'pending_quiz_questions':pending, 'learning_loop':learning.get('learning_loop',{})}
         from .teaching import TeachingOrchestrator
         context['teaching_context'] = TeachingOrchestrator(self.store).context(session,cid,section['id'])
         return course,context,atoms

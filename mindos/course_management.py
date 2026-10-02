@@ -144,7 +144,7 @@ class CourseManagementStorage:
             drafts=[r[0] for r in db.execute('SELECT id FROM course_drafts WHERE confirmed_course_id=?',(cid,))]
             for draft in drafts:db.execute('DELETE FROM draft_documents WHERE draft_id=?',(draft,))
             db.execute('DELETE FROM course_drafts WHERE confirmed_course_id=?',(cid,))
-            for table in ['content_history','teaching_actions','teaching_feedback','teaching_preferences','lesson_teaching_records','assistant_message','assistant_position','production_batches','source_conflicts','discovery_runs','course_graphs','atom_content','atom_turns','learning_events','quizzes','tutor_turns','sections','source_documents']:
+            for table in ['loop_events','knowledge_state_history','learning_misconceptions','knowledge_states','learning_evidence','repair_sessions','returning_sessions','loop_activity','content_history','teaching_actions','teaching_feedback','teaching_preferences','lesson_teaching_records','assistant_message','assistant_position','production_batches','source_conflicts','discovery_runs','course_graphs','atom_content','atom_turns','learning_events','quizzes','tutor_turns','sections','source_documents']:
                 db.execute(f'DELETE FROM {table} WHERE course_id=?',(cid,))
             db.execute('DELETE FROM courses WHERE id=? AND session_id=?',(cid,session))
 

@@ -1913,3 +1913,20 @@ fieldset {
     padding: 8px 10px;
   }
 }
+
+/* Learning loop additions reuse the existing course layout. */
+#learning-loop-panel { margin: 16px 0; }
+#learning-loop-panel > .button { margin: 8px 10px 8px 0; }
+.loop-assessment { max-width: 760px; margin: 20px 0; padding-top: 20px; border-top: 1px solid var(--line); }
+.loop-assessment fieldset { border: 0; border-bottom: 1px solid var(--line); padding: 18px 0; min-width: 0; }
+.loop-assessment legend { line-height: 1.7; }
+.answer-confidence { display: block; margin: 14px 0; max-width: 350px; }
+.answer-confidence select { margin-top: 8px; }
+.knowledge-state-grid { display: grid; grid-template-columns: 100px 1fr; gap: 12px; }
+.knowledge-state-grid dd { margin: 0; }
+.loop-misconception { border-left: 2px dashed #cca1ef; padding-left: 12px; }
+.loop-debug { max-height: 450px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.knowledge-star.review-due .knowledge-star-halo { stroke-dasharray: 5 4; stroke: #d7b577; }
+.knowledge-star.misconception .knowledge-star-halo { stroke: #d5a1e8; stroke-width: 3; }
+.knowledge-star.prerequisite-gap .knowledge-star-halo { stroke: #e0a285; stroke-dasharray: 2 3; }
+@media(max-width:600px) { #learning-loop-panel .button { max-width:100%;white-space:normal; } }

@@ -1,0 +1,60 @@
+{
+  "version": "weighted-evidence-v1",
+  "dimensions": {
+    "understanding": 0.3,
+    "application": 0.3,
+    "transfer": 0.2,
+    "retention": 0.2
+  },
+  "weights": {
+    "lesson_check": 0.35,
+    "quiz_answer": 1.0,
+    "review_answer": 1.6,
+    "transfer_test": 1.4,
+    "diagnostic_test": 0.8,
+    "tutor_interaction": 0.0,
+    "self_explanation": 0.0,
+    "remediation_check": 0.8,
+    "project_evidence": 0.0
+  },
+  "answer_confidence": {
+    "low": 0.6,
+    "medium": 0.85,
+    "high": 1.0,
+    "unknown": 0.8
+  },
+  "hint_multiplier": 0.25,
+  "prior_weight": 1.0,
+  "confidence_prior": 4.0,
+  "mastered_threshold": 0.8,
+  "mastered_confidence": 0.65,
+  "mastered_min_evidence": 6,
+  "weak_threshold": 0.6,
+  "misconception_confirm_errors": 2,
+  "misconception_resolve_successes": 2,
+  "repair_failure_sessions": 2,
+  "max_repair_depth": 3,
+  "max_repair_attempts": 3,
+  "repair_cooldown_minutes": 30,
+  "minimum_delay_hours": 24,
+  "review_intervals_days": [
+    1,
+    3,
+    7,
+    14,
+    30
+  ],
+  "stability_floor_days": 0.5,
+  "forgetting_risk_threshold": 0.5,
+  "return_threshold_days": 7,
+  "return_atom_limit": 4,
+  "review_daily_minutes": 20,
+  "review_minutes_per_atom": 5,
+  "micro_max_characters": 4000,
+  "neutral_prior": 0.5,
+  "confidence_coverage_floor": 0.25,
+  "misconception_initial_confidence": 0.35,
+  "misconception_confidence_increment": 0.2,
+  "misconception_confidence_cap": 0.85,
+  "ai_misconception_confidence_cap": 0.25
+}

@@ -1,0 +1,98 @@
+{
+  "date": "2026-10-02",
+  "scope": "Learning loop P0; additive changes to existing courses, graph, quizzes, ATIE and tutor",
+  "baseline_commit": "d0b27f93091f89512a1387345d27633f85abaeff",
+  "unit_and_http_tests": {
+    "total": 164,
+    "passed": 164,
+    "command": "python3 -m unittest discover -s tests -v",
+    "databases": "temporary; personal learning database not migrated or modified"
+  },
+  "browser": {
+    "runtime": "Playwright / Microsoft Edge headless",
+    "suites": [
+      {
+        "name": "loop",
+        "passed": true
+      },
+      {
+        "name": "presentation",
+        "passed": true
+      },
+      {
+        "name": "atie",
+        "passed": true
+      },
+      {
+        "name": "tutor",
+        "passed": true
+      },
+      {
+        "name": "architecture",
+        "passed": true
+      },
+      {
+        "name": "universe",
+        "passed": true
+      },
+      {
+        "name": "management",
+        "passed": true
+      },
+      {
+        "name": "knowledge",
+        "passed": true
+      },
+      {
+        "name": "production",
+        "passed": true
+      },
+      {
+        "name": "discovery",
+        "passed": true
+      }
+    ],
+    "fixture": "Disposable synthetic courses and mock model; desktop and 390px mobile",
+    "new_loop_scenarios": [
+      "short diagnosis → micro explanation → new assessment → restore origin without chapter advance",
+      "pending assessment survives refresh; deferred task cannot submit or reappear",
+      "state reasons and unknown transfer",
+      "14-day delayed review extends stability",
+      "8-day return detection deduplicates and completes"
+    ]
+  },
+  "real_model": {
+    "fixture": "Synthetic QKV and Multi Head course; no personal course contents sent",
+    "checks": {
+      "short_assessment": {
+        "passed": true
+      },
+      "micro_remediation": {
+        "passed": true,
+        "model_content": true
+      },
+      "open_answer_candidate": {
+        "passed": true
+      }
+    },
+    "outputs": "learning-loop-real-2026-10-02.json",
+    "note": "An earlier structured teaching response failed validation and used the documented course-index fallback. A stricter repair prompt was added; final controlled check returned validated model content. No independent facts or learning outcomes certified."
+  },
+  "static_checks": {
+    "python_ast_files": 63,
+    "javascript_check_files": 18,
+    "passed": true
+  },
+  "boundaries": [
+    "Unknown dimensions remain unmeasured",
+    "No direct mastery writes from AI, user report, reading or import",
+    "Course and session isolation; manual chapter progression",
+    "Time projection does not rewrite persisted historical state",
+    "No human pilot or psychometric validation",
+    "Courses without knowledge index retain section statistics; atom loop requires existing index"
+  ],
+  "files": [
+    "learning-loop-repair.png",
+    "learning-loop-returning.png"
+  ]
+}

@@ -5,7 +5,7 @@ def choose(state,knowledge,feedback,mode):
     if feedback:
         return {'confused':'REPHRASE','formula_confusing':'SIMPLIFY','rephrase':'REPHRASE','visual':'VISUALIZE','example':'EXAMPLE',
                 'deepen':'DEEPEN','backtrack':'BACKTRACK','check':'CHECK','challenge':'CHALLENGE','review':'REVIEW'}[feedback], '根据你当前的提问或反馈调整讲法'
-    if knowledge.get('weak_prerequisite'):return 'BACKTRACK','先补充已有测试显示薄弱的前置知识'
+    if knowledge.get('weak_prerequisite') and not knowledge.get('repair_managed'):return 'BACKTRACK','先补充已有测试显示薄弱的前置知识'
     application=state['assessment_dimensions']['application']
     if application['attempts'] and application['rate']<.6:return 'EXAMPLE','应用题较薄弱，增加情境与案例练习'
     recent=state.get('recent_assessment')

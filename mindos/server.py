@@ -32,7 +32,7 @@ from .web_search import PublicSourceSearch, SearchUnavailable, WebSearch
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
 LOGGER = logging.getLogger("mindos")
-STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
+STATIC = {"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
           "/components/teaching/teaching-blocks.js": ("components/teaching/teaching-blocks.js", "text/javascript; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/components/CourseManager/course-manager.js": ("components/CourseManager/course-manager.js", "text/javascript; charset=utf-8"),
@@ -43,7 +43,7 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/universe.css": ("universe.css", "text/css; charset=utf-8"),
           "/style.css": ("style.css", "text/css; charset=utf-8")}
 ENV_KEYS = {"MINDOS_MODEL_BASE_URL", "MINDOS_CHAT_MODEL", "MINDOS_MODEL_API_KEY",
-            "MINDOS_BRAVE_SEARCH_API_KEY", "MINDOS_DATA_PATH"}
+            "MINDOS_BRAVE_SEARCH_API_KEY", "MINDOS_DATA_PATH", "MINDOS_DEBUG_LEARNING"}
 
 
 class MindOSServer(ThreadingHTTPServer):
@@ -284,6 +284,19 @@ class MindOSHandler(BaseHTTPRequestHandler):
                                  (lesson_id,self._session())).fetchone()
             if not row:raise ValueError('小节不存在')
             self._json(HTTPStatus.OK,self.server.teaching.context(self._session(),row['course_id'],lesson_id))
+        elif re.fullmatch(r'/api/courses/[A-Za-z0-9_-]+/loop(?:/[a-z-]+)?',parsed.path):
+            from .learning.service import LearningLoopService
+            cid=parsed.path.split('/')[3];op=parsed.path.split('/')[-1];service=LearningLoopService(self.server.storage);query=parse_qs(parsed.query)
+            if op=='state':result=service.explain(self._session(),cid,query.get('atom_id',[''])[0])
+            elif op in {'repair','returning'} and query.get('id'):result=service.session(self._session(),cid,op,query['id'][0])
+            elif op=='debug':
+                if os.getenv('MINDOS_DEBUG_LEARNING')!='1':self._json(HTTPStatus.NOT_FOUND,{'error':'页面或接口不存在'});return
+                result=service.snapshot(self._session(),cid)
+                with self.server.storage.connect() as db:
+                    result['recent_evidence']=[dict(r) for r in db.execute('SELECT * FROM learning_evidence WHERE user_id=? AND course_id=? ORDER BY created_at DESC LIMIT 30',(self._session(),cid))]
+                    result['state_history']=[dict(r) for r in db.execute('SELECT * FROM knowledge_state_history WHERE user_id=? AND course_id=? ORDER BY id DESC LIMIT 20',(self._session(),cid))]
+            else:result=service.snapshot(self._session(),cid)
+            self._json(HTTPStatus.OK,result)
         elif re.fullmatch(r'/api/courses/[A-Za-z0-9_-]+/learning-state',parsed.path):
             cid=parsed.path.split('/')[3];course=self._owned_course(cid);query=parse_qs(parsed.query)
             value=query.get('ordinal',[str(course['current_ordinal'])])[0]
@@ -345,6 +358,37 @@ class MindOSHandler(BaseHTTPRequestHandler):
     def _post(self) -> None:
         self._check_local_request()
         path = urlsplit(self.path).path
+        learning=re.fullmatch(r'/api/courses/([A-Za-z0-9_-]+)/loop/([a-z-]+)',path)
+        if learning:
+            from .learning.service import LearningLoopService
+            cid,op=learning.groups();payload=self._request_json(15000);service=LearningLoopService(self.server.storage);user=self._session()
+            self._owned_course(cid)
+            if set(payload)&{'mastery','understanding','application','transfer','retention','score','state'}:raise ValueError('学习状态只能由服务器根据实际答题更新')
+            def optional_model():
+                try:return self._model()
+                except (ValueError,ModelUnavailable):return None
+            if op=='enter':result=service.enter(user,cid,payload.get('return_context')) or {'status':'not_needed'}
+            elif op=='repair-start':result=service.repair_start(user,cid,payload.get('origin_atom_id'),payload.get('return_context'))
+            elif op=='assessment':result=service.assessment(user,cid,payload.get('atom_id'),payload.get('purpose'),optional_model(),payload.get('session_id',''))
+            elif op=='repair-content':result=service.repair_content(user,cid,payload.get('session_id'),optional_model())
+            elif op=='hint':result=service.hint(user,cid,payload.get('quiz_id'),payload.get('question_index'))
+            elif op=='defer':
+                if payload.get('kind') not in {'repair','returning'}:raise ValueError('学习任务类型无效')
+                result=service.defer(user,cid,payload['kind'],payload.get('session_id'))
+            elif op=='self-explanation':
+                atom=self.server.storage.atom(user,cid,payload.get('atom_id'),unlocked=True);answer=payload.get('answer')
+                if not isinstance(answer,str) or not 1<=len(answer)<=2000:raise ValueError('请填写简短解释')
+                from .learning.misconception import MisconceptionEngine
+                candidate=MisconceptionEngine().analyze(optional_model(),{'answer':answer,'atom':atom,'standard_concept':atom['summary'],'goal':atom['why']}) if optional_model() else None
+                from .learning.evidence import append
+                from .learning.state import KnowledgeStateEngine
+                with self.server.storage.connect() as db:
+                    db.execute('BEGIN IMMEDIATE');self.server.storage._manage_owned(db,user,cid)
+                    append(db,user,cid,None,atom['id'],'self_explanation','ai_tutor','signal','self:'+secrets.token_urlsafe(16),code=candidate['code'] if candidate else None,metadata={'answer':answer,'misconception_description':candidate['reason'] if candidate else None,'ai_candidate':candidate})
+                    MisconceptionEngine().update(db,user,cid,atom['id']);KnowledgeStateEngine().update(db,user,cid,atom['id'])
+                result={'candidate':candidate,'affects_mastery':False,'note':'这只是可能误区的提示，不确认掌握，也不替代独立检测。'}
+            else:self._json(HTTPStatus.NOT_FOUND,{'error':'学习接口不存在'});return
+            self._json(HTTPStatus.OK,result);return
         assistant=re.fullmatch(r'/api/courses/([A-Za-z0-9_-]+)/assistant/chat',path)
         if assistant:
             payload=self._request_json(15000)
@@ -720,10 +764,12 @@ class MindOSHandler(BaseHTTPRequestHandler):
             answers = payload.get("answers")
             if not isinstance(answers, list) or any(not isinstance(a, str) for a in answers):
                 raise ValueError("请完成全部题目")
-            result = self.server.storage.submit_quiz(self._session(), course["id"], payload.get("quiz_id"), answers)
+            result = self.server.storage.submit_quiz(self._session(), course["id"], payload.get("quiz_id"), answers,payload.get("confidence"),payload.get("hint_used"),payload.get("response_time_ms"))
             self._json(HTTPStatus.OK, {"result": result, **self._course_public(course["id"])})
         elif path == "/api/sections/advance":
             course = self._owned_course(payload.get("course_id"))
+            from .learning.service import LearningLoopService
+            if LearningLoopService(self.server.storage).snapshot(self._session(),course['id'])['returning_session']:raise ValueError('离开较久，请先完成回忆检测，或明确选择先回看当前小节。')
             expected = payload.get("expected_ordinal")
             if not isinstance(expected, int) or isinstance(expected, bool) or expected != course["current_ordinal"]:
                 raise ValueError("课程进度已变化，请刷新后再试")

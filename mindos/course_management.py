@@ -75,8 +75,21 @@ class CourseManagementStorage:
         for s in sections:
             ids={a['id'] for a in atoms if a['section']==s['ordinal']}
             if ids and ids<=read:done.add(s['ordinal'])
+        completed=db.execute('SELECT content_revision FROM course_final_completion WHERE user_id=? AND course_id=?',(row['session_id'],value['id'])).fetchone()
+        if completed and completed[0]==value['content_revision']:done.update(s['ordinal'] for s in sections)
+        if value['deleted_at']:
+            saved=db.execute('SELECT state_json FROM course_mastery_states WHERE user_id=? AND course_id=?',(row['session_id'],value['id'])).fetchone()
+            state=json.loads(saved[0]) if saved else {}
+            value['course_mastery']={k:state.get(k) for k in ('status','label','mastery_score','mastery_confidence','retention_pending')}
+            value['content_completed']=bool(completed and completed[0]==value['content_revision'])
+        else:
+            from .learning.final import FinalAssessmentService
+            final=FinalAssessmentService(self);context=final._context(row['session_id'],value['id'],db)
+            state=final._analyze(context)
+            value['course_mastery']={k:state[k] for k in ('status','label','mastery_score','mastery_confidence','retention_pending')}
+            value['content_completed']=context['completion']['eligible']
         value['progress']=round(len(done)/len(sections)*100) if sections else 0
-        value['progress_note']='按已进入后续小节、完成章节小测或读完本节全部知识点计算；不代表掌握率'
+        value['progress_note']='按已进入后续小节、完成章节小测或读完本节全部知识点计算；或主动确认内容学完计算；不代表掌握率'
         times=[]
         for table,column in [('tutor_turns','created_at'),('atom_turns','created_at'),('atom_content','created_at'),('learning_events','created_at'),('quizzes','submitted_at')]:
             time=db.execute(f'SELECT MAX({column}) FROM {table} WHERE course_id=?',(value['id'],)).fetchone()[0]
@@ -144,7 +157,7 @@ class CourseManagementStorage:
             drafts=[r[0] for r in db.execute('SELECT id FROM course_drafts WHERE confirmed_course_id=?',(cid,))]
             for draft in drafts:db.execute('DELETE FROM draft_documents WHERE draft_id=?',(draft,))
             db.execute('DELETE FROM course_drafts WHERE confirmed_course_id=?',(cid,))
-            for table in ['loop_events','knowledge_state_history','learning_misconceptions','knowledge_states','learning_evidence','repair_sessions','returning_sessions','loop_activity','content_history','teaching_actions','teaching_feedback','teaching_preferences','lesson_teaching_records','assistant_message','assistant_position','production_batches','source_conflicts','discovery_runs','course_graphs','atom_content','atom_turns','learning_events','quizzes','tutor_turns','sections','source_documents']:
+            for table in ['learning_prediction_outcomes','learning_prediction_snapshots','course_mastery_reports','course_mastery_states','course_repair_plans','final_assessment_plans','course_final_completion','loop_events','knowledge_state_history','learning_misconceptions','knowledge_states','learning_evidence','repair_sessions','returning_sessions','loop_activity','content_history','teaching_actions','teaching_feedback','teaching_preferences','lesson_teaching_records','assistant_message','assistant_position','production_batches','source_conflicts','discovery_runs','course_graphs','atom_content','atom_turns','learning_events','quizzes','tutor_turns','sections','source_documents']:
                 db.execute(f'DELETE FROM {table} WHERE course_id=?',(cid,))
             db.execute('DELETE FROM courses WHERE id=? AND session_id=?',(cid,session))
 

@@ -16,7 +16,7 @@ class LearningLoopService:
    rows=db.execute('SELECT atom_id,state_json FROM knowledge_states WHERE user_id=? AND course_id=?',(user,cid)).fetchall()
    mis=[dict(r) for r in db.execute("SELECT * FROM learning_misconceptions WHERE user_id=? AND course_id=? AND status!='resolved'",(user,cid))]
    repairs=[dict(r) for r in db.execute("SELECT * FROM repair_sessions WHERE user_id=? AND course_id=? AND status IN ('diagnostic','teaching','checking')",(user,cid))]
-   pending=[self.store._quiz_public(dict(r))|{'atom_id':r['target_atom_id'],'session_id':r['loop_session_id']} for r in db.execute("""SELECT * FROM quizzes q WHERE course_id=? AND assessment_kind!='chapter_quiz' AND submitted_at IS NULL
+   pending=[self.store._quiz_public(dict(r))|{'atom_id':r['target_atom_id'],'session_id':r['loop_session_id']} for r in db.execute("""SELECT * FROM quizzes q WHERE course_id=? AND assessment_kind NOT IN ('chapter_quiz','final_concept','final_application','final_transfer','final_retention') AND submitted_at IS NULL
     AND (loop_session_id='' OR EXISTS(SELECT 1 FROM repair_sessions s WHERE s.id=q.loop_session_id AND s.status IN ('diagnostic','teaching','checking'))
     OR EXISTS(SELECT 1 FROM returning_sessions s WHERE s.id=q.loop_session_id AND s.status='pending')) ORDER BY rowid DESC""",(cid,))]
    returns=[dict(r) for r in db.execute("SELECT * FROM returning_sessions WHERE user_id=? AND course_id=? AND status='pending'",(user,cid))]
@@ -135,15 +135,19 @@ class LearningLoopService:
    if referenced['section']!=ordinal:raise ValueError('返回知识点与小节不一致')
   return {'course_id':course['id'],'section_ordinal':ordinal,'knowledge_atom_id':atom,'atom_mode':context.get('atom_mode','quick') if context.get('atom_mode','quick') in {'quick','deep'} else 'quick','view':context.get('view','learn') if context.get('view','learn') in {'learn','stars'} else 'learn','scroll_y':scroll}
 
- def repair_start(self,user,cid,origin,context=None,at=None):
+ def repair_start(self,user,cid,origin,context=None,at=None,*,course_decision=None):
   atom=self.store.atom(user,cid,origin,unlocked=True);loop=self.snapshot(user,cid,at);at=at or clock()
   decision=next((d for d in loop['decisions'] if d.get('metadata',{}).get('origin_atom_id')==origin and d['action']=='remediate'),None)
+  if course_decision is not None:decision=course_decision
   if not decision:raise ValueError('当前证据不足以启动补强，先做一次独立检测。')
   if loop['active_repair']:return loop['active_repair']
   course=self.store._knowledge_course(user,cid);context=self.return_context(course,context,user)
   target=decision['target_atom_id'];self.store.atom(user,cid,target,unlocked=True)
   with self.store.connect() as db:
    db.execute('BEGIN IMMEDIATE');self.store._manage_owned(db,user,cid)
+   if course_decision is not None:
+    row=db.execute("SELECT id,targets_json FROM course_repair_plans WHERE user_id=? AND course_id=? AND status='active'",(user,cid)).fetchone()
+    if not row or row['id']!=course_decision['metadata']['course_repair_plan_id'] or not any(t['origin_atom_id']==origin and t['atom_id']==target and t['status']!='completed' for t in json.loads(row['targets_json'])):raise ValueError('终局补强计划已变化，请刷新')
    active=db.execute("SELECT id FROM repair_sessions WHERE user_id=? AND course_id=? AND status IN ('diagnostic','teaching','checking')",(user,cid)).fetchone()
    if active:return self.session(user,cid,'repair',active[0])
    past=db.execute('SELECT started_at FROM repair_sessions WHERE user_id=? AND course_id=? AND origin_atom_id=? AND target_atom_id=? ORDER BY started_at DESC',(user,cid,origin,target)).fetchall()
@@ -151,6 +155,11 @@ class LearningLoopService:
    if past and (at-date(past[0][0])).total_seconds()<POLICY['repair_cooldown_minutes']*60:raise ValueError('刚进行过补强，请先回看解释，再稍后检测。')
    sid=secrets.token_urlsafe(16)
    db.execute('INSERT INTO repair_sessions(id,user_id,course_id,origin_atom_id,target_atom_id,trigger_reason,status,depth,started_at,return_context_json) VALUES(?,?,?,?,?,?,?,?,?,?)',(sid,user,cid,origin,target,decision['reason_code'],'diagnostic',decision['metadata']['depth'],iso(at),json.dumps(context)))
+   if course_decision is not None:
+    targets=json.loads(row['targets_json'])
+    for entry in targets:
+     if entry['atom_id']==target and entry['origin_atom_id']==origin:entry['repair_session_id']=sid
+    db.execute('UPDATE course_repair_plans SET targets_json=? WHERE id=?',(json.dumps(targets),row['id']))
    event(db,user,cid,'repair_started',{'session_id':sid,'decision':decision},at)
   return self.snapshot(user,cid,at)['active_repair']
 
@@ -249,6 +258,9 @@ class LearningLoopService:
    db.execute('BEGIN IMMEDIATE');self.store._manage_owned(db,user,cid)
    row=db.execute('SELECT * FROM quizzes WHERE id=? AND course_id=? AND submitted_at IS NULL',(quiz_id,cid)).fetchone()
    if not row:raise ValueError('测试不存在或已提交')
+   if row['scope']=='final':
+    from .final import validate_submission
+    validate_submission(db,user,cid,row)
    answers=json.loads(row['answers_json'])
    if type(index) is not int or not 0<=index<len(answers):raise ValueError('题号无效')
    hints=json.loads(row['hint_flags_json']) or [False]*len(answers);hints[index]=True

@@ -332,6 +332,7 @@ function renderCourse(data) {
     : '先学习当前小节，再决定是否进入下一节。';
   MindOSUniverse.renderCourse(data);
   MindOSLearningLoop.render(data);
+  MindOSCourseFinal.render(data);
 }
 
 function respondToTeaching({kind,question,button,referenceTurn,selfExplanation,checkQuestion,courseId=state.courseId,ordinal=state.data?.section.ordinal}){

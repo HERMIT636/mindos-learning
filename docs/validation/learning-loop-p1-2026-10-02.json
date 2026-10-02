@@ -1,0 +1,89 @@
+{
+  "date": "2026-10-02",
+  "baseline_commit": "e446f5a9dec2679b627041c63565052422af5b22",
+  "test_data": "Disposable databases and synthetic courses only. Personal learning records were not read or written.",
+  "automated_tests": {
+    "directory": "release/github-publish",
+    "command": "python3 -m unittest discover -s tests -v",
+    "total": 200,
+    "passed": 200,
+    "baseline_regression_tests": 164,
+    "new_p1_tests": 36,
+    "result": "passed",
+    "runtime_python": "3.14.4",
+    "pypdf": "6.10.0"
+  },
+  "browser": {
+    "engine": "Edge via Playwright",
+    "desktop": [
+      1440,
+      1100
+    ],
+    "mobile": [
+      390,
+      844
+    ],
+    "final_after_last_changes": "passed",
+    "regression_suites": [
+      "final",
+      "loop",
+      "presentation",
+      "universe",
+      "management"
+    ],
+    "regression_result": "All five passed; final was rechecked after final-specific UI and transaction adjustments.",
+    "checks": [
+      "content completion is separate from mastery",
+      "pending plan and question survive refresh",
+      "concept/application/novel scenario questions",
+      "unknown retention remains unknown",
+      "report and cached explanation",
+      "course repair reuses P0 diagnosis/micro teaching/check",
+      "targeted reassessment after repair",
+      "origin restored without advancing chapters",
+      "defer with gaps survives refresh and rejects old submission",
+      "floating mentor shows actual final question context",
+      "mobile without horizontal overflow",
+      "no browser page errors"
+    ]
+  },
+  "real_model": {
+    "result": {
+      "final_concept": true,
+      "final_application": true,
+      "final_transfer": true,
+      "final_completion": true,
+      "evidence_boundary": true,
+      "report_explanation": true,
+      "micro_remediation": true
+    },
+    "artifact": "learning-loop-p1-real-2026-10-02.json",
+    "report_summary_initial_fallback": true,
+    "focused_summary_recheck_after_negation_fix": "passed",
+    "boundary": "Real provider structure checks with synthetic data, not a real-user learning outcome study or factual certification."
+  },
+  "performance_monitor": {
+    "synthetic_answers": 20,
+    "history_rows_before": 3,
+    "history_rows_after": 23,
+    "history_bytes_after": 35555,
+    "context_select_count": 11,
+    "bounded_read": true,
+    "history_growth": "one history row per actual atom-state update; old history retained"
+  },
+  "preserved": {
+    "p0_state_engine": true,
+    "weighted_evidence_v1": true,
+    "quiz_grading_endpoint": true,
+    "course_atom_graph_models": true,
+    "explicit_chapter_progression": true,
+    "course_isolation": true
+  },
+  "policy_sha256": "d16ad38855194c0410e0fae45e838ee378fa76bf84bf4fccd93197655cf6cabc",
+  "limits": [
+    "First version transfer uses unfamiliar scenario MCQ and private rubric; open-answer grading is not implemented.",
+    "Lexical similarity checking cannot independently prove semantic novelty or answer truth.",
+    "Initial course rules are not empirically calibrated; no automatic training or policy tuning.",
+    "Long-term memory requires independent delayed recall; immediate repair success does not certify mastery."
+  ]
+}

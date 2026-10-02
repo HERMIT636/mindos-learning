@@ -89,6 +89,12 @@ class CourseTutorService:
     def context(self,session,cid,current,message):
         course=self.store._knowledge_course(session,cid)
         if not isinstance(current,dict):raise ValueError('当前学习上下文格式无效')
+        from .learning.final import FinalAssessmentService
+        final=FinalAssessmentService(self.store).status(session,cid)
+        final_quiz=final['current_quiz'] if final['plan'] and final['plan']['status']=='active' and not final['plan']['stale'] else None
+        if final_quiz:
+            target=self.store.atom(session,cid,final_quiz['item']['atom_id'],unlocked=True)
+            current={**current,'section_ordinal':target['section'],'knowledge_atom_id':target['id']}
         ordinal=current.get('section_ordinal',course['current_ordinal'])
         if type(ordinal) is not int or not 1<=ordinal<=course['current_ordinal']:raise ValueError('当前小节尚未开放')
         section=course['sections'][ordinal-1];atom_id=current.get('knowledge_atom_id');atom=None
@@ -128,6 +134,10 @@ class CourseTutorService:
                                   'recent_learning_events':recent,'recent_learning_content':recent_content,'rule':'阅读和聊天不是掌握证据；正确率只来自独立测试'},
                  'course_materials':materials,'source_conflicts':self.store.conflicts(session,cid),
                  'pending_quiz_questions':pending, 'learning_loop':learning.get('learning_loop',{})}
+        if final_quiz:
+            context['assessment_mode']='final'
+            context['pending_quiz_questions']=[final_quiz['questions']]
+            context['final_assessment']={'dimension':final_quiz['item']['dimension'],'course_state':final['mastery_state'],'guidance':'先引导独立思考，只给方向或问题；只有用户明确要求标准答案才可以直接解答。任何求助均保存 hint_used，不作为独立终局证据。'}
         from .teaching import TeachingOrchestrator
         context['teaching_context'] = TeachingOrchestrator(self.store).context(session,cid,section['id'])
         return course,context,atoms

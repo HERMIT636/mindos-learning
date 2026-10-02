@@ -1,0 +1,582 @@
+{
+  "date": "2026-10-02",
+  "fixture": "Synthetic Transformer/QKV course in a disposable database. No personal course data sent.",
+  "checks": {
+    "final_concept": {
+      "passed": true,
+      "entries": [
+        {
+          "questions": [
+            {
+              "prompt": "在自注意力机制中，查询（Query）、键（Key）和值（Value）各自的核心角色分别是什么？",
+              "choices": {
+                "a": "查询用于计算匹配得分，键用于提供内容，值用于表达当前需求。",
+                "b": "查询用于表达当前需求，键用于提供内容，值用于计算匹配得分。",
+                "c": "查询用于表达当前需求，键用于与查询匹配，值用于提供匹配后要取出的内容。",
+                "d": "查询用于提供内容，键用于计算匹配得分，值用于表达当前需求。"
+              },
+              "assessment_type": "concept",
+              "atom_ids": [
+                "qkv"
+              ]
+            }
+          ],
+          "generated": true
+        },
+        {
+          "questions": [
+            {
+              "prompt": "关于“注意力加权”，下列哪一项最准确地描述了它的工作方式？",
+              "choices": {
+                "a": "先给所有内容分配相同的权重，再取平均值，因此每个部分对结果的贡献完全一样。",
+                "b": "根据查询与各键的匹配程度计算出权重，权重总和为一，再把对应的值按这些权重组合起来。",
+                "c": "直接把查询和值相加得到输出，键在这个过程中只用来存储结果，不参与权重计算。",
+                "d": "按匹配程度挑出唯一最相关的一份内容，丢弃其余内容，因此输出只来自单个值。"
+              },
+              "assessment_type": "concept",
+              "atom_ids": [
+                "weighted"
+              ]
+            }
+          ],
+          "generated": true
+        },
+        {
+          "questions": [
+            {
+              "prompt": "在注意力机制中，查询表达“当前需要什么信息”，键用于“匹配查询和候选内容”，值提供“匹配后要取出的实际内容”。现在有一个场景：系统收到一个查询向量，需要从三本笔记中提取相关内容。每本笔记都有一个键向量和一个值向量。系统先计算查询与每本笔记键向量的匹配分数，再经 softmax 得到权重，最后用这些权重加权组合值向量。请问在这个过程中，键和值各自扮演什么角色？",
+              "choices": {
+                "a": "键提供最终要组合的内容，值用于与查询匹配以确定权重",
+                "b": "键用于与查询匹配以确定权重，值提供最终要组合的内容",
+                "c": "键和值都用于与查询匹配，最终输出是匹配分数的加权和",
+                "d": "键和值都提供最终要组合的内容，匹配权重由查询自身决定"
+              },
+              "assessment_type": "concept",
+              "atom_ids": [
+                "qkv"
+              ]
+            }
+          ],
+          "generated": true
+        },
+        {
+          "questions": [
+            {
+              "prompt": "在注意力加权中，若查询与各键的匹配分数经归一化后得到权重0.7、0.2、0.1，对应的值向量分别为V1、V2、V3，则最终输出是什么？",
+              "choices": {
+                "a": "0.7×V1 + 0.2×V2 + 0.1×V3",
+                "b": "V1 + V2 + V3",
+                "c": "将V1、V2、V3按权重从大到小排序后拼接",
+                "d": "直接选择权重最大的V1作为输出"
+              },
+              "assessment_type": "concept",
+              "atom_ids": [
+                "weighted"
+              ]
+            }
+          ],
+          "generated": true
+        }
+      ]
+    },
+    "final_application": {
+      "passed": true,
+      "entries": [
+        {
+          "questions": [
+            {
+              "prompt": "某学生用注意力加权来汇总三条学习资料：资料A与当前问题的匹配得分最高，资料B次之，资料C最低。已知三条资料的注意力权重分别为0.6、0.3、0.1，且权重之和为1。关于最终结果，下列哪项判断最符合注意力加权的工作方式？",
+              "choices": {
+                "a": "最终结果由资料A单独决定，因为它的权重最大，其余资料只是陪衬",
+                "b": "最终结果是三条资料按0.6、0.3、0.1的权重混合而成，资料A的影响最大但仍会保留B和C的一部分信息",
+                "c": "最终结果只取决于资料C，因为权重最小的内容往往是被模型忽略后仍需保留的关键细节",
+                "d": "最终结果与权重无关，只取决于三条资料本身的内容长度"
+              },
+              "assessment_type": "application",
+              "atom_ids": [
+                "weighted"
+              ]
+            }
+          ],
+          "generated": true
+        },
+        {
+          "questions": [
+            {
+              "prompt": "在一个注意力机制中，当前查询与三个键的匹配分数经归一化后得到权重：键A为0.5，键B为0.3，键C为0.2。对应的值分别是：值A（内容：数学），值B（内容：物理），值C（内容：化学）。系统按权重组合这些值。关于最终输出，下列哪项最符合这种组合方式？",
+              "choices": {
+                "a": "最终输出由值A单独决定，因为它的权重最大，注意力只选择最强匹配的一项。",
+                "b": "最终输出是一个混合表示，约50%来自数学、30%来自物理、20%来自化学，按权重加权求和。",
+                "c": "最终输出是一个混合表示，但权重需要重新归一化，因为0.5+0.3+0.2不等于1。",
+                "d": "最终输出由值与权重的乘积直接取最大值，即选择0.5、0.3、0.2中最大的权重对应的值，忽略其他值。"
+              },
+              "assessment_type": "application",
+              "atom_ids": [
+                "qkv"
+              ]
+            }
+          ],
+          "generated": true
+        }
+      ]
+    },
+    "final_transfer": {
+      "passed": true,
+      "entries": [
+        {
+          "questions": [
+            {
+              "prompt": "根据QKV机制，下列哪项最准确地描述了系统为当前用户生成最终推荐时，查询、键和值分别发挥的作用？",
+              "choices": {
+                "a": "查询向量用于和每首歌比较匹配，键向量表达用户当前需求，值向量用于存储每首歌的权重。",
+                "b": "查询向量表达用户当前需求，键向量用于和查询比较匹配程度，值向量提供被加权组合的歌曲特征。",
+                "c": "查询向量和键向量都用于最终输出组合，值向量只用来计算匹配分数，不参与输出。",
+                "d": "查询向量提供歌曲特征，键向量表达用户需求，值向量用于计算每首歌的注意力权重。"
+              },
+              "assessment_type": "transfer",
+              "atom_ids": [
+                "qkv"
+              ],
+              "scenario": "某音乐App的“智能歌单补全”功能使用一个注意力模块来推荐歌曲。当前用户正在跑步，系统生成了一个查询向量，它表达“需要节奏快、能提振精神的音乐”。候选歌曲池中有三首歌，系统已经为每首歌计算了一个键向量，用于和查询向量比较匹配程度。匹配分数经过softmax归一化后，得到三首歌的权重：歌曲甲0.7，歌曲乙0.2，歌曲丙0.1。每首歌对应一个值向量，里面编码了歌曲的节奏、情绪等实际特征。系统最终要把这些值向量按权重组合起来，生成推荐结果。",
+              "difficulty": "standard"
+            }
+          ],
+          "generated": true,
+          "private_rubric_for_synthetic_validation": [
+            {
+              "id": "role_query",
+              "criterion": "答案正确指出查询向量表达当前用户的需求或当前任务目标，而不是用于被匹配的静态属性。"
+            },
+            {
+              "id": "role_key",
+              "criterion": "答案正确指出键向量用于与查询向量比较匹配程度，决定每首歌获得多少注意力权重。"
+            },
+            {
+              "id": "role_value",
+              "criterion": "答案正确指出值向量提供被加权取出的实际内容（歌曲特征），最终输出是值向量的加权组合。"
+            },
+            {
+              "id": "no_position_confusion",
+              "criterion": "答案没有把查询和键的角色颠倒，也没有把值理解为仅用于计算权重。"
+            }
+          ],
+          "novelty_check": {
+            "passed": true,
+            "normalized_similarity": 0.259,
+            "keyword_overlap": 0.127,
+            "rule": "lexical-novelty-v1",
+            "boundary": "文本重复防护不能独立证明语义陌生或题目事实正确。"
+          }
+        },
+        {
+          "questions": [
+            {
+              "prompt": "根据注意力加权机制，下列哪项最准确地描述了系统生成综合调度方案时，需求向量、供给向量和车辆状态向量的作用？",
+              "choices": {
+                "a": "需求向量是查询，供给向量是键，车辆状态向量是值；最终方案是各储备点车辆状态向量的加权组合。",
+                "b": "需求向量是查询，供给向量是值，车辆状态向量是键；最终方案是各储备点车辆状态向量的加权组合。",
+                "c": "需求向量是键，供给向量是查询，车辆状态向量是值；最终方案只取权重最高的储备点甲的车辆状态向量。",
+                "d": "需求向量是值，供给向量是键，车辆状态向量是查询；最终方案是各储备点车辆状态向量的简单平均。"
+              },
+              "assessment_type": "transfer",
+              "atom_ids": [
+                "weighted"
+              ],
+              "scenario": "一个城市公共自行车调度系统需要决定把哪些车从储备点运到哪些站点。系统给每个站点计算一个“需求向量”（表示该站需要车的急迫程度和时段特点），给每个储备点计算一个“供给向量”（表示该储备点可提供车的特征）。系统用需求向量与各储备点的供给向量比较匹配程度，匹配分数经softmax归一化后得到三个储备点的调度权重：储备点甲0.65，储备点乙0.25，储备点丙0.10。每个储备点还有一个“车辆状态向量”，编码了该点车辆的实际数量、车况和电池电量。调度系统最终按这些权重把车辆状态向量组合起来，生成一个综合调度方案。",
+              "difficulty": "standard"
+            }
+          ],
+          "generated": true,
+          "private_rubric_for_synthetic_validation": [
+            {
+              "id": "rubric_role_mapping",
+              "criterion": "能正确匹配：需求向量相当于查询，供给向量相当于键，车辆状态向量相当于值。"
+            },
+            {
+              "id": "rubric_weighted_combination",
+              "criterion": "能说明最终方案是按匹配权重把各储备点的车辆状态向量组合起来，而不是只取权重最大的一个。"
+            },
+            {
+              "id": "rubric_weight_sum",
+              "criterion": "能识别权重0.65、0.25、0.10之和为1，且权重来自需求向量与供给向量的匹配程度。"
+            }
+          ],
+          "novelty_check": {
+            "passed": true,
+            "normalized_similarity": 0.3992,
+            "keyword_overlap": 0.2019,
+            "rule": "lexical-novelty-v1",
+            "boundary": "文本重复防护不能独立证明语义陌生或题目事实正确。"
+          }
+        }
+      ]
+    },
+    "final_completion": {
+      "passed": true,
+      "status": "completed",
+      "total_items": 8,
+      "stages": 2
+    },
+    "evidence_boundary": {
+      "passed": true,
+      "mastery_state": {
+        "status": "needs_reinforcement",
+        "label": "还有几个知识点值得巩固",
+        "completion_ratio": 1.0,
+        "mastery_score": 0.7917,
+        "mastery_confidence": 0.4256,
+        "understanding": 0.8333,
+        "application": 0.75,
+        "transfer": 0.7917,
+        "retention": null,
+        "dimension_coverage": {
+          "understanding": 1.0,
+          "application": 1.0,
+          "transfer": 1.0,
+          "retention": 0.0
+        },
+        "critical_atoms_total": 2,
+        "critical_atoms_mastered": 0,
+        "critical_atoms_weak": 0,
+        "critical_atoms_unknown": 2,
+        "stable_atoms": [],
+        "weak_atoms": [],
+        "unknown_atoms": [
+          {
+            "id": "qkv",
+            "title": "QKV",
+            "section": 1,
+            "critical": true,
+            "knowledge_state": {
+              "knowledge_atom_id": "qkv",
+              "mastery": 0.7917,
+              "understanding": 0.8333,
+              "application": 0.75,
+              "transfer": 0.7917,
+              "retention": null,
+              "confidence": 0.4256,
+              "stability": 1,
+              "evidence_count": 5,
+              "graded_evidence_count": 4,
+              "last_evidence_at": "2026-10-02T08:56:54+00:00",
+              "last_graded_evidence_at": "2026-10-02T08:56:54+00:00",
+              "last_independent_success_at": "2026-10-02T08:56:54+00:00",
+              "last_success_at": "2026-10-02T08:56:54+00:00",
+              "last_reviewed_at": null,
+              "next_review_at": "2026-10-03T08:56:54+00:00",
+              "successful_reviews": 0,
+              "consecutive_errors": 0,
+              "failed_sessions": 0,
+              "state": "learning",
+              "version": 5,
+              "policy_version": "weighted-evidence-v1",
+              "updated_at": "2026-10-02T08:56:54+00:00",
+              "effective_mastery": 0.7917,
+              "effective_retention": 0.7917,
+              "forgetting_risk": 0.0,
+              "retention_is_estimate": true
+            }
+          },
+          {
+            "id": "weighted",
+            "title": "注意力加权",
+            "section": 2,
+            "critical": true,
+            "knowledge_state": {
+              "knowledge_atom_id": "weighted",
+              "mastery": 0.7917,
+              "understanding": 0.8333,
+              "application": 0.75,
+              "transfer": 0.7917,
+              "retention": null,
+              "confidence": 0.4256,
+              "stability": 1,
+              "evidence_count": 5,
+              "graded_evidence_count": 4,
+              "last_evidence_at": "2026-10-02T08:56:56+00:00",
+              "last_graded_evidence_at": "2026-10-02T08:56:56+00:00",
+              "last_independent_success_at": "2026-10-02T08:56:56+00:00",
+              "last_success_at": "2026-10-02T08:56:56+00:00",
+              "last_reviewed_at": null,
+              "next_review_at": "2026-10-03T08:56:56+00:00",
+              "successful_reviews": 0,
+              "consecutive_errors": 0,
+              "failed_sessions": 0,
+              "state": "learning",
+              "version": 5,
+              "policy_version": "weighted-evidence-v1",
+              "updated_at": "2026-10-02T08:56:56+00:00",
+              "effective_mastery": 0.7917,
+              "effective_retention": 0.7917,
+              "forgetting_risk": 0.0,
+              "retention_is_estimate": true
+            }
+          }
+        ],
+        "misconception_atoms": [],
+        "review_due_atoms": [],
+        "guards": {
+          "CONTENT_COMPLETE": true,
+          "FINAL_COMPLETED": true,
+          "OVERALL_SCORE": true,
+          "CRITICAL_FLOOR": true,
+          "STATE_CONFIDENCE": false,
+          "UNDERSTANDING_COVERAGE": true,
+          "APPLICATION_COVERAGE": true,
+          "TRANSFER_COVERAGE": true,
+          "NO_CONFIRMED_MISCONCEPTION": true,
+          "INDEPENDENT_FINAL": true,
+          "FINAL_TRANSFER": true
+        },
+        "reasons": [
+          {
+            "code": "STATE_CONFIDENCE",
+            "message": "系统判断所依据的证据量或维度覆盖不足。"
+          }
+        ],
+        "final_independent_answers": 6,
+        "final_accuracy": 1.0,
+        "retention_pending": true,
+        "policy_version": "course-final-v1",
+        "state_policy_version": "weighted-evidence-v1",
+        "boundary": "课程进度不是掌握证明。结论来自规则与答题证据；未知维度不补分，长期记忆未测时不能声称全面掌握。题目未经教师认证。"
+      }
+    },
+    "report_explanation": {
+      "passed": true,
+      "summary": {
+        "status": "needs_reinforcement",
+        "summary": "这份报告针对的是《Transformer基础：QKV与注意力》。系统给出的状态是“还有几个知识点值得巩固”，原因在于判断时所依据的证据量或维度覆盖不足。需要区分两个层面：把课程内容看过、听懂了，属于“内容学完”；而能力证据是指通过足够多且覆盖到位的新题，稳定地展示出你会用、能判断。现在缺少的正是后者的证据，所以不能下结论说已经稳固掌握。当前没有明确被判定为薄弱的知识点，所以不能声称任何内容已被证实薄弱；QKV和注意力加权被列为“证据不足”，只是说验证不够充分，还不代表它们一定有问题。长期记忆方面尚未测得，需要按照延迟回忆的方式再验证，现在先当作待验证状态。下一步不必整门课重学，建议只补当前的关键缺口，然后用新题来做验证；同时沿用现有复习建议和间隔，安排一次延迟回忆。这样既不夸大现有证据，也能把“学过”逐步转成“有证据会用”。"
+      },
+      "program_status": "needs_reinforcement",
+      "initial_fallback": true,
+      "validation_route": "Focused real-provider summary check against the previously validated synthetic program snapshot after correcting negation handling. No scores or state changed."
+    },
+    "micro_remediation": {
+      "passed": true,
+      "blocks": [
+        {
+          "type": "question",
+          "title": "先想一想",
+          "content": "你在图书馆想找一本关于恐龙的书。你会对电脑输入“恐龙”，然后电脑在每本书的标签里找相符的，最后把书的内容给你。\n\n这个过程中，哪一部分是在“表达需要”？哪一部分是在“提供匹配线索”？哪一部分是“真正拿到的内容”？"
+        },
+        {
+          "type": "example",
+          "title": "图书检索例子",
+          "content": "假设你去图书馆找书，整个过程分三步：\n\n第一，你心里想“我要关于恐龙的书”。这个“恐龙”就是你的查询，它表达你的需求。\n\n第二，每本书侧面都有一个标签，写着“恐龙”“植物”“宇宙”等。这些标签就是键，它们负责被拿来和你的查询做匹配。\n\n第三，标签和“恐龙”对上后，你从书架上抽出的那本书的正文内容，就是值，它提供你真正要取走的信息。\n\n注意：是你的查询“恐龙”在表达需求，不是标签；是标签“恐龙”在负责匹配，不是你的查询去贴标签。这里如果反过来，就正好把Q和K对调了。"
+        },
+        {
+          "type": "diagram",
+          "title": "角色关系图",
+          "data": {
+            "nodes": [
+              {
+                "id": "q",
+                "label": "查询：表达需要（恐龙）"
+              },
+              {
+                "id": "k",
+                "label": "键：提供匹配线索（标签）"
+              },
+              {
+                "id": "v",
+                "label": "值：提供实际内容（书正文）"
+              }
+            ],
+            "edges": [
+              {
+                "from": "q",
+                "to": "k",
+                "label": "查询去和键做匹配"
+              },
+              {
+                "from": "k",
+                "to": "v",
+                "label": "匹配成功后取出对应的值"
+              }
+            ]
+          }
+        },
+        {
+          "type": "concept",
+          "title": "一句话区分三个角色",
+          "content": "查询表达“我现在需要什么”；键表达“我有什么特征可以被匹配”；值是“匹配上之后要取走的内容”。\n\n三者身份不同：查询主动提出需求，键被动等待被匹配，值负责提供最终信息。不要因为查询和键都常和“词”有关就把它们的作用对调。"
+        },
+        {
+          "type": "checkpoint",
+          "title": "自查一下",
+          "content": "如果我把图书馆例子里的“你输入的恐龙”和“书侧面的标签”互换说法，说成“标签表达需求、输入负责匹配”，这就犯了哪种典型错误？\n\n请用一句话说出：在这个例子里，查询、键、值分别对应什么。"
+        }
+      ],
+      "fallback": false,
+      "note": null,
+      "return_context": {
+        "course_id": "qHsXzlkT4hmDMYHF9JMbqw",
+        "section_ordinal": 2,
+        "knowledge_atom_id": null,
+        "atom_mode": "quick",
+        "view": "learn",
+        "scroll_y": 0
+      }
+    }
+  },
+  "boundary": "This checks interface behavior and synthetic question structure, not teaching effectiveness or certified correctness.",
+  "diagnostics": [
+    {
+      "stage": "final_question",
+      "raw": "{\n  \"questions\": [\n    {\n      \"prompt\": \"在自注意力机制中，查询（Query）、键（Key）和值（Value）各自的核心角色分别是什么？\",\n      \"choices\": {\n        \"a\": \"查询用于计算匹配得分，键用于提供内容，值用于表达当前需求。\",\n        \"b\": \"查询用于表达当前需求，键用于提供内容，值用于计算匹配得分。\",\n        \"c\": \"查询用于表达当前需求，键用于与查询匹配，值用于提供匹配后要取出的内容。\",\n        \"d\": \"查询用于提供内容，键用于计算匹配得分，值用于表达当前需求。\"\n      },\n      \"answer\": \"c\",\n      \"explanation\": \"查询表达当前需要什么信息；键用于与查询进行匹配，决定哪些位置相关；值提供匹配后实际要聚合的内容。因此选项c正确。选项a、b、d都错误地交换了查询、键、值的角色。\",\n      \"atom_ids\": [\"qkv\"],\n      \"assessment_type\": \"concept\"\n    }\n  ]\n}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "final_question"
+    },
+    {
+      "stage": "final_question",
+      "raw": "{\"questions\":[{\"prompt\":\"关于“注意力加权”，下列哪一项最准确地描述了它的工作方式？\",\"choices\":{\"a\":\"先给所有内容分配相同的权重，再取平均值，因此每个部分对结果的贡献完全一样。\",\"b\":\"根据查询与各键的匹配程度计算出权重，权重总和为一，再把对应的值按这些权重组合起来。\",\"c\":\"直接把查询和值相加得到输出，键在这个过程中只用来存储结果，不参与权重计算。\",\"d\":\"按匹配程度挑出唯一最相关的一份内容，丢弃其余内容，因此输出只来自单个值。\"},\"answer\":\"b\",\"explanation\":\"注意力加权的核心是：先用匹配程度确定各部分内容的权重，并让权重总和为一，再按这些权重把对应的值组合成输出。选项A忽略了权重由匹配程度决定；选项C错误地把键排除在权重计算之外；选项D把加权组合误解为只保留单一内容。\",\"atom_ids\":[\"weighted\"],\"assessment_type\":\"concept\"}]}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "final_question"
+    },
+    {
+      "stage": "final_question",
+      "raw": "{\"questions\":[{\"prompt\":\"某学生用注意力加权来汇总三条学习资料：资料A与当前问题的匹配得分最高，资料B次之，资料C最低。已知三条资料的注意力权重分别为0.6、0.3、0.1，且权重之和为1。关于最终结果，下列哪项判断最符合注意力加权的工作方式？\",\"choices\":{\"a\":\"最终结果由资料A单独决定，因为它的权重最大，其余资料只是陪衬\",\"b\":\"最终结果是三条资料按0.6、0.3、0.1的权重混合而成，资料A的影响最大但仍会保留B和C的一部分信息\",\"c\":\"最终结果只取决于资料C，因为权重最小的内容往往是被模型忽略后仍需保留的关键细节\",\"d\":\"最终结果与权重无关，只取决于三条资料本身的内容长度\"},\"answer\":\"b\",\"explanation\":\"注意力加权先把不同内容按相关程度分配权重，再按这些权重把各份内容组合起来。权重0.6、0.3、0.1之和为1，说明三者都参与组合，只是资料A贡献最大、资料B次之、资料C最少，因此最终结果不是由A单独决定，也并非与权重无关。\",\"atom_ids\":[\"weighted\"],\"assessment_type\":\"application\"}]}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "final_question"
+    },
+    {
+      "stage": "final_question",
+      "raw": "{\"questions\":[{\"prompt\":\"你在实现一个简易注意力模块：用当前查询 q 与每个键 k 计算匹配得分，再按得分权重对值 v 做加权组合。某一步中，你把某个键的匹配得分算得很大，而另外一些键的得分很小。关于随后的输出，下列哪项判断最符合 QKV 的工作方式？\",\"choices\":{\"a\":\"匹配得分高的键所对应的值会对输出产生更大影响，因为得分经归一化后成为组合各值的权重\",\"b\":\"匹配得分高的键本身会作为输出内容，因为键代表要取出的信息\",\"c\":\"匹配得分小的键对应的值会被完全相同地并入输出，因为所有值都必须等量使用\",\"d\":\"查询 q 会直接被加到输出上，因为查询代表最终要汇总的信息\"},\"answer\":\"a\",\"explanation\":\"匹配得分反映查询与各键的匹配程度，归一化后成为权重，用来对相应的值加权组合，因此得分高的键对应的值贡献更大。键只负责匹配，不直接作为输出内容；值不是等量并入；查询也不是被直接加到输出上的汇总内容。\",\"atom_ids\":[\"qkv\"],\"assessment_type\":\"application\",\"misconceptions\":{\"b\":\"把键误当成要取出的内容，忽略值才是提供内容的部分\",\"c\":\"忽略按匹配程度加权，误以为所有值等量合并\",\"d\":\"把查询误当成最终输出内容，忽略查询用于表达当前需要\"}}]}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "final_question"
+    },
+    {
+      "stage": "final_question_validation",
+      "attempt": 1,
+      "failure": "错因选项映射无效"
+    },
+    {
+      "stage": "final_question",
+      "raw": "{\n  \"questions\": [\n    {\n      \"prompt\": \"在一个注意力机制中，当前查询与三个键的匹配分数经归一化后得到权重：键A为0.5，键B为0.3，键C为0.2。对应的值分别是：值A（内容：数学），值B（内容：物理），值C（内容：化学）。系统按权重组合这些值。关于最终输出，下列哪项最符合这种组合方式？\",\n      \"choices\": {\n        \"a\": \"最终输出由值A单独决定，因为它的权重最大，注意力只选择最强匹配的一项。\",\n        \"b\": \"最终输出是一个混合表示，约50%来自数学、30%来自物理、20%来自化学，按权重加权求和。\",\n        \"c\": \"最终输出是一个混合表示，但权重需要重新归一化，因为0.5+0.3+0.2不等于1。\",\n        \"d\": \"最终输出由值与权重的乘积直接取最大值，即选择0.5、0.3、0.2中最大的权重对应的值，忽略其他值。\"\n      },\n      \"answer\": \"b\",\n      \"explanation\": \"注意力机制的核心是按匹配权重对值进行加权求和，权重之和为1时，最终输出是各值按权重比例混合的表示。0.5+0.3+0.2=1，无需重新归一化，也不是只选择最大权重的那一项，更不是对乘积取最大值。\",\n      \"atom_ids\": [\"qkv\"],\n      \"assessment_type\": \"application\"\n    }\n  ]\n}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "final_question"
+    },
+    {
+      "stage": "final_transfer",
+      "raw": "{\n  \"scenario\": \"某音乐App的“智能歌单补全”功能使用一个注意力模块来推荐歌曲。当前用户正在跑步，系统生成了一个查询向量，它表达“需要节奏快、能提振精神的音乐”。候选歌曲池中有三首歌，系统已经为每首歌计算了一个键向量，用于和查询向量比较匹配程度。匹配分数经过softmax归一化后，得到三首歌的权重：歌曲甲0.7，歌曲乙0.2，歌曲丙0.1。每首歌对应一个值向量，里面编码了歌曲的节奏、情绪等实际特征。系统最终要把这些值向量按权重组合起来，生成推荐结果。\",\n  \"question\": \"根据QKV机制，下列哪项最准确地描述了系统为当前用户生成最终推荐时，查询、键和值分别发挥的作用？\",\n  \"target_atom_ids\": [\"qkv\"],\n  \"rubric\": [\n    {\n      \"id\": \"role_query\",\n      \"criterion\": \"答案正确指出查询向量表达当前用户的需求或当前任务目标，而不是用于被匹配的静态属性。\"\n    },\n    {\n      \"id\": \"role_key\",\n      \"criterion\": \"答案正确指出键向量用于与查询向量比较匹配程度，决定每首歌获得多少注意力权重。\"\n    },\n    {\n      \"id\": \"role_value\",\n      \"criterion\": \"答案正确指出值向量提供被加权取出的实际内容（歌曲特征），最终输出是值向量的加权组合。\"\n    },\n    {\n      \"id\": \"no_position_confusion\",\n      \"criterion\": \"答案没有把查询和键的角色颠倒，也没有把值理解为仅用于计算权重。\"\n    }\n  ],\n  \"expected_concepts\": [\n    \"查询表达当前需求\",\n    \"键用于匹配比较\",\n    \"值提供被取出的内容\",\n    \"最终输出是值按注意力权重的组合\"\n  ],\n  \"difficulty\": \"standard\",\n  \"novelty_reason\": \"场景从学习资料汇总换成了音乐推荐系统的实时推荐，角色和操作对象均不同，但其中QKV的机制角色没有改变；需要学生把“查询表达需要、键用于匹配、值提供内容”迁移到新的应用情境中，而不是复述原来学习资料或数学物质的例子。\",\n  \"choices\": {\n    \"a\": \"查询向量用于和每首歌比较匹配，键向量表达用户当前需求，值向量用于存储每首歌的权重。\",\n    \"b\": \"查询向量表达用户当前需求，键向量用于和查询比较匹配程度，值向量提供被加权组合的歌曲特征。\",\n    \"c\": \"查询向量和键向量都用于最终输出组合，值向量只用来计算匹配分数，不参与输出。\",\n    \"d\": \"查询向量提供歌曲特征，键向量表达用户需求，值向量用于计算每首歌的注意力权重。\"\n  },\n  \"answer\": \"b\",\n  \"explanation\": \"在QKV机制中，查询表达当前需要，所以“跑步时想听快节奏提振精神”的音乐这一需求由查询向量表达。键用于和查询比较，产生匹配分数，从而得到各首歌的注意力权重。值才是真正被取出的内容，最终推荐结果是三首歌的值向量按0.7、0.2、0.1的权重组合。其他选项把查询、键、值的角色进行了颠倒或混淆，因此不正确。\"\n}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "final_transfer"
+    },
+    {
+      "stage": "final_transfer",
+      "raw": "{\n  \"scenario\": \"一个城市公共自行车调度系统需要决定把哪些车从储备点运到哪些站点。系统给每个站点计算一个“需求向量”（表示该站需要车的急迫程度和时段特点），给每个储备点计算一个“供给向量”（表示该储备点可提供车的特征）。系统用需求向量与各储备点的供给向量比较匹配程度，匹配分数经softmax归一化后得到三个储备点的调度权重：储备点甲0.65，储备点乙0.25，储备点丙0.10。每个储备点还有一个“车辆状态向量”，编码了该点车辆的实际数量、车况和电池电量。调度系统最终按这些权重把车辆状态向量组合起来，生成一个综合调度方案。\",\n  \"question\": \"根据注意力加权机制，下列哪项最准确地描述了系统生成综合调度方案时，需求向量、供给向量和车辆状态向量的作用？\",\n  \"target_atom_ids\": [\n    \"weighted\"\n  ],\n  \"rubric\": [\n    {\n      \"id\": \"rubric_role_mapping\",\n      \"criterion\": \"能正确匹配：需求向量相当于查询，供给向量相当于键，车辆状态向量相当于值。\"\n    },\n    {\n      \"id\": \"rubric_weighted_combination\",\n      \"criterion\": \"能说明最终方案是按匹配权重把各储备点的车辆状态向量组合起来，而不是只取权重最大的一个。\"\n    },\n    {\n      \"id\": \"rubric_weight_sum\",\n      \"criterion\": \"能识别权重0.65、0.25、0.10之和为1，且权重来自需求向量与供给向量的匹配程度。\"\n    }\n  ],\n  \"expected_concepts\": [\n    \"查询表达当前需要，键用于与查询比较匹配程度\",\n    \"值提供实际内容，注意力输出是按权重复合各值\",\n    \"权重归一化后总和为1，决定不同值在结果中的占比\",\n    \"最终结果是加权组合，而不是硬选择单个项\"\n  ],\n  \"difficulty\": \"standard\",\n  \"novelty_reason\": \"将注意力加权迁移到城市公共自行车调度场景，用需求向量、供给向量和车辆状态向量分别对应查询、键和值，改变了原有音乐推荐、学习资料等实例的表面情境，需要在新语义中重新识别QKV角色和加权组合机制。\",\n  \"choices\": {\n    \"a\": \"需求向量是查询，供给向量是键，车辆状态向量是值；最终方案是各储备点车辆状态向量的加权组合。\",\n    \"b\": \"需求向量是查询，供给向量是值，车辆状态向量是键；最终方案是各储备点车辆状态向量的加权组合。\",\n    \"c\": \"需求向量是键，供给向量是查询，车辆状态向量是值；最终方案只取权重最高的储备点甲的车辆状态向量。\",\n    \"d\": \"需求向量是值，供给向量是键，车辆状态向量是查询；最终方案是各储备点车辆状态向量的简单平均。\"\n  },\n  \"answer\": \"a\",\n  \"explanation\": \"注意力加权中，需求向量表达当前需要，应与各供给向量比较匹配程度，因此需求向量是查询，供给向量是键。权重0.65、0.25、0.10来自匹配分数归一化。车辆状态向量提供实际车辆信息，是值。最终输出是按这些权重把各储备点车辆状态向量组合起来，而不是只选一个或简单平均。因此选a。\"\n}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "final_transfer"
+    },
+    {
+      "stage": "final_question",
+      "raw": "{\n  \"questions\": [\n    {\n      \"prompt\": \"在注意力机制中，查询表达“当前需要什么信息”，键用于“匹配查询和候选内容”，值提供“匹配后要取出的实际内容”。现在有一个场景：系统收到一个查询向量，需要从三本笔记中提取相关内容。每本笔记都有一个键向量和一个值向量。系统先计算查询与每本笔记键向量的匹配分数，再经 softmax 得到权重，最后用这些权重加权组合值向量。请问在这个过程中，键和值各自扮演什么角色？\",\n      \"choices\": {\n        \"a\": \"键提供最终要组合的内容，值用于与查询匹配以确定权重\",\n        \"b\": \"键用于与查询匹配以确定权重，值提供最终要组合的内容\",\n        \"c\": \"键和值都用于与查询匹配，最终输出是匹配分数的加权和\",\n        \"d\": \"键和值都提供最终要组合的内容，匹配权重由查询自身决定\"\n      },\n      \"answer\": \"b\",\n      \"explanation\": \"在注意力机制中，键的作用是与查询比较匹配程度，匹配分数经 softmax 后成为权重；值的作用是提供实际内容，最终输出是值向量的加权组合。选项 b 准确对应了这一角色分工。选项 a 把键和值的角色互换；选项 c 错误地认为值也参与匹配且输出是匹配分数的加权和；选项 d 错误地认为键也提供内容且权重只由查询决定。\",\n      \"atom_ids\": [\n        \"qkv\"\n      ],\n      \"assessment_type\": \"concept\"\n    }\n  ]\n}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "final_question"
+    },
+    {
+      "stage": "final_question",
+      "raw": "{\n  \"questions\": [\n    {\n      \"prompt\": \"在注意力加权中，若查询与各键的匹配分数经归一化后得到权重0.7、0.2、0.1，对应的值向量分别为V1、V2、V3，则最终输出是什么？\",\n      \"choices\": {\n        \"a\": \"0.7×V1 + 0.2×V2 + 0.1×V3\",\n        \"b\": \"V1 + V2 + V3\",\n        \"c\": \"将V1、V2、V3按权重从大到小排序后拼接\",\n        \"d\": \"直接选择权重最大的V1作为输出\"\n      },\n      \"answer\": \"a\",\n      \"explanation\": \"注意力加权将每个值向量乘以对应权重后相加，得到最终的组合输出。权重总和为1，输出是值向量的加权和，而不是简单拼接或只取最大。\",\n      \"atom_ids\": [\n        \"weighted\"\n      ],\n      \"assessment_type\": \"concept\"\n    }\n  ]\n}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "final_question"
+    },
+    {
+      "stage": "final_report_summary",
+      "raw": "{\"status\":\"needs_reinforcement\",\"summary\":\"这门课目前的状态是还需巩固，判断原因主要在于系统所依据的证据量或维度覆盖不足，因此结论的把握度还不高。需要区分两件事：把课程内容学完，并不等于已经拿到了充分的能力证据；目前的证据还不足以说明你已经稳稳掌握或能够熟练运用。具体来看，QKV和注意力加权这两个知识点被标为“证据不足”，意思只是现有表现还不足以判断你掌握得怎么样，并不代表它们已经被证实是你的薄弱点。同时，当前没有已确认的薄弱知识点，因此不能说某个知识已经确定薄弱；也没有已确认的稳固知识点，所以也不宜说已经全面掌握、获得认证或完全没有缺口。长期记忆方面，系统标记为待延迟验证，也就是说隔一段时间后的回忆效果还没有测到，现在还不能下结论。下一步建议是：只针对当前的关键缺口做针对性强化，补完后用新题来验证，而不必把整门课重学一遍；同时按现有的复习安排继续间隔复习，等待延迟回忆的结果。这样既能补上证据不足的地方，也能检验是否真正记得住、用得出。\",\"unknown_note\":\"QKV与注意力加权属于证据不足，非已证实薄弱。\"}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "final_report_summary"
+    },
+    {
+      "stage": "final_report_summary_validation",
+      "attempt": 1,
+      "failure": "Additional properties are not allowed ('unknown_note' was unexpected)\n\nFailed validating 'additionalProperties' in schema:\n    {'additionalProperties': False,\n     'properties': {'status': {'const': 'needs_reinforcement'},\n                    'summary': {'maxLength': 1000,\n                                'minLength': 10,\n                                'type': 'string'}},\n     'required': ['status', 'summary'],\n     'type': 'object'}\n\nOn instance:\n    {'status': 'needs_reinforcement',\n     'summary': '这门课目前的状态是还需巩固，判断原因主要在于系统所依据的证据量或维度覆盖不足，因此结论的把握度还不高。需要区分两件事：把课程内容学完，并不等于已经拿到了充分的能力证据；目前的证据还不足以说明你已经稳稳掌握或能够熟练运用。具体来看，QKV和注意力加权这两个知识点被标为“证据不足”，意思只是现有表现还不足以判断你掌握得怎么样，并不代表它们已经被证实是你的薄弱点。同时，当前没有已确认的薄弱知识点，因此不能说某个知识已经确定薄弱；也没有已确认的稳固知识点，所以也不宜说已经全面掌握、获得认证或完全没有缺口。长期记忆方面，系统标记为待延迟验证，也就是说隔一段时间后的回忆效果还没有测到，现在还不能下结论。下一步建议是：只针对当前的关键缺口做针对性强化，补完后用新题来验证，而不必把整门课重学一遍；同时按现有的复习安排继续间隔复习，等待延迟回忆的结果。这样既能补上证据不足的地方，也能检验是否真正记得住、用得出。',\n     'unknown_note': 'QKV与注意力加权属于证据不足，非已证实薄弱。'}"
+    },
+    {
+      "stage": "final_report_summary",
+      "raw": "{\"status\":\"needs_reinforcement\",\"summary\":\"这门课目前的状态是还需巩固，判断原因主要在于系统所依据的证据量或维度覆盖不足，所以结论的把握度还不高。需要区分两件事：把课程内容学完，并不等于已经拿到了充分的能力证据；现有证据还不足以说明你已经稳稳掌握或能够熟练运用。具体来看，QKV和注意力加权这两个知识点被标为“证据不足”，意思只是现有表现还不足以判断你掌握得怎么样，并不代表它们已经被证实是你的薄弱点。同时，当前没有已确认的薄弱知识点，因此不能说某个知识已经确定薄弱；也没有已确认的稳固知识点，所以也不宜说已经全面掌握、获得认证或完全没有缺口。长期记忆方面，系统标记为待延迟验证，也就是隔一段时间后的回忆效果还没有测到，现在还不能下结论。下一步建议是：只针对当前的关键缺口做针对性强化，补完后用新题来验证，而不必把整门课重学一遍；同时按现有的复习安排继续间隔复习，等待延迟回忆的结果。这样既能补上证据不足的地方，也能检验是否真正记得住、用得出。\"}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "final_report_summary"
+    },
+    {
+      "stage": "final_report_summary_validation",
+      "attempt": 2,
+      "failure": "报告说明不能声称全面掌握、认证或没有缺口"
+    },
+    {
+      "stage": "learning_check",
+      "raw": "{\"questions\":[{\"prompt\":\"在注意力机制中，Q（查询）、K（键）、V（值）三者的核心分工是什么？\",\"choices\":[\"Q用于匹配，K表达需求，V提供内容\",\"Q表达当前需求，K用于匹配，V提供匹配后要取出的内容\",\"Q提供内容，K表达需求，V用于匹配\",\"Q、K、V都只负责提供内容，匹配由外部完成\"],\"answer\":1,\"explanation\":\"Q表达当前需要什么，K用于与Q匹配，V提供匹配后被取出的内容。\",\"atom_ids\":[\"qkv\"],\"assessment_type\":\"concept\"},{\"prompt\":\"用图书馆检索类比：你想找一本关于注意力的书。此时“你的检索需求”“书名索引”“书的内容”依次对应什么？\",\"choices\":[\"K、Q、V\",\"V、K、Q\",\"Q、K、V\",\"Q、V、K\"],\"answer\":2,\"explanation\":\"检索需求对应查询Q，书名索引用于匹配对应键K，书的内容对应值V。\",\"atom_ids\":[\"qkv\"],\"assessment_type\":\"application\"}],\"misconceptions\":{\"0\":{\"code\":\"QKV_ROLE_SWAP_QK\",\"description\":\"把Q和K的角色对调，误以为Q负责匹配、K表达需求。\"},\"2\":{\"code\":\"QKV_ROLE_SWAP_QV\",\"description\":\"把Q和V的角色对调，误以为Q提供内容、V表达需求。\"},\"3\":{\"code\":\"QKV_ALL_CONTENT\",\"description\":\"误认为Q、K、V都只提供内容，忽略Q表达需求、K负责匹配的角色。\"}}}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "learning_check"
+    },
+    {
+      "stage": "learning_check_validation",
+      "attempt": 1,
+      "failure": "Additional properties are not allowed ('misconceptions' was unexpected)\n\nFailed validating 'additionalProperties' in schema:\n    {'additionalProperties': False,\n     'properties': {'questions': {'items': {'additionalProperties': False,\n                                            'properties': {'answer': {'enum': ['a',\n                                                                               'b',\n                                                                               'c',\n                                                                               'd']},\n                                                           'assessment_type': {'enum': ['concept',\n                                                                                        'application',\n                                                                                        'reasoning',\n                                                                                        'math',\n                                                                                        'transfer']},\n                                                           'atom_ids': {'items': {'type': 'string'},\n                                                                        'maxItems': 2,\n                                                                        'minItems': 1,\n                                                                        'type': 'array'},\n                                                           'choices': {'additionalProperties': False,\n                                                                       'properties': {'a': {'maxLength': 1000,\n                                                                                            'minLength': 1,\n                                                                                            'type': 'string'},\n                                                                                      'b': {'maxLength': 1000,\n                                                                                            'minLength': 1,\n                                                                                            'type': 'string'},\n                                                                                      'c': {'maxLength': 1000,\n                                                                                            'minLength': 1,\n                                                                                            'type': 'string'},\n                                                                                      'd': {'maxLength': 1000,\n                                                                                            'minLength': 1,\n                                                                                            'type': 'string'}},\n                                                                       'required': ['a',\n                                                                                    'b',\n                                                                                    'c',\n                                                                                    'd'],\n                                                                       'type': 'object'},\n                                                           'explanation': {'maxLength': 2000,\n                                                                           'minLength': 1,\n                                                                           'type': 'string'},\n                                                           'misconceptions': {'additionalProperties': {'additionalProperties': False,\n                                                                                                       'properties': {'code': {'pattern': '^[A-Z][A-Z0-9_]{2,60}$',\n                                                                                                                               'type': 'string'},\n                                                                                                                      'description': {'maxLength': 400,\n                                                                                                                                      'minLength': 1,\n                                                                                                                                      'type': 'string'}},\n                                                                                                       'required': ['code',\n                                                                                                                    'description'],\n                                                                                                       'type': 'object'},\n                                                                              'maxProperties': 3,\n                                                                              'type': 'object'},\n                                                           'prompt': {'maxLength': 800,\n                                                                      'minLength': 8,\n                                                                      'type': 'string'}},\n                                            'required': ['prompt',\n                                                         'choices',\n                                                         'answer',\n                                                         'explanation',\n                                                         'atom_ids',\n                                                         'assessment_type'],\n                                            'type': 'object'},\n                                  'maxItems': 2,\n                                  'minItems': 2,\n                                  'type': 'array'}},\n     'required': ['questions'],\n     'type': 'object'}\n\nOn instance:\n    {'misconceptions': {'0': {'code': 'QKV_ROLE_SWAP_QK',\n                              'description': '把Q和K的角色对调，误以为Q负责匹配、K表达需求。'},\n                        '2': {'code': 'QKV_ROLE_SWAP_QV',\n                              'description': '把Q和V的角色对调，误以为Q提供内容、V表达需求。'},\n                        '3': {'code': 'QKV_ALL_CONTENT',\n                              'description': '误认为Q、K、V都只提供内容，忽略Q表达需求、K负责匹配的角色。'}},\n     'questions': [{'answer': 1,\n                    'assessment_type': 'concept',\n                    'atom_ids': ['qkv'],\n                    'choices': ['Q用于匹配，K表达需求，V提供内容',\n                                'Q表达当前需求，K用于匹配，V提供匹配后要取出的内容',\n                                'Q提供内容，K表达需求，V用于匹配',\n                                'Q、K、V都只负责提供内容，匹配由外部完成'],\n                    'explanation': 'Q表达当前需要什么，K用于与Q匹配，V提供匹配后被取出的内容。',\n                    'prompt': '在注意力机制中，Q（查询）、K（键）、V（值）三者的核心分工是什么？'},\n                   {'answer': 2,\n                    'assessment_type': 'application',\n                    'atom_ids': ['qkv'],\n                    'choices': ['K、Q、V', 'V、K、Q', 'Q、K、V', 'Q、V、K'],\n                    'explanation': '检索需求对应查询Q，书名索引用于匹配对应键K，书的内容对应值V。',\n                    'prompt': '用图书馆检索类比：你想找一本关于注意力的书。此时“你的检索需求”“书名索引”“书的内容”依次对应什么？'}]}"
+    },
+    {
+      "stage": "learning_check",
+      "raw": "{\n  \"questions\": [\n    {\n      \"prompt\": \"在注意力机制中，查询Q、键K、值V各自的核心职责是什么？\",\n      \"choices\": {\n        \"a\": \"Q负责与K匹配，K表达当前需求，V提供内容\",\n        \"b\": \"Q表达当前需求，K用于匹配，V提供匹配后要取出的内容\",\n        \"c\": \"Q提供内容，K表达当前需求，V负责匹配\",\n        \"d\": \"Q、K、V都只提供内容，匹配由外部机制完成\"\n      },\n      \"answer\": \"b\",\n      \"explanation\": \"Q表达当前需要什么，K用来与Q进行匹配，V提供匹配成功后实际取出的内容。\",\n      \"atom_ids\": [\"qkv\"],\n      \"assessment_type\": \"concept\",\n      \"misconceptions\": {\n        \"a\": {\n          \"code\": \"QKV_ROLE_SWAP_QK\",\n          \"description\": \"把Q和K的角色对调，误以为Q负责匹配、K表达需求。\"\n        },\n        \"c\": {\n          \"code\": \"QKV_ROLE_SWAP_QV\",\n          \"description\": \"把Q和V的角色对调，误以为Q提供内容、V负责匹配。\"\n        },\n        \"d\": {\n          \"code\": \"QKV_ALL_CONTENT\",\n          \"description\": \"误认为Q、K、V都只提供内容，忽略Q表达需求、K负责匹配的角色分工。\"\n        }\n      }\n    },\n    {\n      \"prompt\": \"用图书馆检索类比：当你输入检索词找书时，“检索词”“书目索引”“书页内容”依次最贴近QKV中的哪一项？\",\n      \"choices\": {\n        \"a\": \"K、Q、V\",\n        \"b\": \"V、K、Q\",\n        \"c\": \"Q、K、V\",\n        \"d\": \"Q、V、K\"\n      },\n      \"answer\": \"c\",\n      \"explanation\": \"检索词表达你需要找什么，对应Q；书目索引用来匹配检索词，对应K；书页内容是在匹配成功后取出的信息，对应V。\",\n      \"atom_ids\": [\"qkv\"],\n      \"assessment_type\": \"application\",\n      \"misconceptions\": {\n        \"a\": {\n          \"code\": \"QKV_ROLE_SWAP_QK\",\n          \"description\": \"把Q和K的角色对调，误以为索引表达需求、检索词负责匹配。\"\n        },\n        \"b\": {\n          \"code\": \"QKV_ROLE_SWAP_QV\",\n          \"description\": \"把Q和V的角色对调，误以为书页内容表达需求、检索词是被取出的内容。\"\n        },\n        \"d\": {\n          \"code\": \"QKV_ROLE_SWAP_KV\",\n          \"description\": \"把K和V的角色对调，误以为书目索引是取出的内容、书页内容负责匹配。\"\n        }\n      }\n    }\n  ]\n}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "learning_check"
+    },
+    {
+      "stage": "atie_content",
+      "raw": "{\n  \"presentation_plan\": {\n    \"intent\": \"explanation\",\n    \"reason\": \"用户反馈希望看例子，用具体场景解释查询、键、值各自的作用，并用关系图辅助区分角色，避免Q和K对调\",\n    \"forms\": [\"question\", \"example\", \"diagram\", \"concept\", \"checkpoint\"]\n  },\n  \"blocks\": [\n    {\n      \"type\": \"question\",\n      \"title\": \"先想一想\",\n      \"content\": \"你在图书馆想找一本关于恐龙的书。你会对电脑输入“恐龙”，然后电脑在每本书的标签里找相符的，最后把书的内容给你。\\n\\n这个过程中，哪一部分是在“表达需要”？哪一部分是在“提供匹配线索”？哪一部分是“真正拿到的内容”？\"\n    },\n    {\n      \"type\": \"example\",\n      \"title\": \"图书检索例子\",\n      \"content\": \"假设你去图书馆找书，整个过程分三步：\\n\\n第一，你心里想“我要关于恐龙的书”。这个“恐龙”就是你的查询，它表达你的需求。\\n\\n第二，每本书侧面都有一个标签，写着“恐龙”“植物”“宇宙”等。这些标签就是键，它们负责被拿来和你的查询做匹配。\\n\\n第三，标签和“恐龙”对上后，你从书架上抽出的那本书的正文内容，就是值，它提供你真正要取走的信息。\\n\\n注意：是你的查询“恐龙”在表达需求，不是标签；是标签“恐龙”在负责匹配，不是你的查询去贴标签。这里如果反过来，就正好把Q和K对调了。\"\n    },\n    {\n      \"type\": \"diagram\",\n      \"title\": \"角色关系图\",\n      \"data\": {\n        \"nodes\": [\n          { \"id\": \"q\", \"label\": \"查询：表达需要（恐龙）\" },\n          { \"id\": \"k\", \"label\": \"键：提供匹配线索（标签）\" },\n          { \"id\": \"v\", \"label\": \"值：提供实际内容（书正文）\" }\n        ],\n        \"edges\": [\n          { \"from\": \"q\", \"to\": \"k\", \"label\": \"查询去和键做匹配\" },\n          { \"from\": \"k\", \"to\": \"v\", \"label\": \"匹配成功后取出对应的值\" }\n        ]\n      }\n    },\n    {\n      \"type\": \"concept\",\n      \"title\": \"一句话区分三个角色\",\n      \"content\": \"查询表达“我现在需要什么”；键表达“我有什么特征可以被匹配”；值是“匹配上之后要取走的内容”。\\n\\n三者身份不同：查询主动提出需求，键被动等待被匹配，值负责提供最终信息。不要因为查询和键都常和“词”有关就把它们的作用对调。\"\n    },\n    {\n      \"type\": \"checkpoint\",\n      \"title\": \"自查一下\",\n      \"content\": \"如果我把图书馆例子里的“你输入的恐龙”和“书侧面的标签”互换说法，说成“标签表达需求、输入负责匹配”，这就犯了哪种典型错误？\\n\\n请用一句话说出：在这个例子里，查询、键、值分别对应什么。\"\n    }\n  ]\n}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "atie_content"
+    },
+    {
+      "stage": "atie_presentation"
+    },
+    {
+      "stage": "final_report_summary",
+      "raw": "{\"status\":\"needs_reinforcement\",\"summary\":\"这次学习报告给出的状态是“还有几个知识点值得巩固”。原因不是发现了明确的错误，而是系统判断所依据的证据量或维度覆盖不足，所以还不足以说明你已经稳定掌握。\\n\\n需要区分两件事：内容学完，和能力证据。学完课程内容，只代表你接触过这些知识；而能力证据是你在不同时间、不同题型上能独立做对、稳定复用。当前报告里没有标记任何已证实薄弱的知识，也没有标记已稳定掌握的知识。QKV和注意力加权这两个知识点属于“证据不足”，不是“已被证明薄弱”，更不是“已经掌握”。\\n\\n长期记忆方面，报告明确写了待延迟验证。也就是说，现在还不能判断这些内容在隔一段时间后是否仍能回忆和应用，需要之后再做延迟回忆来确认。\\n\\n下一步建议很具体：不要整门课重学，只补当前关键缺口，再用新题验证；同时沿用现有复习建议和间隔，做延迟回忆检验长期记忆。这样做的目的，是增加有效证据，而不是急着下结论。\\n\\n另外，这份报告没有声称全面掌握，也没有任何认证含义，更没有说没有缺口。整体看，你已经有学习基础，但还需要更多独立作答的证据来支撑稳定掌握。完成针对性巩固和延迟验证后，再根据新的证据判断哪些知识可以算稳定掌握。\"}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "final_report_summary"
+    },
+    {
+      "stage": "final_report_summary_validation",
+      "attempt": 1,
+      "failure": "报告说明不能声称全面掌握、认证或没有缺口"
+    },
+    {
+      "stage": "final_report_summary",
+      "raw": "{\"status\":\"needs_reinforcement\",\"summary\":\"这份报告针对的是《Transformer基础：QKV与注意力》。系统给出的状态是“还有几个知识点值得巩固”，原因在于判断时所依据的证据量或维度覆盖不足。需要区分两个层面：把课程内容看过、听懂了，属于“内容学完”；而能力证据是指通过足够多且覆盖到位的新题，稳定地展示出你会用、能判断。现在缺少的正是后者的证据，所以不能下结论说已经稳固掌握。当前没有明确被判定为薄弱的知识点，所以不能声称任何内容已被证实薄弱；QKV和注意力加权被列为“证据不足”，只是说验证不够充分，还不代表它们一定有问题。长期记忆方面尚未测得，需要按照延迟回忆的方式再验证，现在先当作待验证状态。下一步不必整门课重学，建议只补当前的关键缺口，然后用新题来做验证；同时沿用现有复习建议和间隔，安排一次延迟回忆。这样既不夸大现有证据，也能把“学过”逐步转成“有证据会用”。\"}",
+      "finish_reason": "stop"
+    },
+    {
+      "stage": "final_report_summary"
+    }
+  ]
+}

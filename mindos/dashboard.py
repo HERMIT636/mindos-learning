@@ -20,13 +20,13 @@ class DashboardService:
             if not recommendations:recommendations=[{'course_id':cid,'title':section['title'],'reason':'当前小节尚未生成讲解，先建立基础。' if not section['lesson'] else '继续当前小节；独立小测后再判断需要补强的内容。','source':'course_state','atom_id':None}]
         from .learning.service import LearningLoopService
         daily=[]
-        for c in ([selected] if course_id and selected else active):
+        for c in ([selected] if course_id and selected else [c for c in courses if c['status'] in {'active','completed'}]):
             for item in LearningLoopService(self.store).snapshot(user,c['id'])['review_queue']:
                 daily.append({**item,'course_id':c['id'],'course_title':c['title'],'sort_order':c['sort_order']})
         from .learning.policy import POLICY
         daily=sorted(daily,key=lambda x:(x['priority'],x['sort_order'],x['next_review_at'] or ''))[:POLICY['review_daily_minutes']//POLICY['review_minutes_per_atom']]
         timeline=self.timeline(user,course_id)
-        return {'courses':courses,'current':current,'learning_state':state,'recommendations':recommendations,'timeline':timeline,'today_reviews':daily,
+        return {'courses':courses,'current':current,'learning_state':state,'recommendations':recommendations,'timeline':timeline,'today_reviews':daily,'final_attention':[{'course_id':c['id'],'course_title':c['title'],**c['course_mastery']} for c in courses if c['content_completed'] and c['status']!='archived'],
                 'boundary':'能力维度只统计当前课程近期独立题目表现；不是能力认证，不跨课程合并学习记忆。迁移能力没有对应检测证据时保留未测。建议来自已有课程与复习规则，不是新调用模型生成的推荐。'}
 
     def timeline(self,user,cid=None):

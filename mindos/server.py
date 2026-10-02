@@ -32,7 +32,7 @@ from .web_search import PublicSourceSearch, SearchUnavailable, WebSearch
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
 LOGGER = logging.getLogger("mindos")
-STATIC = {"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
+STATIC = {"/components/mindos/course-final.js": ("components/mindos/course-final.js", "text/javascript; charset=utf-8"),"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
           "/components/teaching/teaching-blocks.js": ("components/teaching/teaching-blocks.js", "text/javascript; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/components/CourseManager/course-manager.js": ("components/CourseManager/course-manager.js", "text/javascript; charset=utf-8"),
@@ -220,7 +220,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
         viewed = self._unlocked_section(course, ordinal or course["current_ordinal"])
         learning_state,knowledge_context=LearningStateManager(self.server.storage).read(self._session(),course_id,viewed['ordinal'])
         scope=self.server.teaching.context(self._session(),course_id,viewed['id'])
-        return {"course": {key: value for key, value in course.items() if key not in ("review_plan","teaching_materials")},
+        from .learning.final import FinalAssessmentService
+        return {'course_final':FinalAssessmentService(self.server.storage).status(self._session(),course_id),"course": {key: value for key, value in course.items() if key not in ("review_plan","teaching_materials")},
                 "mastery": self.server.storage.mastery(self._session(), course_id),
                 "current_section": current, "section": viewed,
                 "lesson_history":self.server.storage.content_versions(self._session(),course_id,'lesson',viewed["id"]),
@@ -284,6 +285,11 @@ class MindOSHandler(BaseHTTPRequestHandler):
                                  (lesson_id,self._session())).fetchone()
             if not row:raise ValueError('小节不存在')
             self._json(HTTPStatus.OK,self.server.teaching.context(self._session(),row['course_id'],lesson_id))
+        elif re.fullmatch(r'/api/courses/[A-Za-z0-9_-]+/final/(status|report|remediation)',parsed.path):
+            from .learning.final import FinalAssessmentService
+            cid=parsed.path.split('/')[3];op=parsed.path.rsplit('/',1)[1];service=FinalAssessmentService(self.server.storage)
+            result=service.report(self._session(),cid) if op=='report' else service.status(self._session(),cid)
+            self._json(HTTPStatus.OK,result)
         elif re.fullmatch(r'/api/courses/[A-Za-z0-9_-]+/loop(?:/[a-z-]+)?',parsed.path):
             from .learning.service import LearningLoopService
             cid=parsed.path.split('/')[3];op=parsed.path.split('/')[-1];service=LearningLoopService(self.server.storage);query=parse_qs(parsed.query)
@@ -358,6 +364,30 @@ class MindOSHandler(BaseHTTPRequestHandler):
     def _post(self) -> None:
         self._check_local_request()
         path = urlsplit(self.path).path
+        final=re.fullmatch(r'/api/courses/([A-Za-z0-9_-]+)/final/([a-z-]+|remediation/(?:start|target))',path)
+        if final:
+            from .learning.final import FinalAssessmentService
+            cid,op=final.groups();op=op.replace('remediation/','remediation-');payload=self._request_json(15000);user=self._session();service=FinalAssessmentService(self.server.storage)
+            self._owned_course(cid)
+            if set(payload)&{'mastery','understanding','application','transfer','retention','score','state','report','targets','blueprint'}:raise ValueError('掌握结论与检测范围只能由服务器生成')
+            def optional_final_model():
+                try:return self._model()
+                except (ValueError,ModelUnavailable):return None
+            if op=='complete-content':result=service.complete_content(user,cid)
+            elif op=='start':
+                if type(payload.get('reassessment',False)) is not bool:raise ValueError('重新检测标记无效')
+                result=service.start(user,cid,payload.get('reassessment',False))
+            elif op=='assessment':result=service.assessment(user,cid,optional_final_model())
+            elif op=='report':
+                if type(payload.get('summary',False)) is not bool:raise ValueError('报告说明选项无效')
+                result=service.refresh_report(user,cid,optional_final_model() if payload.get('summary') else None,payload.get('summary',False))
+            elif op=='defer':
+                if type(payload.get('end_with_gaps',False)) is not bool:raise ValueError('暂时结束选项无效')
+                result=service.defer(user,cid,payload.get('end_with_gaps',False))
+            elif op=='remediation-start':result=service.remediation_start(user,cid)
+            elif op=='remediation-target':result=service.remediation_target(user,cid,payload.get('atom_id'),payload.get('return_context'))
+            else:self._json(HTTPStatus.NOT_FOUND,{'error':'课程终局接口不存在'});return
+            self._json(HTTPStatus.OK,result);return
         learning=re.fullmatch(r'/api/courses/([A-Za-z0-9_-]+)/loop/([a-z-]+)',path)
         if learning:
             from .learning.service import LearningLoopService

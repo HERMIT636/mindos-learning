@@ -37,7 +37,8 @@
  }
  function render(data){
   const root=$('learning-loop-panel');if(!root)return;root.replaceChildren();const cid=data.course.id,loop=data.knowledge.learning_loop;
-  root.hidden=!loop;if(!loop)return;const version=++generation;root.append(node('h2','下一步学习建议'));
+  root.hidden=!loop;if(!loop)return;
+  if(data.course_final?.plan?.status==='active'&&!data.course_final.plan.stale&&!loop.active_repair&&!loop.returning_session){root.hidden=true;return;}const version=++generation;root.append(node('h2','下一步学习建议'));
   const session=loop.active_repair,returning=loop.returning_session;
   if(!session&&!returning)memory=null;
   if(memory&&memory.cid!==cid)memory=null;if(displayQuiz?.cid!==cid||displayQuiz?.session_id&&!loop.pending_assessments.some(q=>q.id===displayQuiz.id))displayQuiz=null;

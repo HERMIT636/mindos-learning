@@ -16,6 +16,12 @@ const CourseAssistant=(()=>{
   const c=current();if(!c){$('assistant-course').textContent='选择一门课程，导师才知道从哪里开始。';$('assistant-context').textContent='学习记忆按课程隔离。';$('assistant-insight').textContent='先进入课程，或从驾驶舱选择当前课程。不会在没有学习证据时推断你的能力。';return;}
   const section=state.data.course.sections.find(s=>s.ordinal===c.section_ordinal);
   $('assistant-course').textContent=`当前课程：${state.data.course.title}`;
+  const final=state.data.course_final;
+  if(final?.plan?.status==='active'&&!final.plan.stale&&final.current_quiz){
+   const target=state.data.knowledge.atoms.find(a=>a.id===final.current_quiz.item.atom_id);
+   $('assistant-context').textContent='课程掌握检测 · 当前题：'+(target?.title||'当前知识点');
+   $('assistant-insight').textContent='先试着独立思考，我可以给方向提示。向导师求助或查看解释会留下提示记录，这题按练习处理。';return;
+  }
   $('assistant-context').textContent=`当前星系（小节）：${section.title}`+(c.knowledge_atom_id?` · 知识点：${state.atomDetail.atom.title}`:'');
   const weak=state.data.knowledge.atoms.filter(a=>a.unlocked&&a.rate!==null&&a.rate<60).slice(0,3);
   $('assistant-insight').textContent=weak.length?'独立测试线索：'+weak.map(a=>a.title).join('、')+'需要补强。可以让我换个例子，或补充前置知识。':'暂无需要补强的独立测试记录。你可以要求换一种说法、看个例子或看图理解。';

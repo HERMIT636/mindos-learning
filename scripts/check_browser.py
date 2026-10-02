@@ -6,7 +6,7 @@ ROOT=Path(__file__).resolve().parents[1]
 parser=argparse.ArgumentParser();parser.add_argument('suites',nargs='*',default=['universe']);parser.add_argument('--screenshots',action='store_true');args=parser.parse_args()
 node=os.environ.get('MINDOS_NODE') or shutil.which('node') or shutil.which('node.exe') or ''
 module=os.environ.get('PLAYWRIGHT_MODULE_WINDOWS','playwright')
-fixtures={'loop':'browser_loop_fixture.py','presentation':'browser_presentation_fixture.py','universe':'browser_universe_fixture.py','atie':'browser_atie_fixture.py','tutor':'browser_tutor_fixture.py','architecture':'browser_architecture_fixture.py','management':'browser_management_fixture.py','knowledge':'browser_fixture.py','production':'browser_fixture.py','discovery':'browser_discovery_fixture.py'}
+fixtures={'final':'browser_final_fixture.py','loop':'browser_loop_fixture.py','presentation':'browser_presentation_fixture.py','universe':'browser_universe_fixture.py','atie':'browser_atie_fixture.py','tutor':'browser_tutor_fixture.py','architecture':'browser_architecture_fixture.py','management':'browser_management_fixture.py','knowledge':'browser_fixture.py','production':'browser_fixture.py','discovery':'browser_discovery_fixture.py'}
 if not Path(node).is_file():parser.error('找不到 Node 运行环境，请通过 MINDOS_NODE 指定；另需安装 Playwright 和 Edge。')
 for suite in args.suites:
     if suite not in fixtures:parser.error('未知检查：'+suite)

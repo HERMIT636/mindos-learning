@@ -118,6 +118,8 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
                 db.execute("ALTER TABLE quizzes ADD COLUMN target_atom_id TEXT NOT NULL DEFAULT ''")
             from .learning.evidence import migrate
             migrate(db)
+            from .learning.final import migrate as migrate_final
+            migrate_final(db)
 
     @contextmanager
     def connect(self):
@@ -429,7 +431,10 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
                 raise ValueError("测试不存在")
             if row["submitted_at"]:
                 raise ValueError("这次测试已经提交，请生成新测试继续复测")
-            if row['loop_session_id']:
+            if row['assessment_kind'].startswith('final_'):
+                from .learning.final import validate_submission
+                validate_submission(db,session_id,course_id,row)
+            elif row['loop_session_id']:
                 table='repair_sessions' if row['assessment_kind']=='remediation' else 'returning_sessions'
                 task=db.execute(f'SELECT status FROM {table} WHERE id=? AND user_id=? AND course_id=?',(row['loop_session_id'],session_id,course_id)).fetchone()
                 if not task or task[0] not in {'diagnostic','teaching','checking','pending'}:
@@ -457,6 +462,8 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
             graded=db.execute('SELECT * FROM quizzes WHERE id=?',(quiz_id,)).fetchone()
             from .learning.service import LearningLoopService
             LearningLoopService(self).submitted(db,graded,confidence,hints,times)
+            from .learning.final import FinalAssessmentService
+            FinalAssessmentService(self).on_submit(db,session_id,course_id,graded)
         return {"id": quiz_id, "score": score, "total": len(answers),
                 "results": [{"correct": a == item["answer"], **item}
                             for a, item in zip(user_answers, answers)]}

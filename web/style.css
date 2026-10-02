@@ -14,3 +14,26 @@
 
 /* Typed teaching blocks */
 .teaching-blocks{display:grid;gap:14px;min-width:0}.teaching-block{padding:16px;border:1px solid var(--border,#dce4ed);border-radius:12px;background:var(--surface,#fff);min-width:0;overflow-wrap:anywhere}.teaching-block h3{margin:0 0 10px;font-size:1rem}.teaching-block p{white-space:pre-wrap;margin:0;line-height:1.8}.teaching-question,.teaching-analogy{background:#f4f8ff}.teaching-checkpoint{background:#f2faf5}.teaching-strategy-note{font-size:.88rem;color:#526a83;margin:0}.teaching-flow{list-style:none;padding:0;display:grid;gap:24px}.teaching-flow li{padding:12px;border:1px solid #c5d6e8;border-radius:8px;position:relative}.teaching-flow li+li::before{content:'↓';position:absolute;top:-27px;left:50%;color:#577896}.teaching-diagram svg{display:block;width:100%;max-height:540px;color:#4c6788}.teaching-diagram-node{fill:#edf4ff;stroke:#a1bce0}.teaching-diagram text{fill:#203b5c;font-size:13px}.teaching-relations{font-size:.9rem}.teaching-table-wrap{overflow-x:auto}.teaching-comparison{width:100%;border-collapse:collapse}.teaching-comparison td,.teaching-comparison th{border:1px solid #dce4ed;padding:10px;text-align:left;min-width:90px}.teaching-equation{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f6fa;padding:12px;border-radius:8px}.teaching-block dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px}.teaching-block dd{margin:0}.teaching-feedback{display:flex;gap:8px;flex-wrap:wrap}.teaching-preferences{margin:12px 0;padding:12px;border:1px solid #dce4ed;border-radius:10px}.teaching-preferences label{display:block;margin:10px 0}.teaching-checkpoint-form{display:grid;gap:8px;margin-top:12px}.teaching-checkpoint-form textarea{width:100%;min-width:0}.assistant-message-content .teaching-block{padding:10px}.assistant-message-content .teaching-feedback .button{padding:6px;font-size:.8rem}
+
+/* P1 ending is an addition to the existing learning space. */
+#course-final-panel {scroll-margin-top:2rem;min-width:0;}
+.final-state {color:var(--accent,#a9baff);font-weight:600;line-height:1.65;}
+.final-plan-progress {margin:1.4rem 0 .5rem;}
+#course-final-panel small {line-height:1.75;}
+#course-final-panel > small {display:block;}
+.final-question {margin:1.5rem 0;}
+.final-question fieldset {min-width:0;border:0;padding:0;}
+.final-question legend {font-size:1.12rem;font-weight:600;line-height:1.8;margin-bottom:1rem;}
+.final-scenario,.final-repair {padding:1.25rem;margin:1.25rem 0;border:1px solid rgba(136,158,219,.22);background:rgba(115,143,209,.06);border-radius:16px;}
+.final-scenario p,.final-explanation {white-space:pre-wrap;line-height:1.9;}
+.final-report {border-top:1px solid rgba(136,158,219,.2);margin-top:1.6rem;padding-top:1.6rem;}
+.final-metrics {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.6rem 1rem;max-width:600px;margin:1.5rem 0;}
+.final-metrics dd {margin:0;color:#c5d3ff;font-variant-numeric:tabular-nums;}
+.final-knowledge-group {padding:.9rem 0;border-top:1px solid rgba(136,158,219,.16);}
+.final-knowledge-group summary {cursor:pointer;line-height:1.8;}
+.final-knowledge-row {display:flex;align-items:center;flex-wrap:wrap;gap:.6rem 1rem;margin:1rem 0;overflow-wrap:anywhere;}
+.final-knowledge-row > span {flex:1 1 150px;}
+.final-knowledge-row > small {flex-basis:100%;}
+.final-defer {margin-top:1.5rem;}
+.final-reasons li {line-height:1.9;}
+@media(max-width:600px){.final-scenario,.final-repair {padding:.95rem;}.final-defer button {width:100%;}.final-question .option {align-items:flex-start;}.final-metrics {font-size:.92rem;}}

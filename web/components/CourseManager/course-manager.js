@@ -49,7 +49,8 @@ const CourseManager = (() => {
     const head=node('div','','section-head');head.append(node('h2',course.title),CourseMenu(course,trash));card.append(head);
     if(course.cover){const image=node('img','','manager-cover');image.src=course.cover;image.alt=course.title+'的课程封面';image.loading='lazy';image.referrerPolicy='no-referrer';image.addEventListener('error',()=>{image.replaceWith(node('p','封面暂时无法显示','muted'));});card.prepend(image);}
     card.append(node('p',course.description || course.goal || '暂未填写课程简介','muted'));
-    const info=node('div','','manager-card-info');info.append(node('span',labels[course.status]),node('span',course.level),node('span',`知识点 ${course.knowledge_count} 个`));card.append(info);
+    const info=node('div','','manager-card-info');info.append(node('span','管理状态：'+labels[course.status]),node('span',course.level),node('span',`知识点 ${course.knowledge_count} 个`));card.append(info);
+    if(course.course_mastery?.label)card.append(node('p',course.course_mastery.label,'final-state'));
     const progress=node('p',`学习进度 ${course.progress}% · 共 ${course.section_count} 节`);progress.title=course.progress_note;card.append(progress);
     const meter=node('progress');meter.max=100;meter.value=course.progress;meter.setAttribute('aria-label','学习进度');card.append(meter);
     card.append(node('p',course.last_study_at?`最近学习：${new Date(course.last_study_at).toLocaleString('zh-CN')}`:'最近学习：尚无学习记录','muted'));

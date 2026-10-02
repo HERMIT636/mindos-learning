@@ -117,8 +117,12 @@ class ContentGenerator:
         from ..learning.personal import InheritedKnowledgePrior
         InheritedKnowledgePrior(self.store).refresh(user,cid)
         state,knowledge=self.states.read(user,cid,section['ordinal'],atom_id)
+        from ..learning.growth import GrowthService
+        growth_context=GrowthService(self.store).context(user,cid,[atom_id] if atom_id else None)
         scope=self.scope.context(user,cid,section['id'])
         action=self.engine.decide(state,knowledge,scope,question,mode,kind)
+        if growth_context:
+            action['growth_context']={**growth_context,'boundary':'只用于解释当前学习与目标的关联，不改变教学范围、策略或章节推进。'}
         # A backtrack deliberately teaches prerequisites in detail; validation must
         # use the same scope that is sent to the content generator.
         if action['action']=='BACKTRACK':

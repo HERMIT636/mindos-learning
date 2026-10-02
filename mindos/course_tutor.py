@@ -160,6 +160,8 @@ class CourseTutorService:
         from .teaching import TeachingOrchestrator
         context['teaching_context'] = TeachingOrchestrator(self.store).context(session,cid,section['id'])
         from .learning.personal import InheritedKnowledgePrior
+        from .learning.growth import GrowthService
+        context['growth_context']=GrowthService(self.store).context(session,cid,ids)
         context['relevant_personal_prior']=InheritedKnowledgePrior(self.store).relevant(session,cid,ids)
         return course,context,atoms
 

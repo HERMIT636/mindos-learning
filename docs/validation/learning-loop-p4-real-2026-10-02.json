@@ -1,0 +1,1532 @@
+{
+  "date": "2026-10-02",
+  "synthetic_only": true,
+  "live_model_calls": true,
+  "cases": [
+    {
+      "goal": "掌握 LLM 推理优化",
+      "checks": {
+        "structured_capability_graph": true,
+        "hard_dependencies_valid": true,
+        "program_order_preserved": true,
+        "required_critical_exists": true,
+        "supporting_distinguished": true,
+        "practice_explicit": true,
+        "structured_stages": true,
+        "no_learner_scores_in_requirements": true,
+        "program_gaps_from_synthetic_p3": true,
+        "strong_basics_not_relearned": true,
+        "existing_course_reused": true,
+        "conflict_schedules_verification": true
+      },
+      "passed": true,
+      "synthetic_conditions": {
+        "LLM推理基础": "strong",
+        "推理性能指标与瓶颈分析": "partial",
+        "KV缓存优化技术": "conflicted"
+      },
+      "graph": {
+        "goal_summary": "该目标要求能够独立理解和应用LLM推理优化。需要掌握LLM推理基础、性能分析方法、优化技术（如量化、KV缓存、批处理、投机解码）、并行策略以及工程部署能力，并能通过实践项目和竞赛验证。最终能针对具体场景选择并实施优化方案。",
+        "capabilities": [
+          {
+            "name": "LLM推理基础",
+            "type": "knowledge",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "理解Transformer解码器架构、自回归生成过程、注意力机制、前馈网络等，能够分析推理阶段的计算与内存访问模式。",
+            "concept_type": "concept",
+            "id": "-9jhSYWWb6J0hX8c",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "推理性能指标与瓶颈分析",
+            "type": "knowledge",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "掌握时延（TTFT、TPOT）、吞吐量、内存占用等关键指标，并能使用性能分析工具定位计算、内存或通信瓶颈。",
+            "concept_type": "mechanism",
+            "id": "CQ7UXJ3EnHPYne7f",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "KV缓存优化技术",
+            "type": "application",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "理解KV缓存机制及其内存开销，能够应用PagedAttention、KV缓存量化、缓存共享等优化方法。",
+            "concept_type": "skill",
+            "id": "PpeqU8ibg6dOWTYb",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "模型量化与压缩",
+            "type": "application",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "掌握训练后量化（PTQ）、量化感知训练（QAT）、权重与激活量化等方法，能对LLM进行低比特量化并评估精度损失。",
+            "concept_type": "skill",
+            "id": "UvVptgHZ_kjql9uN",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "批处理与调度策略",
+            "type": "application",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "理解连续批处理、动态批处理、请求调度等策略，并能实现或配置以提升吞吐量。",
+            "concept_type": "skill",
+            "id": "YJA2CT90_KgAY2fo",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "投机解码",
+            "type": "application",
+            "required_level": "application",
+            "importance": "supporting",
+            "description": "掌握投机解码原理，能实现草稿模型与目标模型协同生成，降低解码延迟。",
+            "concept_type": "skill",
+            "id": "NoGeowN5WgrYAdWw",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "并行推理策略",
+            "type": "knowledge",
+            "required_level": "application",
+            "importance": "supporting",
+            "description": "了解张量并行、流水线并行、序列并行等分布式推理方法，能根据场景选择并行策略。",
+            "concept_type": "concept",
+            "id": "G0FG2jdHahrjuq9q",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "推理引擎与部署工具",
+            "type": "tool",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "熟练使用vLLM、TensorRT-LLM、TGI、ONNX Runtime等推理引擎，能够部署模型并配置优化参数。",
+            "concept_type": "skill",
+            "id": "ingrj0kHLn0hsWr2",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "硬件加速基础",
+            "type": "knowledge",
+            "required_level": "understanding",
+            "importance": "supporting",
+            "description": "了解GPU、TPU等加速器架构，以及CUDA编程、算子融合等对推理性能的影响。",
+            "concept_type": "concept",
+            "id": "ACNhXM9dOzs2qQXV",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "性能评估与调优实践",
+            "type": "practice",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "通过基准测试和消融实验评估优化效果，能迭代调优参数达到目标性能。",
+            "concept_type": "skill",
+            "id": "_fVDnkxvrT6FAf0u",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "优化项目实践",
+            "type": "practice",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "完成一个端到端的LLM推理优化项目，包括需求分析、方案设计、实现、测试与报告。",
+            "concept_type": "skill",
+            "id": "X138uyFAKmqUO6HY",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "优化竞赛参与",
+            "type": "practice",
+            "required_level": "transfer",
+            "importance": "supporting",
+            "description": "参加LLM推理优化相关竞赛（如MLPerf、Kaggle），在限时环境下应用优化技术并对比方案。",
+            "concept_type": "skill",
+            "id": "aCgEKXTYaSW9LCnW",
+            "source": "requirement",
+            "user_override": false
+          }
+        ],
+        "dependencies": [
+          {
+            "from": "-9jhSYWWb6J0hX8c",
+            "to": "CQ7UXJ3EnHPYne7f",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "CQ7UXJ3EnHPYne7f",
+            "to": "PpeqU8ibg6dOWTYb",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "CQ7UXJ3EnHPYne7f",
+            "to": "UvVptgHZ_kjql9uN",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "CQ7UXJ3EnHPYne7f",
+            "to": "YJA2CT90_KgAY2fo",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "CQ7UXJ3EnHPYne7f",
+            "to": "NoGeowN5WgrYAdWw",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "CQ7UXJ3EnHPYne7f",
+            "to": "G0FG2jdHahrjuq9q",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "CQ7UXJ3EnHPYne7f",
+            "to": "ingrj0kHLn0hsWr2",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "PpeqU8ibg6dOWTYb",
+            "to": "_fVDnkxvrT6FAf0u",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "UvVptgHZ_kjql9uN",
+            "to": "_fVDnkxvrT6FAf0u",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "YJA2CT90_KgAY2fo",
+            "to": "_fVDnkxvrT6FAf0u",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "ingrj0kHLn0hsWr2",
+            "to": "_fVDnkxvrT6FAf0u",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "_fVDnkxvrT6FAf0u",
+            "to": "X138uyFAKmqUO6HY",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "X138uyFAKmqUO6HY",
+            "to": "aCgEKXTYaSW9LCnW",
+            "relation": "recommended_before"
+          }
+        ],
+        "ignored_soft_edges": [
+          {
+            "from": "ACNhXM9dOzs2qQXV",
+            "to": "ingrj0kHLn0hsWr2",
+            "relation": "recommended_before"
+          }
+        ],
+        "source": "model_requirement"
+      },
+      "gaps": [
+        {
+          "name": "LLM推理基础",
+          "status": "sufficient",
+          "required_level": "application",
+          "reason_code": "CAPABILITY_VERIFIED"
+        },
+        {
+          "name": "推理性能指标与瓶颈分析",
+          "status": "partial",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_PARTIAL"
+        },
+        {
+          "name": "KV缓存优化技术",
+          "status": "conflicted",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_CONFLICT"
+        },
+        {
+          "name": "模型量化与压缩",
+          "status": "missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_MISSING"
+        },
+        {
+          "name": "批处理与调度策略",
+          "status": "missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_MISSING"
+        },
+        {
+          "name": "投机解码",
+          "status": "missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_MISSING"
+        },
+        {
+          "name": "并行推理策略",
+          "status": "missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_MISSING"
+        },
+        {
+          "name": "推理引擎与部署工具",
+          "status": "practice_missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_PRACTICE_MISSING"
+        },
+        {
+          "name": "硬件加速基础",
+          "status": "missing",
+          "required_level": "understanding",
+          "reason_code": "GOAL_GAP_MISSING"
+        },
+        {
+          "name": "性能评估与调优实践",
+          "status": "practice_missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_PRACTICE_MISSING"
+        },
+        {
+          "name": "优化项目实践",
+          "status": "practice_missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_PRACTICE_MISSING"
+        },
+        {
+          "name": "优化竞赛参与",
+          "status": "practice_missing",
+          "required_level": "transfer",
+          "reason_code": "GOAL_GAP_PRACTICE_MISSING"
+        }
+      ],
+      "stages": [
+        {
+          "title": "推理基础与性能分析",
+          "objective": "建立LLM推理核心概念，掌握性能指标与瓶颈定位方法。",
+          "capability_ids": [
+            "-9jhSYWWb6J0hX8c",
+            "CQ7UXJ3EnHPYne7f"
+          ],
+          "id": "Fn25acS66S5d_FuH",
+          "ordinal": 1,
+          "status": "planned",
+          "gate": {
+            "type": "capability_gate",
+            "requirements": [
+              {
+                "capability_id": "-9jhSYWWb6J0hX8c",
+                "minimum": "application"
+              },
+              {
+                "capability_id": "CQ7UXJ3EnHPYne7f",
+                "minimum": "application"
+              }
+            ]
+          },
+          "estimated_minutes": 25
+        },
+        {
+          "title": "核心优化技术",
+          "objective": "应用KV缓存优化、模型量化、批处理调度及推理引擎部署技术。",
+          "capability_ids": [
+            "PpeqU8ibg6dOWTYb",
+            "UvVptgHZ_kjql9uN",
+            "YJA2CT90_KgAY2fo",
+            "ingrj0kHLn0hsWr2"
+          ],
+          "id": "CFH2b2MUMZg6lxXm",
+          "ordinal": 2,
+          "status": "planned",
+          "gate": {
+            "type": "capability_gate",
+            "requirements": [
+              {
+                "capability_id": "PpeqU8ibg6dOWTYb",
+                "minimum": "application"
+              },
+              {
+                "capability_id": "UvVptgHZ_kjql9uN",
+                "minimum": "application"
+              },
+              {
+                "capability_id": "YJA2CT90_KgAY2fo",
+                "minimum": "application"
+              },
+              {
+                "capability_id": "ingrj0kHLn0hsWr2",
+                "minimum": "application"
+              }
+            ]
+          },
+          "estimated_minutes": 43
+        },
+        {
+          "title": "性能调优与项目实践",
+          "objective": "通过基准测试与消融实验迭代调优，完成端到端优化项目。",
+          "capability_ids": [
+            "_fVDnkxvrT6FAf0u",
+            "X138uyFAKmqUO6HY"
+          ],
+          "id": "BUfrUJfVCe8G2Fu8",
+          "ordinal": 3,
+          "status": "planned",
+          "gate": {
+            "type": "capability_gate",
+            "requirements": [
+              {
+                "capability_id": "_fVDnkxvrT6FAf0u",
+                "minimum": "application"
+              },
+              {
+                "capability_id": "X138uyFAKmqUO6HY",
+                "minimum": "application"
+              }
+            ]
+          },
+          "estimated_minutes": 30
+        },
+        {
+          "title": "进阶优化与扩展",
+          "objective": "掌握投机解码、并行推理策略及硬件加速原理。",
+          "capability_ids": [
+            "NoGeowN5WgrYAdWw",
+            "G0FG2jdHahrjuq9q",
+            "ACNhXM9dOzs2qQXV"
+          ],
+          "id": "-62kF_gNQPKYf0O5",
+          "ordinal": 4,
+          "status": "planned",
+          "gate": {
+            "type": "capability_gate",
+            "requirements": [
+              {
+                "capability_id": "NoGeowN5WgrYAdWw",
+                "minimum": "application"
+              },
+              {
+                "capability_id": "G0FG2jdHahrjuq9q",
+                "minimum": "application"
+              },
+              {
+                "capability_id": "ACNhXM9dOzs2qQXV",
+                "minimum": "understanding"
+              }
+            ]
+          },
+          "estimated_minutes": 30
+        },
+        {
+          "title": "竞赛与迁移应用",
+          "objective": "在限时竞赛环境中应用并对比优化方案，提升迁移能力。",
+          "capability_ids": [
+            "aCgEKXTYaSW9LCnW"
+          ],
+          "id": "bxmp70Rd19dsZ-_u",
+          "ordinal": 5,
+          "status": "planned",
+          "gate": {
+            "type": "capability_gate",
+            "requirements": [
+              {
+                "capability_id": "aCgEKXTYaSW9LCnW",
+                "minimum": "transfer"
+              }
+            ]
+          },
+          "estimated_minutes": 5
+        }
+      ],
+      "program_order": [
+        "-9jhSYWWb6J0hX8c",
+        "CQ7UXJ3EnHPYne7f",
+        "PpeqU8ibg6dOWTYb",
+        "UvVptgHZ_kjql9uN",
+        "YJA2CT90_KgAY2fo",
+        "ingrj0kHLn0hsWr2",
+        "_fVDnkxvrT6FAf0u",
+        "X138uyFAKmqUO6HY",
+        "NoGeowN5WgrYAdWw",
+        "G0FG2jdHahrjuq9q",
+        "ACNhXM9dOzs2qQXV",
+        "aCgEKXTYaSW9LCnW"
+      ],
+      "tasks": [
+        {
+          "title": "LLM推理基础",
+          "task_type": "goal_checkpoint",
+          "status": "completed",
+          "reason_code": "CAPABILITY_VERIFIED"
+        },
+        {
+          "title": "推理性能指标与瓶颈分析",
+          "task_type": "continue_course",
+          "status": "ready",
+          "reason_code": "REUSE_EXISTING_COURSE"
+        },
+        {
+          "title": "KV缓存优化技术",
+          "task_type": "cross_course_verify",
+          "status": "blocked",
+          "reason_code": "GOAL_GAP_CONFLICT"
+        },
+        {
+          "title": "模型量化与压缩",
+          "task_type": "create_course",
+          "status": "blocked",
+          "reason_code": "CREATE_COURSE_REQUIRED"
+        },
+        {
+          "title": "批处理与调度策略",
+          "task_type": "create_course",
+          "status": "blocked",
+          "reason_code": "CREATE_COURSE_REQUIRED"
+        },
+        {
+          "title": "推理引擎与部署工具",
+          "task_type": "authentic_assessment",
+          "status": "blocked",
+          "reason_code": "GOAL_GAP_PRACTICE_MISSING"
+        },
+        {
+          "title": "性能评估与调优实践",
+          "task_type": "authentic_assessment",
+          "status": "blocked",
+          "reason_code": "GOAL_GAP_PRACTICE_MISSING"
+        },
+        {
+          "title": "优化项目实践",
+          "task_type": "authentic_assessment",
+          "status": "blocked",
+          "reason_code": "GOAL_GAP_PRACTICE_MISSING"
+        },
+        {
+          "title": "投机解码",
+          "task_type": "create_course",
+          "status": "planned",
+          "reason_code": "CREATE_COURSE_REQUIRED"
+        },
+        {
+          "title": "并行推理策略",
+          "task_type": "create_course",
+          "status": "planned",
+          "reason_code": "CREATE_COURSE_REQUIRED"
+        },
+        {
+          "title": "硬件加速基础",
+          "task_type": "create_course",
+          "status": "planned",
+          "reason_code": "CREATE_COURSE_REQUIRED"
+        },
+        {
+          "title": "优化竞赛参与",
+          "task_type": "goal_checkpoint",
+          "status": "ready",
+          "reason_code": "GOAL_GAP_PRACTICE_MISSING"
+        }
+      ],
+      "model_outputs": [
+        {
+          "stage": "growth_capabilities",
+          "raw": "{\n  \"goal_summary\": \"该目标要求能够独立理解和应用LLM推理优化。需要掌握LLM推理基础、性能分析方法、优化技术（如量化、KV缓存、批处理、投机解码）、并行策略以及工程部署能力，并能通过实践项目和竞赛验证。最终能针对具体场景选择并实施优化方案。\",\n  \"capabilities\": [\n    {\n      \"name\": \"LLM推理基础\",\n      \"type\": \"knowledge\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"理解Transformer解码器架构、自回归生成过程、注意力机制、前馈网络等，能够分析推理阶段的计算与内存访问模式。\",\n      \"concept_type\": \"concept\"\n    },\n    {\n      \"name\": \"推理性能指标与瓶颈分析\",\n      \"type\": \"knowledge\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"掌握时延（TTFT、TPOT）、吞吐量、内存占用等关键指标，并能使用性能分析工具定位计算、内存或通信瓶颈。\",\n      \"concept_type\": \"mechanism\"\n    },\n    {\n      \"name\": \"KV缓存优化技术\",\n      \"type\": \"application\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"理解KV缓存机制及其内存开销，能够应用PagedAttention、KV缓存量化、缓存共享等优化方法。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"模型量化与压缩\",\n      \"type\": \"application\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"掌握训练后量化（PTQ）、量化感知训练（QAT）、权重与激活量化等方法，能对LLM进行低比特量化并评估精度损失。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"批处理与调度策略\",\n      \"type\": \"application\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"理解连续批处理、动态批处理、请求调度等策略，并能实现或配置以提升吞吐量。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"投机解码\",\n      \"type\": \"application\",\n      \"required_level\": \"application\",\n      \"importance\": \"supporting\",\n      \"description\": \"掌握投机解码原理，能实现草稿模型与目标模型协同生成，降低解码延迟。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"并行推理策略\",\n      \"type\": \"knowledge\",\n      \"required_level\": \"application\",\n      \"importance\": \"supporting\",\n      \"description\": \"了解张量并行、流水线并行、序列并行等分布式推理方法，能根据场景选择并行策略。\",\n      \"concept_type\": \"concept\"\n    },\n    {\n      \"name\": \"推理引擎与部署工具\",\n      \"type\": \"tool\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"熟练使用vLLM、TensorRT-LLM、TGI、ONNX Runtime等推理引擎，能够部署模型并配置优化参数。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"硬件加速基础\",\n      \"type\": \"knowledge\",\n      \"required_level\": \"understanding\",\n      \"importance\": \"supporting\",\n      \"description\": \"了解GPU、TPU等加速器架构，以及CUDA编程、算子融合等对推理性能的影响。\",\n      \"concept_type\": \"concept\"\n    },\n    {\n      \"name\": \"性能评估与调优实践\",\n      \"type\": \"practice\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"通过基准测试和消融实验评估优化效果，能迭代调优参数达到目标性能。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"优化项目实践\",\n      \"type\": \"practice\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"完成一个端到端的LLM推理优化项目，包括需求分析、方案设计、实现、测试与报告。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"优化竞赛参与\",\n      \"type\": \"practice\",\n      \"required_level\": \"transfer\",\n      \"importance\": \"supporting\",\n      \"description\": \"参加LLM推理优化相关竞赛（如MLPerf、Kaggle），在限时环境下应用优化技术并对比方案。\",\n      \"concept_type\": \"skill\"\n    }\n  ],\n  \"dependencies\": [\n    {\n      \"from\": \"LLM推理基础\",\n      \"to\": \"推理性能指标与瓶颈分析\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"推理性能指标与瓶颈分析\",\n      \"to\": \"KV缓存优化技术\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"推理性能指标与瓶颈分析\",\n      \"to\": \"模型量化与压缩\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"推理性能指标与瓶颈分析\",\n      \"to\": \"批处理与调度策略\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"推理性能指标与瓶颈分析\",\n      \"to\": \"投机解码\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"推理性能指标与瓶颈分析\",\n      \"to\": \"并行推理策略\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"推理性能指标与瓶颈分析\",\n      \"to\": \"推理引擎与部署工具\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"硬件加速基础\",\n      \"to\": \"推理引擎与部署工具\",\n      \"relation\": \"recommended_before\"\n    },\n    {\n      \"from\": \"KV缓存优化技术\",\n      \"to\": \"性能评估与调优实践\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"模型量化与压缩\",\n      \"to\": \"性能评估与调优实践\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"批处理与调度策略\",\n      \"to\": \"性能评估与调优实践\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"推理引擎与部署工具\",\n      \"to\": \"性能评估与调优实践\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"性能评估与调优实践\",\n      \"to\": \"优化项目实践\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"优化项目实践\",\n      \"to\": \"优化竞赛参与\",\n      \"relation\": \"recommended_before\"\n    }\n  ]\n}"
+        },
+        {
+          "stage": "growth_capabilities",
+          "parsed": {
+            "goal_summary": "该目标要求能够独立理解和应用LLM推理优化。需要掌握LLM推理基础、性能分析方法、优化技术（如量化、KV缓存、批处理、投机解码）、并行策略以及工程部署能力，并能通过实践项目和竞赛验证。最终能针对具体场景选择并实施优化方案。",
+            "capabilities": [
+              {
+                "name": "LLM推理基础",
+                "type": "knowledge",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "理解Transformer解码器架构、自回归生成过程、注意力机制、前馈网络等，能够分析推理阶段的计算与内存访问模式。",
+                "concept_type": "concept"
+              },
+              {
+                "name": "推理性能指标与瓶颈分析",
+                "type": "knowledge",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "掌握时延（TTFT、TPOT）、吞吐量、内存占用等关键指标，并能使用性能分析工具定位计算、内存或通信瓶颈。",
+                "concept_type": "mechanism"
+              },
+              {
+                "name": "KV缓存优化技术",
+                "type": "application",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "理解KV缓存机制及其内存开销，能够应用PagedAttention、KV缓存量化、缓存共享等优化方法。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "模型量化与压缩",
+                "type": "application",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "掌握训练后量化（PTQ）、量化感知训练（QAT）、权重与激活量化等方法，能对LLM进行低比特量化并评估精度损失。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "批处理与调度策略",
+                "type": "application",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "理解连续批处理、动态批处理、请求调度等策略，并能实现或配置以提升吞吐量。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "投机解码",
+                "type": "application",
+                "required_level": "application",
+                "importance": "supporting",
+                "description": "掌握投机解码原理，能实现草稿模型与目标模型协同生成，降低解码延迟。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "并行推理策略",
+                "type": "knowledge",
+                "required_level": "application",
+                "importance": "supporting",
+                "description": "了解张量并行、流水线并行、序列并行等分布式推理方法，能根据场景选择并行策略。",
+                "concept_type": "concept"
+              },
+              {
+                "name": "推理引擎与部署工具",
+                "type": "tool",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "熟练使用vLLM、TensorRT-LLM、TGI、ONNX Runtime等推理引擎，能够部署模型并配置优化参数。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "硬件加速基础",
+                "type": "knowledge",
+                "required_level": "understanding",
+                "importance": "supporting",
+                "description": "了解GPU、TPU等加速器架构，以及CUDA编程、算子融合等对推理性能的影响。",
+                "concept_type": "concept"
+              },
+              {
+                "name": "性能评估与调优实践",
+                "type": "practice",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "通过基准测试和消融实验评估优化效果，能迭代调优参数达到目标性能。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "优化项目实践",
+                "type": "practice",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "完成一个端到端的LLM推理优化项目，包括需求分析、方案设计、实现、测试与报告。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "优化竞赛参与",
+                "type": "practice",
+                "required_level": "transfer",
+                "importance": "supporting",
+                "description": "参加LLM推理优化相关竞赛（如MLPerf、Kaggle），在限时环境下应用优化技术并对比方案。",
+                "concept_type": "skill"
+              }
+            ],
+            "dependencies": [
+              {
+                "from": "LLM推理基础",
+                "to": "推理性能指标与瓶颈分析",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "推理性能指标与瓶颈分析",
+                "to": "KV缓存优化技术",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "推理性能指标与瓶颈分析",
+                "to": "模型量化与压缩",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "推理性能指标与瓶颈分析",
+                "to": "批处理与调度策略",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "推理性能指标与瓶颈分析",
+                "to": "投机解码",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "推理性能指标与瓶颈分析",
+                "to": "并行推理策略",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "推理性能指标与瓶颈分析",
+                "to": "推理引擎与部署工具",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "硬件加速基础",
+                "to": "推理引擎与部署工具",
+                "relation": "recommended_before"
+              },
+              {
+                "from": "KV缓存优化技术",
+                "to": "性能评估与调优实践",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "模型量化与压缩",
+                "to": "性能评估与调优实践",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "批处理与调度策略",
+                "to": "性能评估与调优实践",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "推理引擎与部署工具",
+                "to": "性能评估与调优实践",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "性能评估与调优实践",
+                "to": "优化项目实践",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "优化项目实践",
+                "to": "优化竞赛参与",
+                "relation": "recommended_before"
+              }
+            ]
+          }
+        },
+        {
+          "stage": "growth_stages",
+          "raw": "{\n  \"stages\": [\n    {\n      \"title\": \"推理基础与性能分析\",\n      \"objective\": \"建立LLM推理核心概念，掌握性能指标与瓶颈定位方法。\",\n      \"capability_ids\": [\n        \"-9jhSYWWb6J0hX8c\",\n        \"CQ7UXJ3EnHPYne7f\"\n      ]\n    },\n    {\n      \"title\": \"核心优化技术\",\n      \"objective\": \"应用KV缓存优化、模型量化、批处理调度及推理引擎部署技术。\",\n      \"capability_ids\": [\n        \"PpeqU8ibg6dOWTYb\",\n        \"UvVptgHZ_kjql9uN\",\n        \"YJA2CT90_KgAY2fo\",\n        \"ingrj0kHLn0hsWr2\"\n      ]\n    },\n    {\n      \"title\": \"性能调优与项目实践\",\n      \"objective\": \"通过基准测试与消融实验迭代调优，完成端到端优化项目。\",\n      \"capability_ids\": [\n        \"_fVDnkxvrT6FAf0u\",\n        \"X138uyFAKmqUO6HY\"\n      ]\n    },\n    {\n      \"title\": \"进阶优化与扩展\",\n      \"objective\": \"掌握投机解码、并行推理策略及硬件加速原理。\",\n      \"capability_ids\": [\n        \"NoGeowN5WgrYAdWw\",\n        \"G0FG2jdHahrjuq9q\",\n        \"ACNhXM9dOzs2qQXV\"\n      ]\n    },\n    {\n      \"title\": \"竞赛与迁移应用\",\n      \"objective\": \"在限时竞赛环境中应用并对比优化方案，提升迁移能力。\",\n      \"capability_ids\": [\n        \"aCgEKXTYaSW9LCnW\"\n      ]\n    }\n  ]\n}"
+        },
+        {
+          "stage": "growth_stages",
+          "parsed": {
+            "stages": [
+              {
+                "title": "推理基础与性能分析",
+                "objective": "建立LLM推理核心概念，掌握性能指标与瓶颈定位方法。",
+                "capability_ids": [
+                  "-9jhSYWWb6J0hX8c",
+                  "CQ7UXJ3EnHPYne7f"
+                ]
+              },
+              {
+                "title": "核心优化技术",
+                "objective": "应用KV缓存优化、模型量化、批处理调度及推理引擎部署技术。",
+                "capability_ids": [
+                  "PpeqU8ibg6dOWTYb",
+                  "UvVptgHZ_kjql9uN",
+                  "YJA2CT90_KgAY2fo",
+                  "ingrj0kHLn0hsWr2"
+                ]
+              },
+              {
+                "title": "性能调优与项目实践",
+                "objective": "通过基准测试与消融实验迭代调优，完成端到端优化项目。",
+                "capability_ids": [
+                  "_fVDnkxvrT6FAf0u",
+                  "X138uyFAKmqUO6HY"
+                ]
+              },
+              {
+                "title": "进阶优化与扩展",
+                "objective": "掌握投机解码、并行推理策略及硬件加速原理。",
+                "capability_ids": [
+                  "NoGeowN5WgrYAdWw",
+                  "G0FG2jdHahrjuq9q",
+                  "ACNhXM9dOzs2qQXV"
+                ]
+              },
+              {
+                "title": "竞赛与迁移应用",
+                "objective": "在限时竞赛环境中应用并对比优化方案，提升迁移能力。",
+                "capability_ids": [
+                  "aCgEKXTYaSW9LCnW"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "goal": "准备机器学习比赛",
+      "checks": {
+        "structured_capability_graph": true,
+        "hard_dependencies_valid": true,
+        "program_order_preserved": true,
+        "required_critical_exists": true,
+        "supporting_distinguished": true,
+        "practice_explicit": true,
+        "structured_stages": true,
+        "no_learner_scores_in_requirements": true,
+        "program_gaps_from_synthetic_p3": true,
+        "strong_basics_not_relearned": true,
+        "existing_course_reused": true,
+        "conflict_schedules_verification": true
+      },
+      "passed": true,
+      "synthetic_conditions": {
+        "机器学习基础概念与范式": "strong",
+        "比赛任务与评价指标理解": "partial",
+        "数据探索与预处理": "conflicted"
+      },
+      "graph": {
+        "goal_summary": "该目标旨在培养独立参加机器学习比赛所需的核心能力，涵盖问题定义、数据处理、模型构建、实验评估、结果提交与竞赛策略等环节。能力拆分基于比赛应用场景，不涉及个人现有水平判断。",
+        "capabilities": [
+          {
+            "name": "机器学习基础概念与范式",
+            "type": "knowledge",
+            "required_level": "understanding",
+            "importance": "critical",
+            "description": "理解监督学习、无监督学习、分类、回归、聚类、损失函数、过拟合与欠拟合等基本概念，为后续建模与调参提供理论支撑。",
+            "concept_type": "concept",
+            "id": "7f4dfYD5lcLM0BXf",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "比赛任务与评价指标理解",
+            "type": "knowledge",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "能够根据比赛说明识别任务类型（分类、回归、排序等），理解官方评价指标（如AUC、F1、RMSE、MAE等）及其优化方向。",
+            "concept_type": "concept",
+            "id": "_PbIIyjeBeCmrv1x",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "数据探索与预处理",
+            "type": "application",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "能够对训练集和测试集进行缺失值、异常值、分布、类别不平衡等探索，并执行标准化、归一化、编码、填充等预处理操作。",
+            "concept_type": "skill",
+            "id": "hizJeqfkyPZFWZ1o",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "特征工程",
+            "type": "application",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "能够构造、选择、变换特征，包括分箱、交叉、聚合、文本/类别特征编码等，以提升模型表现。",
+            "concept_type": "skill",
+            "id": "jzMkUp1x4WO7j0dB",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "常用机器学习模型应用",
+            "type": "application",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "能够调用并训练常见模型（如线性模型、决策树、随机森林、梯度提升树、神经网络等），理解其适用场景与基本参数。",
+            "concept_type": "skill",
+            "id": "KGctNhltJtYDsV27",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "模型评估与验证策略",
+            "type": "application",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "能够设计并实施交叉验证、留出法、分层抽样等验证方案，正确计算评价指标，避免数据泄漏。",
+            "concept_type": "skill",
+            "id": "Ve0Chojt9eXeegAM",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "超参数调优与模型选择",
+            "type": "application",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "能够使用网格搜索、随机搜索、贝叶斯优化等方法进行超参数调优，并依据验证结果选择模型。",
+            "concept_type": "skill",
+            "id": "PHHCszuDhyhhOiPX",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "集成学习与模型融合",
+            "type": "application",
+            "required_level": "application",
+            "importance": "supporting",
+            "description": "能够应用Bagging、Boosting、Stacking、Blending等集成方法，或对多个模型结果进行加权融合以提升排名。",
+            "concept_type": "skill",
+            "id": "lfCR8SgWVq83DiUU",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "深度学习基础与框架使用",
+            "type": "application",
+            "required_level": "application",
+            "importance": "supporting",
+            "description": "能够使用至少一种深度学习框架（如PyTorch、TensorFlow）构建、训练和调试简单神经网络，适用于图像、文本或结构化数据比赛。",
+            "concept_type": "skill",
+            "id": "VF708HvrJ5onFG_2",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "比赛策略与结果提交",
+            "type": "practice",
+            "required_level": "application",
+            "importance": "critical",
+            "description": "能够制定提交策略，包括提交格式、提交频率、排行榜反馈分析、过拟合风险控制，并完成有效提交。",
+            "concept_type": "skill",
+            "id": "geawM1ioKoYtgDm5",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "实验管理与可复现性",
+            "type": "practice",
+            "required_level": "application",
+            "importance": "supporting",
+            "description": "能够记录实验配置、随机种子、数据版本、模型参数，保证结果可复现，便于迭代优化。",
+            "concept_type": "skill",
+            "id": "Ma6hBj4kvUoTWB6N",
+            "source": "requirement",
+            "user_override": false
+          },
+          {
+            "name": "持续学习与问题解决",
+            "type": "meta_skill",
+            "required_level": "transfer",
+            "importance": "supporting",
+            "description": "能够在比赛过程中查阅文献、复现方案、分析失败原因并调整方向，独立解决新出现的问题。",
+            "concept_type": "skill",
+            "id": "0Yr8M1sJLDS7wzHP",
+            "source": "requirement",
+            "user_override": false
+          }
+        ],
+        "dependencies": [
+          {
+            "from": "7f4dfYD5lcLM0BXf",
+            "to": "_PbIIyjeBeCmrv1x",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "7f4dfYD5lcLM0BXf",
+            "to": "KGctNhltJtYDsV27",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "_PbIIyjeBeCmrv1x",
+            "to": "Ve0Chojt9eXeegAM",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "hizJeqfkyPZFWZ1o",
+            "to": "jzMkUp1x4WO7j0dB",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "jzMkUp1x4WO7j0dB",
+            "to": "KGctNhltJtYDsV27",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "KGctNhltJtYDsV27",
+            "to": "Ve0Chojt9eXeegAM",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "Ve0Chojt9eXeegAM",
+            "to": "PHHCszuDhyhhOiPX",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "PHHCszuDhyhhOiPX",
+            "to": "lfCR8SgWVq83DiUU",
+            "relation": "recommended_before"
+          },
+          {
+            "from": "KGctNhltJtYDsV27",
+            "to": "VF708HvrJ5onFG_2",
+            "relation": "recommended_before"
+          },
+          {
+            "from": "Ve0Chojt9eXeegAM",
+            "to": "geawM1ioKoYtgDm5",
+            "relation": "prerequisite"
+          },
+          {
+            "from": "Ma6hBj4kvUoTWB6N",
+            "to": "geawM1ioKoYtgDm5",
+            "relation": "supports"
+          },
+          {
+            "from": "0Yr8M1sJLDS7wzHP",
+            "to": "geawM1ioKoYtgDm5",
+            "relation": "supports"
+          }
+        ],
+        "ignored_soft_edges": [],
+        "source": "model_requirement"
+      },
+      "gaps": [
+        {
+          "name": "机器学习基础概念与范式",
+          "status": "sufficient",
+          "required_level": "understanding",
+          "reason_code": "CAPABILITY_VERIFIED"
+        },
+        {
+          "name": "比赛任务与评价指标理解",
+          "status": "partial",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_PARTIAL"
+        },
+        {
+          "name": "数据探索与预处理",
+          "status": "conflicted",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_CONFLICT"
+        },
+        {
+          "name": "特征工程",
+          "status": "missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_MISSING"
+        },
+        {
+          "name": "常用机器学习模型应用",
+          "status": "missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_MISSING"
+        },
+        {
+          "name": "模型评估与验证策略",
+          "status": "missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_MISSING"
+        },
+        {
+          "name": "超参数调优与模型选择",
+          "status": "missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_MISSING"
+        },
+        {
+          "name": "集成学习与模型融合",
+          "status": "missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_MISSING"
+        },
+        {
+          "name": "深度学习基础与框架使用",
+          "status": "missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_MISSING"
+        },
+        {
+          "name": "比赛策略与结果提交",
+          "status": "practice_missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_PRACTICE_MISSING"
+        },
+        {
+          "name": "实验管理与可复现性",
+          "status": "practice_missing",
+          "required_level": "application",
+          "reason_code": "GOAL_GAP_PRACTICE_MISSING"
+        },
+        {
+          "name": "持续学习与问题解决",
+          "status": "practice_missing",
+          "required_level": "transfer",
+          "reason_code": "GOAL_GAP_PRACTICE_MISSING"
+        }
+      ],
+      "stages": [
+        {
+          "title": "数据准备与探索",
+          "objective": "掌握数据探索与预处理、特征工程，为后续建模提供高质量数据。",
+          "capability_ids": [
+            "hizJeqfkyPZFWZ1o",
+            "jzMkUp1x4WO7j0dB"
+          ],
+          "id": "HsP4Z5ZV75xXnHSj",
+          "ordinal": 1,
+          "status": "planned",
+          "gate": {
+            "type": "capability_gate",
+            "requirements": [
+              {
+                "capability_id": "hizJeqfkyPZFWZ1o",
+                "minimum": "application"
+              },
+              {
+                "capability_id": "jzMkUp1x4WO7j0dB",
+                "minimum": "application"
+              }
+            ]
+          },
+          "estimated_minutes": 18
+        },
+        {
+          "title": "理论基础与模型应用",
+          "objective": "理解机器学习基本概念，识别比赛任务与评价指标，并应用常用模型。",
+          "capability_ids": [
+            "7f4dfYD5lcLM0BXf",
+            "KGctNhltJtYDsV27",
+            "_PbIIyjeBeCmrv1x"
+          ],
+          "id": "GQTp5MCsqOYJBRDK",
+          "ordinal": 2,
+          "status": "planned",
+          "gate": {
+            "type": "capability_gate",
+            "requirements": [
+              {
+                "capability_id": "7f4dfYD5lcLM0BXf",
+                "minimum": "understanding"
+              },
+              {
+                "capability_id": "KGctNhltJtYDsV27",
+                "minimum": "application"
+              },
+              {
+                "capability_id": "_PbIIyjeBeCmrv1x",
+                "minimum": "application"
+              }
+            ]
+          },
+          "estimated_minutes": 35
+        },
+        {
+          "title": "模型评估与调优",
+          "objective": "建立可靠的验证策略，进行超参数调优与模型选择。",
+          "capability_ids": [
+            "Ve0Chojt9eXeegAM",
+            "PHHCszuDhyhhOiPX"
+          ],
+          "id": "exEeFiFVGke3PUAq",
+          "ordinal": 3,
+          "status": "planned",
+          "gate": {
+            "type": "capability_gate",
+            "requirements": [
+              {
+                "capability_id": "Ve0Chojt9eXeegAM",
+                "minimum": "application"
+              },
+              {
+                "capability_id": "PHHCszuDhyhhOiPX",
+                "minimum": "application"
+              }
+            ]
+          },
+          "estimated_minutes": 20
+        },
+        {
+          "title": "比赛实践与进阶",
+          "objective": "制定提交策略，应用集成学习与深度学习，并管理实验可复现性。",
+          "capability_ids": [
+            "geawM1ioKoYtgDm5",
+            "lfCR8SgWVq83DiUU",
+            "VF708HvrJ5onFG_2",
+            "Ma6hBj4kvUoTWB6N"
+          ],
+          "id": "dO1SZl8xvDoSy0ML",
+          "ordinal": 4,
+          "status": "planned",
+          "gate": {
+            "type": "capability_gate",
+            "requirements": [
+              {
+                "capability_id": "geawM1ioKoYtgDm5",
+                "minimum": "application"
+              },
+              {
+                "capability_id": "lfCR8SgWVq83DiUU",
+                "minimum": "application"
+              },
+              {
+                "capability_id": "VF708HvrJ5onFG_2",
+                "minimum": "application"
+              },
+              {
+                "capability_id": "Ma6hBj4kvUoTWB6N",
+                "minimum": "application"
+              }
+            ]
+          },
+          "estimated_minutes": 40
+        },
+        {
+          "title": "持续学习与问题解决",
+          "objective": "培养在比赛过程中独立查阅资料、分析问题并调整方向的能力。",
+          "capability_ids": [
+            "0Yr8M1sJLDS7wzHP"
+          ],
+          "id": "6vyrzj5ADVUpI0sP",
+          "ordinal": 5,
+          "status": "planned",
+          "gate": {
+            "type": "capability_gate",
+            "requirements": [
+              {
+                "capability_id": "0Yr8M1sJLDS7wzHP",
+                "minimum": "transfer"
+              }
+            ]
+          },
+          "estimated_minutes": 5
+        }
+      ],
+      "program_order": [
+        "hizJeqfkyPZFWZ1o",
+        "jzMkUp1x4WO7j0dB",
+        "7f4dfYD5lcLM0BXf",
+        "KGctNhltJtYDsV27",
+        "_PbIIyjeBeCmrv1x",
+        "Ve0Chojt9eXeegAM",
+        "PHHCszuDhyhhOiPX",
+        "geawM1ioKoYtgDm5",
+        "lfCR8SgWVq83DiUU",
+        "VF708HvrJ5onFG_2",
+        "Ma6hBj4kvUoTWB6N",
+        "0Yr8M1sJLDS7wzHP"
+      ],
+      "tasks": [
+        {
+          "title": "数据探索与预处理",
+          "task_type": "cross_course_verify",
+          "status": "ready",
+          "reason_code": "GOAL_GAP_CONFLICT"
+        },
+        {
+          "title": "特征工程",
+          "task_type": "create_course",
+          "status": "blocked",
+          "reason_code": "CREATE_COURSE_REQUIRED"
+        },
+        {
+          "title": "机器学习基础概念与范式",
+          "task_type": "goal_checkpoint",
+          "status": "completed",
+          "reason_code": "CAPABILITY_VERIFIED"
+        },
+        {
+          "title": "常用机器学习模型应用",
+          "task_type": "create_course",
+          "status": "blocked",
+          "reason_code": "CREATE_COURSE_REQUIRED"
+        },
+        {
+          "title": "比赛任务与评价指标理解",
+          "task_type": "continue_course",
+          "status": "ready",
+          "reason_code": "REUSE_EXISTING_COURSE"
+        },
+        {
+          "title": "模型评估与验证策略",
+          "task_type": "create_course",
+          "status": "planned",
+          "reason_code": "CREATE_COURSE_REQUIRED"
+        },
+        {
+          "title": "超参数调优与模型选择",
+          "task_type": "create_course",
+          "status": "planned",
+          "reason_code": "CREATE_COURSE_REQUIRED"
+        },
+        {
+          "title": "比赛策略与结果提交",
+          "task_type": "authentic_assessment",
+          "status": "blocked",
+          "reason_code": "GOAL_GAP_PRACTICE_MISSING"
+        },
+        {
+          "title": "集成学习与模型融合",
+          "task_type": "create_course",
+          "status": "planned",
+          "reason_code": "CREATE_COURSE_REQUIRED"
+        },
+        {
+          "title": "深度学习基础与框架使用",
+          "task_type": "create_course",
+          "status": "planned",
+          "reason_code": "CREATE_COURSE_REQUIRED"
+        },
+        {
+          "title": "实验管理与可复现性",
+          "task_type": "goal_checkpoint",
+          "status": "ready",
+          "reason_code": "GOAL_GAP_PRACTICE_MISSING"
+        },
+        {
+          "title": "持续学习与问题解决",
+          "task_type": "goal_checkpoint",
+          "status": "ready",
+          "reason_code": "GOAL_GAP_PRACTICE_MISSING"
+        }
+      ],
+      "model_outputs": [
+        {
+          "stage": "growth_capabilities",
+          "raw": "{\n  \"goal_summary\": \"该目标旨在培养独立参加机器学习比赛所需的核心能力，涵盖问题定义、数据处理、模型构建、实验评估、结果提交与竞赛策略等环节。能力拆分基于比赛应用场景，不涉及个人现有水平判断。\",\n  \"capabilities\": [\n    {\n      \"name\": \"机器学习基础概念与范式\",\n      \"type\": \"knowledge\",\n      \"required_level\": \"understanding\",\n      \"importance\": \"critical\",\n      \"description\": \"理解监督学习、无监督学习、分类、回归、聚类、损失函数、过拟合与欠拟合等基本概念，为后续建模与调参提供理论支撑。\",\n      \"concept_type\": \"concept\"\n    },\n    {\n      \"name\": \"比赛任务与评价指标理解\",\n      \"type\": \"knowledge\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"能够根据比赛说明识别任务类型（分类、回归、排序等），理解官方评价指标（如AUC、F1、RMSE、MAE等）及其优化方向。\",\n      \"concept_type\": \"concept\"\n    },\n    {\n      \"name\": \"数据探索与预处理\",\n      \"type\": \"application\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"能够对训练集和测试集进行缺失值、异常值、分布、类别不平衡等探索，并执行标准化、归一化、编码、填充等预处理操作。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"特征工程\",\n      \"type\": \"application\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"能够构造、选择、变换特征，包括分箱、交叉、聚合、文本/类别特征编码等，以提升模型表现。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"常用机器学习模型应用\",\n      \"type\": \"application\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"能够调用并训练常见模型（如线性模型、决策树、随机森林、梯度提升树、神经网络等），理解其适用场景与基本参数。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"模型评估与验证策略\",\n      \"type\": \"application\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"能够设计并实施交叉验证、留出法、分层抽样等验证方案，正确计算评价指标，避免数据泄漏。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"超参数调优与模型选择\",\n      \"type\": \"application\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"能够使用网格搜索、随机搜索、贝叶斯优化等方法进行超参数调优，并依据验证结果选择模型。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"集成学习与模型融合\",\n      \"type\": \"application\",\n      \"required_level\": \"application\",\n      \"importance\": \"supporting\",\n      \"description\": \"能够应用Bagging、Boosting、Stacking、Blending等集成方法，或对多个模型结果进行加权融合以提升排名。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"深度学习基础与框架使用\",\n      \"type\": \"application\",\n      \"required_level\": \"application\",\n      \"importance\": \"supporting\",\n      \"description\": \"能够使用至少一种深度学习框架（如PyTorch、TensorFlow）构建、训练和调试简单神经网络，适用于图像、文本或结构化数据比赛。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"比赛策略与结果提交\",\n      \"type\": \"practice\",\n      \"required_level\": \"application\",\n      \"importance\": \"critical\",\n      \"description\": \"能够制定提交策略，包括提交格式、提交频率、排行榜反馈分析、过拟合风险控制，并完成有效提交。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"实验管理与可复现性\",\n      \"type\": \"practice\",\n      \"required_level\": \"application\",\n      \"importance\": \"supporting\",\n      \"description\": \"能够记录实验配置、随机种子、数据版本、模型参数，保证结果可复现，便于迭代优化。\",\n      \"concept_type\": \"skill\"\n    },\n    {\n      \"name\": \"持续学习与问题解决\",\n      \"type\": \"meta_skill\",\n      \"required_level\": \"transfer\",\n      \"importance\": \"supporting\",\n      \"description\": \"能够在比赛过程中查阅文献、复现方案、分析失败原因并调整方向，独立解决新出现的问题。\",\n      \"concept_type\": \"skill\"\n    }\n  ],\n  \"dependencies\": [\n    {\n      \"from\": \"机器学习基础概念与范式\",\n      \"to\": \"比赛任务与评价指标理解\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"机器学习基础概念与范式\",\n      \"to\": \"常用机器学习模型应用\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"比赛任务与评价指标理解\",\n      \"to\": \"模型评估与验证策略\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"数据探索与预处理\",\n      \"to\": \"特征工程\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"特征工程\",\n      \"to\": \"常用机器学习模型应用\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"常用机器学习模型应用\",\n      \"to\": \"模型评估与验证策略\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"模型评估与验证策略\",\n      \"to\": \"超参数调优与模型选择\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"超参数调优与模型选择\",\n      \"to\": \"集成学习与模型融合\",\n      \"relation\": \"recommended_before\"\n    },\n    {\n      \"from\": \"常用机器学习模型应用\",\n      \"to\": \"深度学习基础与框架使用\",\n      \"relation\": \"recommended_before\"\n    },\n    {\n      \"from\": \"模型评估与验证策略\",\n      \"to\": \"比赛策略与结果提交\",\n      \"relation\": \"prerequisite\"\n    },\n    {\n      \"from\": \"实验管理与可复现性\",\n      \"to\": \"比赛策略与结果提交\",\n      \"relation\": \"supports\"\n    },\n    {\n      \"from\": \"持续学习与问题解决\",\n      \"to\": \"比赛策略与结果提交\",\n      \"relation\": \"supports\"\n    }\n  ]\n}"
+        },
+        {
+          "stage": "growth_capabilities",
+          "parsed": {
+            "goal_summary": "该目标旨在培养独立参加机器学习比赛所需的核心能力，涵盖问题定义、数据处理、模型构建、实验评估、结果提交与竞赛策略等环节。能力拆分基于比赛应用场景，不涉及个人现有水平判断。",
+            "capabilities": [
+              {
+                "name": "机器学习基础概念与范式",
+                "type": "knowledge",
+                "required_level": "understanding",
+                "importance": "critical",
+                "description": "理解监督学习、无监督学习、分类、回归、聚类、损失函数、过拟合与欠拟合等基本概念，为后续建模与调参提供理论支撑。",
+                "concept_type": "concept"
+              },
+              {
+                "name": "比赛任务与评价指标理解",
+                "type": "knowledge",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "能够根据比赛说明识别任务类型（分类、回归、排序等），理解官方评价指标（如AUC、F1、RMSE、MAE等）及其优化方向。",
+                "concept_type": "concept"
+              },
+              {
+                "name": "数据探索与预处理",
+                "type": "application",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "能够对训练集和测试集进行缺失值、异常值、分布、类别不平衡等探索，并执行标准化、归一化、编码、填充等预处理操作。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "特征工程",
+                "type": "application",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "能够构造、选择、变换特征，包括分箱、交叉、聚合、文本/类别特征编码等，以提升模型表现。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "常用机器学习模型应用",
+                "type": "application",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "能够调用并训练常见模型（如线性模型、决策树、随机森林、梯度提升树、神经网络等），理解其适用场景与基本参数。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "模型评估与验证策略",
+                "type": "application",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "能够设计并实施交叉验证、留出法、分层抽样等验证方案，正确计算评价指标，避免数据泄漏。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "超参数调优与模型选择",
+                "type": "application",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "能够使用网格搜索、随机搜索、贝叶斯优化等方法进行超参数调优，并依据验证结果选择模型。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "集成学习与模型融合",
+                "type": "application",
+                "required_level": "application",
+                "importance": "supporting",
+                "description": "能够应用Bagging、Boosting、Stacking、Blending等集成方法，或对多个模型结果进行加权融合以提升排名。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "深度学习基础与框架使用",
+                "type": "application",
+                "required_level": "application",
+                "importance": "supporting",
+                "description": "能够使用至少一种深度学习框架（如PyTorch、TensorFlow）构建、训练和调试简单神经网络，适用于图像、文本或结构化数据比赛。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "比赛策略与结果提交",
+                "type": "practice",
+                "required_level": "application",
+                "importance": "critical",
+                "description": "能够制定提交策略，包括提交格式、提交频率、排行榜反馈分析、过拟合风险控制，并完成有效提交。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "实验管理与可复现性",
+                "type": "practice",
+                "required_level": "application",
+                "importance": "supporting",
+                "description": "能够记录实验配置、随机种子、数据版本、模型参数，保证结果可复现，便于迭代优化。",
+                "concept_type": "skill"
+              },
+              {
+                "name": "持续学习与问题解决",
+                "type": "meta_skill",
+                "required_level": "transfer",
+                "importance": "supporting",
+                "description": "能够在比赛过程中查阅文献、复现方案、分析失败原因并调整方向，独立解决新出现的问题。",
+                "concept_type": "skill"
+              }
+            ],
+            "dependencies": [
+              {
+                "from": "机器学习基础概念与范式",
+                "to": "比赛任务与评价指标理解",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "机器学习基础概念与范式",
+                "to": "常用机器学习模型应用",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "比赛任务与评价指标理解",
+                "to": "模型评估与验证策略",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "数据探索与预处理",
+                "to": "特征工程",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "特征工程",
+                "to": "常用机器学习模型应用",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "常用机器学习模型应用",
+                "to": "模型评估与验证策略",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "模型评估与验证策略",
+                "to": "超参数调优与模型选择",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "超参数调优与模型选择",
+                "to": "集成学习与模型融合",
+                "relation": "recommended_before"
+              },
+              {
+                "from": "常用机器学习模型应用",
+                "to": "深度学习基础与框架使用",
+                "relation": "recommended_before"
+              },
+              {
+                "from": "模型评估与验证策略",
+                "to": "比赛策略与结果提交",
+                "relation": "prerequisite"
+              },
+              {
+                "from": "实验管理与可复现性",
+                "to": "比赛策略与结果提交",
+                "relation": "supports"
+              },
+              {
+                "from": "持续学习与问题解决",
+                "to": "比赛策略与结果提交",
+                "relation": "supports"
+              }
+            ]
+          }
+        },
+        {
+          "stage": "growth_stages",
+          "raw": "{\n  \"stages\": [\n    {\n      \"title\": \"数据准备与探索\",\n      \"objective\": \"掌握数据探索与预处理、特征工程，为后续建模提供高质量数据。\",\n      \"capability_ids\": [\n        \"hizJeqfkyPZFWZ1o\",\n        \"jzMkUp1x4WO7j0dB\"\n      ]\n    },\n    {\n      \"title\": \"理论基础与模型应用\",\n      \"objective\": \"理解机器学习基本概念，识别比赛任务与评价指标，并应用常用模型。\",\n      \"capability_ids\": [\n        \"7f4dfYD5lcLM0BXf\",\n        \"KGctNhltJtYDsV27\",\n        \"_PbIIyjeBeCmrv1x\"\n      ]\n    },\n    {\n      \"title\": \"模型评估与调优\",\n      \"objective\": \"建立可靠的验证策略，进行超参数调优与模型选择。\",\n      \"capability_ids\": [\n        \"Ve0Chojt9eXeegAM\",\n        \"PHHCszuDhyhhOiPX\"\n      ]\n    },\n    {\n      \"title\": \"比赛实践与进阶\",\n      \"objective\": \"制定提交策略，应用集成学习与深度学习，并管理实验可复现性。\",\n      \"capability_ids\": [\n        \"geawM1ioKoYtgDm5\",\n        \"lfCR8SgWVq83DiUU\",\n        \"VF708HvrJ5onFG_2\",\n        \"Ma6hBj4kvUoTWB6N\"\n      ]\n    },\n    {\n      \"title\": \"持续学习与问题解决\",\n      \"objective\": \"培养在比赛过程中独立查阅资料、分析问题并调整方向的能力。\",\n      \"capability_ids\": [\n        \"0Yr8M1sJLDS7wzHP\"\n      ]\n    }\n  ]\n}"
+        },
+        {
+          "stage": "growth_stages",
+          "parsed": {
+            "stages": [
+              {
+                "title": "数据准备与探索",
+                "objective": "掌握数据探索与预处理、特征工程，为后续建模提供高质量数据。",
+                "capability_ids": [
+                  "hizJeqfkyPZFWZ1o",
+                  "jzMkUp1x4WO7j0dB"
+                ]
+              },
+              {
+                "title": "理论基础与模型应用",
+                "objective": "理解机器学习基本概念，识别比赛任务与评价指标，并应用常用模型。",
+                "capability_ids": [
+                  "7f4dfYD5lcLM0BXf",
+                  "KGctNhltJtYDsV27",
+                  "_PbIIyjeBeCmrv1x"
+                ]
+              },
+              {
+                "title": "模型评估与调优",
+                "objective": "建立可靠的验证策略，进行超参数调优与模型选择。",
+                "capability_ids": [
+                  "Ve0Chojt9eXeegAM",
+                  "PHHCszuDhyhhOiPX"
+                ]
+              },
+              {
+                "title": "比赛实践与进阶",
+                "objective": "制定提交策略，应用集成学习与深度学习，并管理实验可复现性。",
+                "capability_ids": [
+                  "geawM1ioKoYtgDm5",
+                  "lfCR8SgWVq83DiUU",
+                  "VF708HvrJ5onFG_2",
+                  "Ma6hBj4kvUoTWB6N"
+                ]
+              },
+              {
+                "title": "持续学习与问题解决",
+                "objective": "培养在比赛过程中独立查阅资料、分析问题并调整方向的能力。",
+                "capability_ids": [
+                  "0Yr8M1sJLDS7wzHP"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "all_passed": true,
+  "personal_database_unchanged": true,
+  "boundaries": [
+    "只读模型配置，未读取个人课程或答题。",
+    "合成P3状态通过原有聚合函数计算，不写入个人数据库。",
+    "模型只分解要求与组织阶段；程序判断缺口、依赖、任务及完成。",
+    "能力路线不是职业或教育认证，也未证明是最优教育路径。"
+  ]
+}

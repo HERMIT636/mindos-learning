@@ -5,10 +5,10 @@ const MindOSUniverse=(()=>{
  const title=(eyebrow,heading,description='')=>{const box=node('div','','universe-heading');box.append(node('p',eyebrow,'eyebrow'),node('h2',heading));if(description)box.append(node('p',description,'muted'));return box;};
  const short=(text,n=16)=>Array.from(text||'').length>n?Array.from(text).slice(0,n).join('')+'…':text;
  const date=value=>value?new Date(value).toLocaleString('zh-CN',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'尚未学习';
- function hideStandalone(){for(const id of ['learning-dashboard','growth-profile'])$(id).hidden=true;}
- function navigation(page){state.page=page;document.querySelectorAll('.primary-nav button').forEach(b=>b.classList.toggle('active',b.id===(page==='growth'?'growth-open':page==='dashboard'?'dashboard-open':'')));$('course-manager-open').classList.toggle('active',page==='courses');}
+ function hideStandalone(){for(const id of ['learning-dashboard','growth-profile','growth-roadmap'])$(id).hidden=true;}
+ function navigation(page){state.page=page;document.querySelectorAll('.primary-nav button').forEach(b=>b.classList.toggle('active',b.id===(page==='growth-roadmap'?'growth-roadmap-open':page==='growth'?'growth-open':page==='dashboard'?'dashboard-open':'')));$('course-manager-open').classList.toggle('active',page==='courses');}
  async function showDashboard(page='dashboard',cid){
-  invalidateNavigation();const version=navigationVersion;navigation(page);
+  invalidateNavigation();hideStandalone();const version=navigationVersion;navigation(page);
   for(const id of ['welcome','review-view','course-view','course-management'])$(id).hidden=true;
   $('learning-dashboard').hidden=page!=='dashboard';$('growth-profile').hidden=page!=='growth';
   $('breadcrumb').textContent=page==='growth'?'成长档案':'学习驾驶舱';state.data=null;state.courseId=null;state.atomDetail=null;
@@ -48,6 +48,7 @@ const MindOSUniverse=(()=>{
   grid.append(current,next);root.append(grid,CognitiveStatus(data));
   if(data.final_attention?.length){const final=node('section','','card');final.append(node('h2','内容学完后，看看掌握了哪些知识'));for(const item of data.final_attention)final.append(button(item.course_title+' · '+item.label,async()=>{await openCourse(item.course_id,undefined,'learn');$('course-final-panel').scrollIntoView({block:'start'});}));root.append(final);}
   if(data.today_reviews?.length){const reviews=node('section','','card');reviews.append(node('h2','今日复习 · 先试着回忆'));for(const r of data.today_reviews)reviews.append(button(`${r.course_title} · ${r.title} · 约${r.minutes}分钟`,async()=>{await openCourse(r.course_id,undefined,'learn');if(state.courseId===r.course_id)await MindOSLearningLoop.check(r.course_id,r.atom_id,'review');}));root.append(reviews);}
+  if(typeof MindOSGrowth!=='undefined'){const growth=node('section','','card');growth.append(node('h2','目标驱动的成长路线'),button('管理我的学习目标',()=>MindOSGrowth.show()));for(const t of data.growth?.today||[])growth.append(node('h3',t.title),node('p',t.reason,'muted'),t.goal_id?button(`打开建议 · 约${t.planned_minutes}分钟`,()=>MindOSGrowth.startTask(t.goal_id,t.task_id)):button(t.atom_id?'开始回忆':'继续课程',async()=>{await openCourse(t.course_id);if(t.atom_id)await MindOSLearningLoop.check(t.course_id,t.atom_id,'review');}));growth.append(node('small',data.growth?.boundary||'今日建议不自动推进章节。','muted'));root.append(growth);}
   const activity=node('section','','card');activity.append(title('RECENT ACTIVITY','最近留下的学习足迹'));Timeline(activity,data.timeline.slice(0,5));root.append(activity);
  }
  function Timeline(root,events){const list=node('ol','','growth-timeline');const labels={lesson:'生成小节讲解',quiz:'完成独立小测',reading:'记录阅读 / 复习',tutor:'向课程导师提问'};

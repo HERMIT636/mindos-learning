@@ -57,6 +57,7 @@ function renderSidebar() {
 }
 
 function showWelcome() {
+  if(typeof MindOSGrowth!=='undefined')MindOSGrowth.resetCreation();
   invalidateNavigation();
   if(typeof MindOSUniverse!=='undefined'){MindOSUniverse.hideStandalone();MindOSUniverse.navigation('create');}
   $('course-materials').value='';$('course-policy-field').hidden=true;
@@ -433,6 +434,7 @@ $('course-form').addEventListener('submit', event => {
   event.preventDefault();
   action($('course-create'), '正在解析资料并拟定课程方向…', async () => {
     const result = await api('/api/courses/draft', {
+      ...(typeof MindOSGrowth!=='undefined'?MindOSGrowth.creationContext():{}),
       title: $('course-title-input').value, goal: $('course-goal-input').value,
       description:$('course-description').value, cover:$('course-cover').value, level:$('course-difficulty').value,
       tags:$('course-tags').value.split(/[、,，]/).map(s=>s.trim()).filter(Boolean),
@@ -447,6 +449,7 @@ $('review-form').addEventListener('submit', event => {
   event.preventDefault(); const draft = state.draft;
   action($('review-revise'), '正在按你的修改意见重新搜索并调整方向…', async () => {
     const result = await api('/api/courses/draft', {
+      ...(typeof MindOSGrowth!=='undefined'?MindOSGrowth.creationContext():{}),
       draft_id: draft.id, revision: draft.revision,
       title: $('review-title-input').value, goal: $('review-goal-input').value,
       feedback: $('review-feedback').value, search_mode: $('review-search-mode').value,
@@ -466,6 +469,7 @@ $('review-confirm').addEventListener('click', () => {
   }
   action($('review-confirm'), '正在保存你确认的课程…', async () => {
     const result = await api('/api/courses/confirm', { draft_id: draft.id, revision: draft.revision });
+    if(typeof MindOSGrowth!=='undefined')await MindOSGrowth.courseCreated(result.course.course.id);
     const latest = await api('/api/bootstrap');
     state.courses = latest.courses; state.drafts = latest.drafts;
     renderCourse(result.course);

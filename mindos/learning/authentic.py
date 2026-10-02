@@ -123,7 +123,7 @@ class AuthenticAssessmentService:
                 r=db.execute('SELECT * FROM authentic_tasks WHERE user_id=? AND course_id=? ORDER BY rowid DESC LIMIT 1',(user,cid)).fetchone()
                 return {'task':self._public(db,dict(r)) if r else None,'boundary':'开放式真实能力尚未额外验证。此处的模型辅助评分不影响课程掌握结论。'}
             return {'task':self._public(db,self._owned(db,user,cid,tid))}
-    def start(self,user,cid,atom_id,task_type,model,difficulty='standard'):
+    def start(self,user,cid,atom_id,task_type,model,difficulty='standard',growth_context=None):
         if task_type not in TASK_TYPES or difficulty not in {'standard','challenge'}:raise ValueError('开放任务类型或难度无效')
         context=FinalAssessmentService(self.store)._context(user,cid)
         atom=next((a for a in context['graph']['atoms'] if a['id']==atom_id and a['section']<=context['course']['current_ordinal'] and a.get('quality_status')!='deprecated'),None)
@@ -145,8 +145,10 @@ class AuthenticAssessmentService:
             structures={(r[0],normalized(json.loads(r[1])['structure'])) for r in db.execute('SELECT task_type,task_json FROM authentic_tasks WHERE course_id=? AND atom_id=? AND task_signature IS NOT NULL',(cid,atom_id))}
         section=context['course']['sections'][atom['section']-1]
         minimal={'atom':atom,'course':{k:context['course'][k] for k in ['title','goal','learner_level']},'background':section['lesson'][:6000],'misconceptions':[m['description'] for m in context['misconceptions'] if m['atom_id']==atom_id],'task_type':task_type,'difficulty':difficulty,'original_domains':[context['course']['title'],section['title']]}
+        if growth_context:minimal['growth_goal_context']=growth_context
         try:
             raw,signature=AuthenticAssessmentGenerator().generate(model,minimal,previous,signatures,structures)
+            if growth_context:raw['growth_scope']=growth_context
             with self.store.connect() as db:
                 db.execute('BEGIN IMMEDIATE');row=self._owned(db,user,cid,tid)
                 if row['status']!='generating':return {'task':self._public(db,row)}

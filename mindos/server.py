@@ -33,7 +33,7 @@ from .web_search import PublicSourceSearch, SearchUnavailable, WebSearch
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
 LOGGER = logging.getLogger("mindos")
-STATIC = {"/components/mindos/personal.js": ("components/mindos/personal.js", "text/javascript; charset=utf-8"),"/components/mindos/authentic.js": ("components/mindos/authentic.js", "text/javascript; charset=utf-8"),"/components/mindos/course-final.js": ("components/mindos/course-final.js", "text/javascript; charset=utf-8"),"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
+STATIC = {"/components/mindos/growth.js": ("components/mindos/growth.js", "text/javascript; charset=utf-8"),"/components/mindos/personal.js": ("components/mindos/personal.js", "text/javascript; charset=utf-8"),"/components/mindos/authentic.js": ("components/mindos/authentic.js", "text/javascript; charset=utf-8"),"/components/mindos/course-final.js": ("components/mindos/course-final.js", "text/javascript; charset=utf-8"),"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
           "/components/teaching/teaching-blocks.js": ("components/teaching/teaching-blocks.js", "text/javascript; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/components/CourseManager/course-manager.js": ("components/CourseManager/course-manager.js", "text/javascript; charset=utf-8"),
@@ -243,10 +243,15 @@ class MindOSHandler(BaseHTTPRequestHandler):
     def do_PUT(self) -> None:
         self._safe_call(self._manage_mutation)
 
+    def do_PATCH(self) -> None:
+        self._safe_call(self._manage_mutation)
+
     def do_DELETE(self) -> None:
         self._safe_call(self._manage_mutation)
 
     def _manage_mutation(self) -> None:
+        from .learning.growth_api import dispatch
+        if dispatch(self):return
         self._check_local_request()
         path=urlsplit(self.path).path;session=self._session();store=self.server.storage
         assistant=re.fullmatch(r'/api/courses/([A-Za-z0-9_-]+)/assistant/position',path)
@@ -276,6 +281,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
         self._json(HTTPStatus.OK,{'course':result})
 
     def _get(self) -> None:
+        from .learning.growth_api import dispatch
+        if dispatch(self):return
         parsed = urlsplit(self.path)
         if parsed.path in STATIC:
             name, content_type = STATIC[parsed.path]
@@ -359,6 +366,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
             from .dashboard import DashboardService
             cid=parse_qs(parsed.query).get('course_id',[None])[0]
             data=DashboardService(self.server.storage).read(self._session(),cid)
+            from .learning.growth import GrowthService
+            data['growth']=GrowthService(self.server.storage).dashboard(self._session())
             data['context']=self._course_public(data['current']['course_id']) if data['current'] else None
             self._json(HTTPStatus.OK,data)
         elif parsed.path == "/api/bootstrap":
@@ -406,6 +415,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.NOT_FOUND, {"error": "页面或接口不存在"})
 
     def _post(self) -> None:
+        from .learning.growth_api import dispatch
+        if dispatch(self):return
         self._check_local_request()
         path = urlsplit(self.path).path
         personal=re.fullmatch(r'/api/courses/([A-Za-z0-9_-]+)/knowledge/(mappings/scan|mappings/[A-Za-z0-9_-]+/(?:verify|reject|split)|priors/[A-Za-z0-9_-]+/verify)',path)
@@ -433,7 +444,12 @@ class MindOSHandler(BaseHTTPRequestHandler):
             from .learning.authentic import AuthenticAssessmentService
             cid,op=authentic.groups();payload=self._request_json(90000);user=self._session();self._owned_course(cid);service=AuthenticAssessmentService(self.server.storage)
             if set(payload)&{'score','valid_for_calibration','hint_used','mastery','evaluation'}:raise ValueError('评分与独立性只能由服务器确定')
-            if op=='start':result=service.start(user,cid,payload.get('atom_id'),payload.get('task_type'),self._model(),payload.get('difficulty','standard'))
+            if op=='start':
+                growth_context=None
+                if payload.get('growth_goal_id') or payload.get('growth_task_id'):
+                    from .learning.growth import GrowthService
+                    growth_context=GrowthService(self.server.storage).practice_context(user,payload.get('growth_goal_id'),payload.get('growth_task_id'),cid,payload.get('atom_id'))
+                result=service.start(user,cid,payload.get('atom_id'),payload.get('task_type'),self._model(),payload.get('difficulty','standard'),growth_context)
             else:
                 tid,operation=op.split('/')
                 if operation=='submit':
@@ -648,6 +664,9 @@ class MindOSHandler(BaseHTTPRequestHandler):
             topic=normalized(title+' '+goal)
             relevant=[p for p in PersonalKnowledgeProfileBuilder(self.server.storage).profiles(self._session())['profiles'] if any(n and n in topic for n in names(p['name']))][:6]
             context['relevant_personal_knowledge']=[{'name':p['name'],'label':p['label'],'guidance':'历史基础仅作提示；大纲保持完整，不自动删章节'} for p in relevant]
+            if payload.get('growth_goal_id') or payload.get('growth_task_id'):
+                from .learning.growth import GrowthService
+                context['growth_goal_context']=GrowthService(self.server.storage).course_context(self._session(),payload.get('growth_goal_id'),payload.get('growth_task_id'))
             plan=model.plan_course_review(title.strip(),goal.strip(),feedback.strip(),previous['plan'] if previous else None,sources,context)
             if source_policy=='user_material_first':
                 headings=[]

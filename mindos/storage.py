@@ -128,6 +128,8 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
             from .learning.personal import migrate as migrate_personal
             migrate_canonical(db)
             migrate_personal(db)
+            from .learning.growth import migrate as migrate_growth
+            migrate_growth(db)
 
     @contextmanager
     def connect(self):

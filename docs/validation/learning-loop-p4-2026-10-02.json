@@ -1,0 +1,123 @@
+{
+  "date": "2026-10-02",
+  "baseline_commit": "9f01c592e6d1e2b2f4dcdc79d425c6426564c3aa",
+  "status": "complete",
+  "targeted_tests": {
+    "count": 38,
+    "passed": true,
+    "new_p4_only": true
+  },
+  "full_regression": {
+    "count": 304,
+    "passed": true,
+    "seconds": 37.693,
+    "working_directory": "project root",
+    "command": "python3 -m unittest discover -s tests -v",
+    "baseline_tests": 266,
+    "new_p4_tests": 38
+  },
+  "browser": {
+    "viewports": [
+      1440,
+      390
+    ],
+    "growth_full_flow_passed": true,
+    "legacy_suites": [
+      "personal",
+      "authentic",
+      "final",
+      "loop",
+      "presentation",
+      "universe",
+      "management"
+    ],
+    "legacy_all_passed": true,
+    "page_errors": 0,
+    "overflow": false,
+    "screenshots": [
+      "learning-loop-p4-desktop.png",
+      "learning-loop-p4-mobile.png"
+    ]
+  },
+  "live_model": {
+    "synthetic_only": true,
+    "goals": [
+      "掌握 LLM 推理优化",
+      "准备机器学习比赛"
+    ],
+    "all_checks_passed": true,
+    "personal_database_unchanged": true,
+    "report": "learning-loop-p4-real-2026-10-02.json"
+  },
+  "frozen": {
+    "mindos/learning/state.py": {
+      "baseline_sha256": "4c8fd399d6931ff84f86dbb059c41088e0fe9f067f6bf69b4da05a4dcda87a5c",
+      "current_sha256": "4c8fd399d6931ff84f86dbb059c41088e0fe9f067f6bf69b4da05a4dcda87a5c",
+      "unchanged": true
+    },
+    "mindos/learning/learning_policy.json": {
+      "baseline_sha256": "6fadff4ea74d7ffad3fc3be5c323bef1aa24efe02e910eba886d4cb735098fbd",
+      "current_sha256": "6fadff4ea74d7ffad3fc3be5c323bef1aa24efe02e910eba886d4cb735098fbd",
+      "unchanged": true
+    },
+    "mindos/learning/course_mastery.py": {
+      "baseline_sha256": "299ca4fc2450586882c2f24a76eb76721da0680fbc7496683ffe72a98b2beb51",
+      "current_sha256": "299ca4fc2450586882c2f24a76eb76721da0680fbc7496683ffe72a98b2beb51",
+      "unchanged": true
+    },
+    "mindos/learning/final_policy.json": {
+      "baseline_sha256": "d16ad38855194c0410e0fae45e838ee378fa76bf84bf4fccd93197655cf6cabc",
+      "current_sha256": "d16ad38855194c0410e0fae45e838ee378fa76bf84bf4fccd93197655cf6cabc",
+      "unchanged": true
+    },
+    "mindos/learning/calibration.py": {
+      "baseline_sha256": "606f85bfb96d7c1d73837db638845f611e18ca05493127de4ae7eb26e3fd50de",
+      "current_sha256": "606f85bfb96d7c1d73837db638845f611e18ca05493127de4ae7eb26e3fd50de",
+      "unchanged": true
+    },
+    "mindos/learning/calibration_policy.json": {
+      "baseline_sha256": "6da6412e2226d8cd2225a2a43bbdf8be61ca01660e28369e3c1a7c9326cb837e",
+      "current_sha256": "6da6412e2226d8cd2225a2a43bbdf8be61ca01660e28369e3c1a7c9326cb837e",
+      "unchanged": true
+    },
+    "mindos/learning/personal.py": {
+      "baseline_sha256": "029aef62de961c0000e7edea4eded01ea2fde0cb10bea3d075383f2a595cadba",
+      "current_sha256": "029aef62de961c0000e7edea4eded01ea2fde0cb10bea3d075383f2a595cadba",
+      "unchanged": true
+    },
+    "mindos/learning/canonical.py": {
+      "baseline_sha256": "ef347e2b8615369fba2483bc6960727bf3dd67f92c8fbdc9cc6b4e69ea0b3969",
+      "current_sha256": "ef347e2b8615369fba2483bc6960727bf3dd67f92c8fbdc9cc6b4e69ea0b3969",
+      "unchanged": true
+    },
+    "mindos/learning/personal_knowledge_policy.json": {
+      "baseline_sha256": "7df6ffc9b17cf50ca211c154dee9ea08c3e06dc16f58ad44bfe9d4625f8010e4",
+      "current_sha256": "7df6ffc9b17cf50ca211c154dee9ea08c3e06dc16f58ad44bfe9d4625f8010e4",
+      "unchanged": true
+    }
+  },
+  "boundaries": {
+    "planner_writes_p0_p3": false,
+    "planner_advances_chapters": false,
+    "automatic_course_creation": false,
+    "candidate_counts_as_coverage": false,
+    "skipping_counts_as_mastery": false,
+    "llm_sets_achievement": false,
+    "llm_may_reorder_program_priority": false
+  },
+  "root_baseline_check": {
+    "tracked_files": 180,
+    "differences": []
+  },
+  "limitations": [
+    "规划阈值和时间估计为工程启发式，不是严格排程。",
+    "多目标暂采用最小每周预算保守安排。",
+    "开放实践评分是模型辅助观察，不是权威认证。",
+    "没有真实用户长期教育效果实验，也未证明路线是最优教育路径。"
+  ],
+  "self_audit": "../learning-loop-p4.md",
+  "sync": {
+    "checked": 199,
+    "differences": []
+  }
+}

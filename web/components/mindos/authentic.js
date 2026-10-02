@@ -4,12 +4,14 @@
  const alive=(cid,root)=>state.page==='course'&&state.courseId===cid&&root.isConnected;
  const path=(cid,op)=>`/api/courses/${encodeURIComponent(cid)}/authentic/${op}`;
  function control(text,fn,primary=false){const b=node('button',text,'button '+(primary?'primary':'secondary'));b.type='button';b.onclick=()=>action(b,'正在处理…',fn);return b;}
- async function render(parent,report,cid){
+ async function render(parent,report,cid,requested=null){
   const root=node('section','','authentic-verification');parent.append(root);state.authenticTask=null;
   root.append(node('h3','进一步验证真实能力'),node('p','可选的 3–10 分钟开放任务。自己解释、分析或设计，比识别选项更进一步。模型辅助评分暂不改变课程掌握结论。','muted'));
   const body=node('div');root.append(body);
   async function show(task){
-   if(!alive(cid,root))return;body.replaceChildren();state.authenticTask=task?.status==='created'?{...task,course_id:cid}:null;
+   if(!alive(cid,root))return;
+   if(typeof MindOSGrowth!=='undefined')await MindOSGrowth.attach(cid,task);
+   body.replaceChildren();state.authenticTask=task?.status==='created'?{...task,course_id:cid}:null;
    if(!task||['deferred','unavailable'].includes(task.status)){choose();return;}
    body.append(node('h4',names[task.task_type]),node('p',task.prompt||'正在准备任务，请稍后刷新。','authentic-prompt'));
    if(['generating','evaluating'].includes(task.status)){body.append(node('p','任务正在处理，回答会保留。','muted'),control('刷新任务',refresh));return;}
@@ -31,19 +33,19 @@
    async function save(){const answer=input.value;pending=api(path(cid,task.id+'/draft'),{answer});await pending;if(alive(cid,root))note.textContent='草稿已保存。';}
    input.oninput=()=>{clearTimeout(timer);note.textContent='正在保存草稿…';timer=setTimeout(()=>save().catch(e=>{note.textContent='草稿尚未保存：'+e.message;}),400);};
    body.append(node('p',task.hint_used?'已向导师求助：本次按练习处理，不用于校准。':'请先独立尝试；向导师求助会标记提示，本次不用于校准。','muted'));
-   const controls=node('div','','action-row');controls.append(control('提交开放回答',async()=>{clearTimeout(timer);await pending;await save();const r=await api(path(cid,task.id+'/submit'),{answer:input.value});await show(r.task);},true),control('向导师请求引导',async()=>{await api(path(cid,task.id+'/hint'),{});state.authenticTask={...task,course_id:cid};$('assistant-toggle').click();}),control('先保存，稍后再做',async()=>{clearTimeout(timer);await pending;await save();note.textContent='草稿已保存，可离开页面，回来继续。';}));body.append(controls);
+   const controls=node('div','','action-row');controls.append(control('提交开放回答',async()=>{clearTimeout(timer);await pending;await save();const r=await api(path(cid,task.id+'/submit'),{answer:input.value});await show(r.task);},true),control('向导师请求引导',async()=>{await api(path(cid,task.id+'/hint'),{});state.authenticTask={...task,course_id:cid};$('assistant-toggle').click();}),control('暂缓本次开放任务',async()=>{clearTimeout(timer);await pending;await save();const r=await api(path(cid,task.id+'/defer'),{});await show(r.task);}),control('先保存，稍后再做',async()=>{clearTimeout(timer);await pending;await save();note.textContent='草稿已保存，可离开页面，回来继续。';}));body.append(controls);
   }
   function choose(){
    if(!alive(cid,root))return;body.replaceChildren();state.authenticTask=null;
    body.append(node('p','开放式真实能力尚未额外验证。可以跳过，不影响已保存的掌握报告。','muted'));
    const atoms=state.data.knowledge.atoms.filter(a=>a.unlocked&&a.quality_status!=='deprecated'),label=node('label','选择知识点'),select=document.createElement('select');
-   for(const atom of atoms){const option=document.createElement('option');option.value=atom.id;option.textContent=atom.title;select.append(option);}label.append(select);body.append(label);
-   const buttons=node('div','','action-row');for(const [type,name]of Object.entries(names))buttons.append(control(name,async()=>{if(!select.value)return;const r=await api(path(cid,'start'),{atom_id:select.value,task_type:type});await show(r.task);}));body.append(buttons);
+   for(const atom of atoms){const option=document.createElement('option');option.value=atom.id;option.textContent=atom.title;select.append(option);}if(requested){select.value=requested.atom_id;select.disabled=true;}label.append(select);body.append(label);
+   const buttons=node('div','','action-row');for(const [type,name]of Object.entries(names).filter(([type])=>!requested||requested.task_type===type))buttons.append(control(name,async()=>{if(!select.value)return;const r=await api(path(cid,'start'),{...(requested||{}),atom_id:select.value,task_type:type});await show(r.task);}));body.append(buttons);
    body.append(control('查看已有开放任务',refresh),control('查看间隔后验证情况',async()=>{const result=await api(`/api/courses/${cid}/calibration`);if(!alive(cid,root))return;const box=node('div');box.append(node('p',result.boundary,'muted'));for(const [version,windows]of Object.entries(result.windows)){box.append(node('strong',version));for(const [days,sources]of Object.entries(windows))box.append(node('p',`${days} 天：独立检测 ${sources.independent_mcq.samples} 次 · 开放评分 ${sources.llm_rubric.samples} 次。${sources.independent_mcq.classification==='insufficient_future_evidence'?'证据不足，暂不判断偏差。':'已积累可分析的独立结果。'}`));}body.append(box);}));
    const params=new URLSearchParams(location.search);if(params.get('debug_learning')==='1')body.append(control('查看开发校准统计',async()=>{const r=await api('/api/debug/learning/calibration');if(alive(cid,root)){const details=node('pre',JSON.stringify(r,null,2),'calibration-debug');body.append(details);}}));
   }
   async function refresh(){const r=await api(path(cid,'current'));await show(r.task);}
-  try{await refresh();}catch(e){if(alive(cid,root))body.append(node('p',e.message,'muted'));}
+  try{if(requested){const r=await api(path(cid,'start'),requested);await show(r.task);}else await refresh();}catch(e){if(alive(cid,root))body.append(node('p',e.message,'muted'));}
  }
  window.MindOSAuthentic={render};
 })();

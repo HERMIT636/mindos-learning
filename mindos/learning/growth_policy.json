@@ -1,0 +1,7 @@
+{
+  "version": "growth-planner-v1",
+  "planning": {"max_active_stages": 1, "max_tasks_per_stage": 8, "max_new_course_recommendations": 2, "max_verification_tasks": 3, "max_capabilities": 32, "today_limit": 3},
+  "replanning": {"min_seconds_between_major_replans": 600, "auto_replan_on_stage_completion": true},
+  "gap": {"sufficient_dimension": 0.75, "minimum_confidence": 0.55, "practice_score": 0.75, "practice_confidence": 0.65},
+  "minutes": {"continue_course": 25, "start_course": 25, "create_course": 10, "review": 5, "cross_course_verify": 8, "final_assessment": 20, "authentic_assessment": 15, "micro_practice": 10, "goal_checkpoint": 5}
+}

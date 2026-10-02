@@ -132,7 +132,7 @@ class CalibrationService:
             valid=not immediate and all(not a['hint_used'] and not json.loads(a['metadata_json']).get('reused_question') and not json.loads(a['metadata_json']).get('legacy') and not json.loads(a['metadata_json']).get('immediate_repeat') for a in answers)
             score=sum(a['result']=='correct' for a in answers);total=len(answers);last=max(a['cursor'] for a in answers)
             quiz=db.execute('SELECT assessment_kind FROM quizzes WHERE id=?',(meta['quiz_id'],)).fetchone();kind=quiz[0] if quiz else 'quiz'
-            typ='review' if kind in {'review','returning','final_retention'} else 'final' if kind.startswith('final_') else 'quiz'
+            typ='cross_course_verification' if meta.get('cross_course_verification') else 'review' if kind in {'review','returning','final_retention'} else 'final' if kind.startswith('final_') else 'quiz'
             for p in _predictions(db,user,cid,r['created_at']):
                 if p['atom_id'] and p['atom_id']!=r['atom_id']:continue
                 # Atom-level outcomes must not overwrite an aggregate course trial

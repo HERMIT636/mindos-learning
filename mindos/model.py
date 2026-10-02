@@ -163,6 +163,7 @@ class ModelGateway:
 
     def answer_course_tutor(self, context, question, history, route, search):
         return self._json(
+            '历史relevant_personal_prior只代表相关学习记录；未在当前课程独立验证时不能称已经掌握，验证通过后可以简短回顾基础，仍不跳章节。'
             '你是MindOS课程智能助教。目标是帮助学习者真正理解知识，优先用通俗中文，首次出现专业词要解释。'
             '先直接解答，严格执行ATIE提供的教学动作、难度和presentation_policy，不自行改换教学策略或强制固定四段。'
             '教学动作与难度由ATIE约束；根据问题涉及的关系、流程、比较或概念，主动选择适合的展示形式，讲解应具体。'
@@ -212,6 +213,7 @@ class ModelGateway:
     def generate_teaching_blocks(self,payload):
         from .teaching import RULES
         return self._json('你是MindOS结构化教学内容生成教师。根据ATIE已经决定的讲法生成内容，不自行覆盖教学动作。'
+            'relevant_personal_prior是历史相关记录，不是当前掌握；仅reduce_repeated_basics=true时简短回顾verified_basics列出的已在当前课程验证的原子基础；其他原子仍按当前学习状态完整讲解，把篇幅用于当前小节新角度，仍保持完整章节与当前教学范围。'
             '用通俗语言循序渐进地讲透当前知识，首次出现术语必须解释。' + RULES + self.teaching_block_protocol() +
             '追问中的reference_explanation仅指定用户想继续理解的历史讲解；根据question回答，不将引用中提及的后续知识当成用户要求提前展开。'
             '返回 {"presentation_plan":展示计划,"blocks":[内容块]}。',json.dumps(payload,ensure_ascii=False),max_tokens=7000,diagnostic_stage='atie_content')
@@ -230,6 +232,7 @@ class ModelGateway:
             "你是中文课程规划教师。当前只生成供学习者审查的课程方向，不写任何具体讲义、推导、代码或测验。"
             "结合检索结果中的标题和摘要及 source_context 中的实际用户资料、来源偏好、用户水平。"
             "资料优先时尽量沿用其目录、术语、顺序与重点，综合模式可补充课程范围；资料本身不等于事实权威。"
+            "relevant_personal_knowledge仅为相关历史学习记录，可安排快速确认基础，不代表本课程已掌握，不删除基础或关键章节。"
             "给学习者通俗说明：这门课在学什么、学完大致能做什么、"
             "主要涵盖哪些知识点、为什么按这个顺序学习。再拟 8 至 12 节的简短目录；很窄的主题可 4 至 7 节。"
             "每节只写标题和一两句白话目标，不展开细节。若用户给了修改意见，优先按最新意见调整，保留仍适用部分。"

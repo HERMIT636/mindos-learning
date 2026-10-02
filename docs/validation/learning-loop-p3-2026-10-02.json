@@ -1,0 +1,89 @@
+{
+  "date": "2026-10-02",
+  "baseline": "123045bd44a8e5a187f452ff0b3e989649fdcfb0",
+  "automatic_tests": {
+    "count": 266,
+    "seconds": 32.8,
+    "passed": true,
+    "baseline_count": 239,
+    "new_count": 27
+  },
+  "browser": {
+    "suites": [
+      "personal",
+      "authentic",
+      "final",
+      "loop",
+      "presentation",
+      "universe",
+      "management"
+    ],
+    "passed_suites": 7,
+    "viewports": [
+      1440,
+      390
+    ],
+    "log": "Checking personal\nPASS P3: related history → UI quick diagnosis → real submit → persisted verified status; candidate confirm/revoke + refresh; profile source navigation; desktop/mobile no overflow.\nChecking authentic\nPASS: 1440/390 report open transfer, multiline server draft + refresh, weighted rubric feedback, idempotent submission, return report, tutor hint exclusion, unchanged P1 judgment, submitted refresh, no overflow or page errors.\nChecking final\nPASS: final content completion separate from mastery; planning, independent concept/application/novel scenario questions, persisted pending plan/question; unknown long-term memory, immutable report; P0 diagnosis/micro teaching/check and full targeted reassessment; report explanation; defer with gaps and stale submit rejection; desktop/mobile no overflow.\nChecking loop\nPASS: short diagnosis, micro teaching, persisted pending assessment, successful return to origin without advance; state reasons and unknown transfer; delayed review grows stability; returning check survives refresh and finishes; mobile.\nChecking presentation\nPASS: automatic diagram for concept lesson without manual visual mode; paragraphs and numbered lists; feedback and checkpoints on every follow-up; referenced answer context; reload; unchanged mastery/manual progression; safe text; mobile.\nChecking universe\nPASS: cockpit evidence and course isolation; unknown transfer; global mentor context and related jump; star states and filters; locked galaxy keyboard; shared quiz; real growth history; edge snap and saved position; mobile views; reduced motion; no automatic progression/mastery change.\nChecking management\nPASS: manager edit, status/archive, button and drag order persistence, copy isolation, recycle/restore/permanent delete, existing creation flow, mobile\n",
+    "last_personal_run": "Checking personal\nPASS P3: related history → UI quick diagnosis → real submit → persisted verified status; candidate confirm/revoke + refresh; profile source navigation; desktop/mobile no overflow.\n",
+    "transient_retry_note": "A later Windows-to-WSL run encountered a temporary Failed to fetch during course navigation. An isolated rerun of the complete P3 suite passed; no assertions were removed."
+  },
+  "frozen": {
+    "mindos/learning/state.py": {
+      "unchanged": true,
+      "sha256": "4c8fd399d6931ff84f86dbb059c41088e0fe9f067f6bf69b4da05a4dcda87a5c"
+    },
+    "mindos/learning/learning_policy.json": {
+      "unchanged": true,
+      "sha256": "6fadff4ea74d7ffad3fc3be5c323bef1aa24efe02e910eba886d4cb735098fbd"
+    },
+    "mindos/learning/course_mastery.py": {
+      "unchanged": true,
+      "sha256": "299ca4fc2450586882c2f24a76eb76721da0680fbc7496683ffe72a98b2beb51"
+    },
+    "mindos/learning/final_policy.json": {
+      "unchanged": true,
+      "sha256": "d16ad38855194c0410e0fae45e838ee378fa76bf84bf4fccd93197655cf6cabc"
+    },
+    "mindos/learning/calibration_policy.json": {
+      "unchanged": true,
+      "sha256": "6da6412e2226d8cd2225a2a43bbdf8be61ca01660e28369e3c1a7c9326cb837e"
+    },
+    "CalibrationAnalyzer": {
+      "unchanged": true
+    }
+  },
+  "real_model_record": "learning-loop-p3-real-2026-10-02.json",
+  "new_cases": [
+    "same title different domain",
+    "registered synonyms",
+    "broader/narrower/related rejection",
+    "high confidence without consistent external context",
+    "schema failure repair and conservative fallback",
+    "candidate confirmation and rejection",
+    "rejected mapping never silently restored",
+    "mapping uniqueness and revocation preserves real state",
+    "merge redirect and atomic split",
+    "cross-course HTTP diagnosis metadata",
+    "independent pass vs hinted/reused exclusion",
+    "failure leaves historical course unchanged",
+    "profile cross-course conflict and single-course cap",
+    "unknown transfer and higher target depth",
+    "stale and soft deleted history",
+    "permanent source removal",
+    "copy retains no evidence/state",
+    "owner isolation and debug gate",
+    "source-only immutable prior and idempotent refresh",
+    "verified related basics only in ATIE",
+    "changed target context invalidates old prior and cannot recreate it before rescan"
+  ],
+  "boundary": "Derived profile and prior are not course mastery or learning evidence; engineering heuristics are not validated learner outcome metrics.",
+  "primary_root_tests": {
+    "count": 266,
+    "seconds": 32.769,
+    "passed": true
+  },
+  "source_sync": {
+    "reviewable_files": 180,
+    "differences": []
+  }
+}

@@ -585,6 +585,7 @@ function renderAtom(detail) {
   if(Object.values(detail.content_metadata||{}).some(m=>m.stale))$('atom-meta').textContent+=' · 讲解依据已更新，可重新生成；历史记录保留';
   $('atom-summary').textContent=atom.summary; $('atom-why').textContent=`为什么需要：${atom.why}`;
   MindOSLearningLoop.stateDetail(state.courseId,atom.id);
+  window.MindOSPersonal?.atom(state.courseId,atom.id);
   $('atom-state').textContent=current ? `${MindOSLearningLoop.labels[current.knowledge_state?.state]||current.status} · ${current.evidence_count} 道已提交题目的记录` : '未测';
   const relations=$('atom-relations'); relations.replaceChildren();
   state.data.knowledge.edges.filter(e=>e.from===atom.id||e.to===atom.id).forEach(e=>{

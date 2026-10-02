@@ -1,0 +1,121 @@
+{
+  "date": "2026-10-02",
+  "fixture": "Only synthetic concept contexts; local personal DB opened read-only exclusively for encrypted model configuration. No learner courses or histories transmitted.",
+  "checks": {
+    "same": {
+      "schema_valid": true,
+      "expected": "same",
+      "model_output": {
+        "same_concept": true,
+        "confidence": 1,
+        "relationship": "same",
+        "reasons": [
+          "The course atom title 'Query-Key-Value' is an expanded form of the canonical name 'QKV'.",
+          "The summaries are verbatim identical: 'Query expresses the current request, Key provides matching features, Value provides content read with matching weights.'",
+          "Both are typed as 'mechanism' in the same 'machine_learning' domain.",
+          "The context metadata (why, depth, chapter, objective, neighbors, goal) matches the course atom exactly, so the canonical entry describes the same concept."
+        ],
+        "conflicts": []
+      },
+      "relationship_matches_expected": true,
+      "conservative_gate": true
+    },
+    "different": {
+      "schema_valid": true,
+      "expected": "different",
+      "model_output": {
+        "same_concept": false,
+        "confidence": 0.99,
+        "relationship": "different",
+        "reasons": [
+          "课程原子中的 Attention 指认知心理学中的人类选择性注意机制，将有限认知资源分配给感官输入。",
+          "规范概念中的 Attention 指机器学习中的神经自注意力机制，计算加权 token 表示。",
+          "两者领域不同：cognitive_psychology 与 machine_learning。",
+          "两者的机制描述不同：一个是人类认知资源分配，一个是神经网络中的 token 表示加权。",
+          "尽管自注意力受人类注意隐喻启发，但概念类型所属实体不同。"
+        ],
+        "conflicts": [
+          "课程原子域为 cognitive_psychology，规范概念域为 machine_learning。",
+          "课程原子描述人类选择性注意，规范概念描述神经自注意力计算。"
+        ]
+      },
+      "relationship_matches_expected": true,
+      "conservative_gate": false
+    },
+    "broader": {
+      "schema_valid": true,
+      "expected": "broader",
+      "model_output": {
+        "same_concept": false,
+        "confidence": 0.91,
+        "relationship": "broader",
+        "reasons": [
+          "课程原子标题为 Attention，摘要明确覆盖 additive attention、cross attention 和 self attention，范围大于 Self Attention。",
+          "规范概念 Self Attention 是注意力机制中的一个具体情形，即 queries、keys、values 来自同一 token 序列。",
+          "两者领域均为 machine_learning，但课程原子是上位机制类别，规范概念是其下位子类。",
+          "课程原子的目标与规范上下文的目标相近，均关注 QKV/注意力角色理解，但这不改变其概念范围关系。"
+        ],
+        "conflicts": []
+      },
+      "relationship_matches_expected": true,
+      "conservative_gate": false
+    },
+    "narrower": {
+      "schema_valid": true,
+      "expected": "narrower",
+      "model_output": {
+        "same_concept": false,
+        "confidence": 0.96,
+        "relationship": "narrower",
+        "reasons": [
+          "Self Attention is explicitly described as a specific case of neural attention, making it narrower than the broader Attention concept.",
+          "Canonical Attention includes additive, cross, and self attention, so Self Attention is one subtype within that broader mechanism.",
+          "The course atom and canonical context share the QKV mechanism, but that shared mechanism belongs to the broader Attention family, not exclusively to Self Attention."
+        ],
+        "conflicts": []
+      },
+      "relationship_matches_expected": true,
+      "conservative_gate": false
+    },
+    "related": {
+      "schema_valid": true,
+      "expected": "related",
+      "model_output": {
+        "same_concept": false,
+        "confidence": 0.96,
+        "relationship": "related",
+        "reasons": [
+          "Softmax 是将实数分数归一化为正权重且总和为一的机制；QKV 描述 Query、Key、Value 在注意力中的角色分工。",
+          "两者都出现在 Transformer attention 语境中，邻接概念均为 Softmax，目标相关，但定义的核心机制不同。",
+          "QKV 使用匹配权重来读取 Value，其中权重通常由 Softmax 产生，因此 Softmax 是 QKV 注意力机制中的相关组件而非同一概念。"
+        ],
+        "conflicts": [
+          "课程原子标题为 Softmax，而规范概念名称为 QKV，名称不一致。",
+          "Softmax 的摘要强调归一化分数；QKV 的摘要强调请求、匹配特征和内容读取三类角色。"
+        ]
+      },
+      "relationship_matches_expected": true,
+      "conservative_gate": false
+    },
+    "ambiguous": {
+      "schema_valid": true,
+      "expected": "ambiguous",
+      "model_output": {
+        "same_concept": true,
+        "confidence": 0.97,
+        "relationship": "same",
+        "reasons": [
+          "Both the course atom and canonical entry use the same concept name: Attention.",
+          "Both classify the concept type as mechanism.",
+          "Both describe it as a process that selects important information.",
+          "Both are in the machine_learning domain.",
+          "The course atom's goal of understanding Transformer attention is a specific application of the same general attention mechanism."
+        ],
+        "conflicts": []
+      },
+      "relationship_matches_expected": null,
+      "conservative_gate": false
+    }
+  },
+  "boundary": "Semantic mapping schema and conservative gate validation does not certify an absolute knowledge ontology or real learner benefit."
+}

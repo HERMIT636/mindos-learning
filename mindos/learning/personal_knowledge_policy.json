@@ -1,0 +1,28 @@
+{
+  "version": "personal-knowledge-v1",
+  "mapping": {
+    "version": "canonical-mapping-v1",
+    "auto_verify_threshold": 0.9,
+    "candidate_threshold": 0.65,
+    "top_k": 3,
+    "require_domain_match": true,
+    "require_type_compatibility": true,
+    "context_threshold": 0.7,
+    "max_model_judgments_per_scan": 8
+  },
+  "profile": {
+    "per_course_contribution_cap": 1.0,
+    "strong_confidence_threshold": 0.75,
+    "moderate_confidence_threshold": 0.55,
+    "stale_days": 60,
+    "conflict_gap": 0.3,
+    "evidence_scale": 12,
+    "recency_days": 180,
+    "calibration_trust_multiplier": 0.75
+  },
+  "prior": {
+    "strong_threshold": 0.8,
+    "moderate_threshold": 0.6,
+    "verification_required": true
+  }
+}

@@ -10,6 +10,7 @@ import logging
 import os
 import re
 import secrets
+import threading
 from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -32,7 +33,7 @@ from .web_search import PublicSourceSearch, SearchUnavailable, WebSearch
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
 LOGGER = logging.getLogger("mindos")
-STATIC = {"/components/mindos/authentic.js": ("components/mindos/authentic.js", "text/javascript; charset=utf-8"),"/components/mindos/course-final.js": ("components/mindos/course-final.js", "text/javascript; charset=utf-8"),"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
+STATIC = {"/components/mindos/personal.js": ("components/mindos/personal.js", "text/javascript; charset=utf-8"),"/components/mindos/authentic.js": ("components/mindos/authentic.js", "text/javascript; charset=utf-8"),"/components/mindos/course-final.js": ("components/mindos/course-final.js", "text/javascript; charset=utf-8"),"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
           "/components/teaching/teaching-blocks.js": ("components/teaching/teaching-blocks.js", "text/javascript; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/components/CourseManager/course-manager.js": ("components/CourseManager/course-manager.js", "text/javascript; charset=utf-8"),
@@ -56,6 +57,7 @@ class MindOSServer(ThreadingHTTPServer):
         self.course_tutor = CourseTutorService(self.storage)
         self.teaching = TeachingOrchestrator(self.storage)
         self.content_generator = ContentGenerator(self.storage)
+        self.canonical_slots=threading.BoundedSemaphore(2)
         self.assistant_search_factory = None
         self.discovery_provider_factory = None
         self.secrets = SecretStore()
@@ -278,6 +280,37 @@ class MindOSHandler(BaseHTTPRequestHandler):
         if parsed.path in STATIC:
             name, content_type = STATIC[parsed.path]
             self._send(HTTPStatus.OK, (WEB / name).read_bytes(), content_type)
+        elif parsed.path=='/api/debug/learning/personal':
+            if os.getenv('MINDOS_DEBUG_LEARNING')!='1':self._json(HTTPStatus.NOT_FOUND,{'error':'接口不存在'});return
+            from .learning.personal import PersonalKnowledgeProfileBuilder
+            user=self._session();result=PersonalKnowledgeProfileBuilder(self.server.storage).profiles(user,debug=True)
+            with self.server.storage.connect() as db:
+                result['canonical_atoms']=[dict(r) for r in db.execute('SELECT * FROM canonical_knowledge_atoms WHERE user_id=?',(user,))]
+                result['mapping_history']=[dict(r) for r in db.execute('SELECT * FROM canonical_mapping_history WHERE user_id=?',(user,))]
+                result['mappings']=[dict(r) for r in db.execute('SELECT * FROM course_atom_mappings WHERE user_id=?',(user,))]
+                result['priors']=[dict(r) for r in db.execute('SELECT * FROM inherited_knowledge_priors WHERE user_id=?',(user,))]
+            self._json(HTTPStatus.OK,result)
+        elif parsed.path=='/api/knowledge/profile' or re.fullmatch(r'/api/knowledge/profile/[A-Za-z0-9_-]+',parsed.path):
+            from .learning.personal import PersonalKnowledgeProfileBuilder
+            query=parse_qs(parsed.query);service=PersonalKnowledgeProfileBuilder(self.server.storage)
+            result=service.profiles(self._session(),query.get('search',[''])[0],query.get('domain',[''])[0],query.get('status',[''])[0])
+            if parsed.path!='/api/knowledge/profile':
+                p=next((p for p in result['profiles'] if p['canonical_atom_id']==parsed.path.rsplit('/',1)[1]),None)
+                identifier=parsed.path.rsplit('/',1)[1];original=identifier;seen=set()
+                with self.server.storage.connect() as db:
+                    while not p and identifier not in seen:
+                        seen.add(identifier);row=db.execute("SELECT redirect_id FROM canonical_knowledge_atoms WHERE id=? AND user_id=? AND status='redirect'",(identifier,self._session())).fetchone()
+                        if not row:break
+                        identifier=row[0];p=next((item for item in result['profiles'] if item['canonical_atom_id']==identifier),None)
+                if not p:raise ValueError('个人知识不存在')
+                result={'profile':p,'boundary':result['boundary'],'redirected_from':original if original!=identifier else None}
+            self._json(HTTPStatus.OK,result)
+        elif re.fullmatch(r'/api/courses/[A-Za-z0-9_-]+/knowledge/(mappings|priors)',parsed.path):
+            from .learning.canonical import KnowledgeMappingEngine
+            from .learning.personal import InheritedKnowledgePrior
+            cid=parsed.path.split('/')[3]
+            result=KnowledgeMappingEngine(self.server.storage).list(self._session(),cid) if parsed.path.endswith('mappings') else InheritedKnowledgePrior(self.server.storage).list(self._session(),cid)
+            self._json(HTTPStatus.OK,result)
         elif parsed.path=='/api/debug/learning/calibration':
             if os.getenv('MINDOS_DEBUG_LEARNING')!='1':self._json(HTTPStatus.NOT_FOUND,{'error':'页面或接口不存在'});return
             from .learning.calibration import CalibrationService
@@ -375,6 +408,26 @@ class MindOSHandler(BaseHTTPRequestHandler):
     def _post(self) -> None:
         self._check_local_request()
         path = urlsplit(self.path).path
+        personal=re.fullmatch(r'/api/courses/([A-Za-z0-9_-]+)/knowledge/(mappings/scan|mappings/[A-Za-z0-9_-]+/(?:verify|reject|split)|priors/[A-Za-z0-9_-]+/verify)',path)
+        if personal:
+            from .learning.canonical import KnowledgeMappingEngine
+            from .learning.personal import InheritedKnowledgePrior
+            from .learning.cross_course import CrossCourseVerification
+            cid,op=personal.groups();user=self._session();self._owned_course(cid);payload=self._request_json()
+            if payload:raise ValueError('此操作不接受客户端评分、置信度或知识状态')
+            engine=KnowledgeMappingEngine(self.server.storage)
+            try:model=self._model()
+            except (ValueError,ModelUnavailable):model=None
+            if op=='mappings/scan':result=engine.scan(user,cid,model)
+            elif op.startswith('priors/'):result=CrossCourseVerification(self.server.storage).start(user,cid,op.split('/')[1],model)
+            elif op.endswith('/split'):result=engine.split(user,cid,op.split('/')[1])
+            else:result=engine.review(user,cid,op.split('/')[1],op.endswith('/verify'))
+            self._json(HTTPStatus.OK,result);return
+        if path=='/api/knowledge/canonical/merge':
+            from .learning.canonical import KnowledgeMappingEngine
+            payload=self._request_json()
+            if payload.get('confirm') is not True:raise ValueError('请明确确认这两个知识身份表达同一概念')
+            self._json(HTTPStatus.OK,KnowledgeMappingEngine(self.server.storage).merge(self._session(),payload.get('source_id'),payload.get('target_id')));return
         authentic=re.fullmatch(r'/api/courses/([A-Za-z0-9_-]+)/authentic/(start|[A-Za-z0-9_-]+/(?:submit|draft|defer|hint))',path)
         if authentic:
             from .learning.authentic import AuthenticAssessmentService
@@ -590,6 +643,11 @@ class MindOSHandler(BaseHTTPRequestHandler):
             search_report={**search_report,'discovery_plan':discovery_plan}
             context={'source_policy':source_policy,'learner_level':learner_level,
                 'documents':[{'title':d['title'],'blocks':selected_blocks(d,8000)} for d in documents]}
+            from .learning.personal import PersonalKnowledgeProfileBuilder
+            from .learning.canonical import normalized,names
+            topic=normalized(title+' '+goal)
+            relevant=[p for p in PersonalKnowledgeProfileBuilder(self.server.storage).profiles(self._session())['profiles'] if any(n and n in topic for n in names(p['name']))][:6]
+            context['relevant_personal_knowledge']=[{'name':p['name'],'label':p['label'],'guidance':'历史基础仅作提示；大纲保持完整，不自动删章节'} for p in relevant]
             plan=model.plan_course_review(title.strip(),goal.strip(),feedback.strip(),previous['plan'] if previous else None,sources,context)
             if source_policy=='user_material_first':
                 headings=[]
@@ -696,6 +754,18 @@ class MindOSHandler(BaseHTTPRequestHandler):
             if covered!=set(range(1,len(course["sections"])+1)):
                 graph = self._model().build_knowledge_graph(course)
                 self.server.storage.complete_index(self._session(), course["id"], graph,existing)
+            from .learning.canonical import KnowledgeMappingEngine
+            # The stored index is ready independently of optional semantic refinement.
+            # Bound model work and keep it outside the request's course transaction.
+            try:
+                store=self.server.storage;user=self._session();cid=course['id'];model=self._model()
+                slots=self.server.canonical_slots
+                def refine():
+                    try:KnowledgeMappingEngine(store).scan(user,cid,model)
+                    except Exception as exc:LOGGER.warning('语义关联补充待重试：%s',type(exc).__name__)
+                    finally:slots.release()
+                if slots.acquire(blocking=False):threading.Thread(target=refine,daemon=True,name='canonical-refinement').start()
+            except (ValueError,ModelUnavailable):pass
             self._json(HTTPStatus.OK, self._course_public(course["id"]))
         elif path == "/api/sections/read":
             course = self._owned_course(payload.get("course_id"))

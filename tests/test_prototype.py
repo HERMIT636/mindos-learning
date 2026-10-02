@@ -63,7 +63,10 @@ class FakeProvider(BaseHTTPRequestHandler):
         system = payload["messages"][0]["content"]
         user = json.loads(payload["messages"][-1]["content"]) if len(payload["messages"]) > 1 and \
             payload["messages"][-1]["content"].startswith("{") else {}
-        if '开放能力检测出题教师' in system or '按给定rubric逐项评估开放回答' in system:
+        if '知识语义身份比较助手' in system:
+            from personal_fixture import PersonalModel
+            content=json.dumps(PersonalModel().mapping_judge(user),ensure_ascii=False)
+        elif '开放能力检测出题教师' in system or '按给定rubric逐项评估开放回答' in system:
             from authentic_fixture import AuthenticModel
             if not hasattr(FakeProvider,'authentic_model'):FakeProvider.authentic_model=AuthenticModel()
             content=json.dumps(FakeProvider.authentic_model.authentic_json('authentic_generation' if '开放能力检测出题教师' in system else 'authentic_evaluation',user),ensure_ascii=False)

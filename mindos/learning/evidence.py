@@ -86,6 +86,7 @@ def quiz_evidence(db,row,confidence=None,hints=None,times=None):
       code=mis['code'] if mis else None,difficulty=q.get('difficulty','standard'),at=__import__('datetime').datetime.fromisoformat(row['submitted_at']),
       metadata={'quiz_id':row['id'],'question_index':i,'assessment_type':q.get('assessment_type','unknown'),'question':q['prompt'],'selected':g,
        'misconception_description':mis['description'] if mis else None,'checked_codes':[v['code'] for v in mappings.values()],
+       **({'cross_course_verification':True,'inherited_prior_id':q['cross_course_verification']['prior_id'],'canonical_atom_id':q['cross_course_verification']['canonical_atom_id']} if q.get('cross_course_verification') else {}),
        'reused_question':bool(q.get('reused_question')),'legacy':bool(row.get('legacy',False)) if isinstance(row,dict) else False}):
     if atom:touched.add(atom)
  return user,cid,touched

@@ -46,3 +46,6 @@
 .authentic-criterion blockquote{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;margin:.8rem 0 0;color:var(--muted,#b1bdd4)}
 .authentic-rubric{margin:1rem 0}.authentic-rubric p{line-height:1.7}.calibration-debug{max-height:500px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:600px){.authentic-verification .action-row{display:flex;flex-wrap:wrap}.authentic-verification .button{flex:1 1 140px}.authentic-verification select{max-width:100%;width:100%}}
+.personal-knowledge-card,.personal-atom-card{margin:1rem 0;padding:1.2rem;border:1px solid var(--border,#384358);border-radius:14px;background:rgba(120,140,255,.04);overflow-wrap:anywhere}
+.personal-source{padding:.8rem 0;border-top:1px solid var(--border,#384358);line-height:1.8}.personal-source .button{margin:.3rem .5rem .3rem 0}.personal-knowledge-card summary{cursor:pointer;font-weight:600}
+@media(max-width:600px){.personal-atom-card{padding:.8rem}.personal-source .button{max-width:100%}.personal-atom-card fieldset{min-width:0}.personal-knowledge-card{padding:.9rem}}

@@ -157,7 +157,10 @@ class CourseManagementStorage:
             drafts=[r[0] for r in db.execute('SELECT id FROM course_drafts WHERE confirmed_course_id=?',(cid,))]
             for draft in drafts:db.execute('DELETE FROM draft_documents WHERE draft_id=?',(draft,))
             db.execute('DELETE FROM course_drafts WHERE confirmed_course_id=?',(cid,))
-            for table in ['calibration_matches','authentic_results','authentic_tasks','learning_prediction_outcomes','learning_prediction_snapshots','course_mastery_reports','course_mastery_states','course_repair_plans','final_assessment_plans','course_final_completion','loop_events','knowledge_state_history','learning_misconceptions','knowledge_states','learning_evidence','repair_sessions','returning_sessions','loop_activity','content_history','teaching_actions','teaching_feedback','teaching_preferences','lesson_teaching_records','assistant_message','assistant_position','production_batches','source_conflicts','discovery_runs','course_graphs','atom_content','atom_turns','learning_events','quizzes','tutor_turns','sections','source_documents']:
+            db.execute('DELETE FROM canonical_mapping_history WHERE mapping_id IN (SELECT id FROM course_atom_mappings WHERE user_id=? AND course_id=?)',(session,cid))
+            db.execute('DELETE FROM inherited_knowledge_priors WHERE user_id=? AND course_id=?',(session,cid))
+            db.execute('DELETE FROM course_atom_mappings WHERE user_id=? AND course_id=?',(session,cid))
+            for table in ['inherited_knowledge_priors','calibration_matches','authentic_results','authentic_tasks','learning_prediction_outcomes','learning_prediction_snapshots','course_mastery_reports','course_mastery_states','course_repair_plans','final_assessment_plans','course_final_completion','loop_events','knowledge_state_history','learning_misconceptions','knowledge_states','learning_evidence','repair_sessions','returning_sessions','loop_activity','content_history','teaching_actions','teaching_feedback','teaching_preferences','lesson_teaching_records','assistant_message','assistant_position','production_batches','source_conflicts','discovery_runs','course_graphs','atom_content','atom_turns','learning_events','quizzes','tutor_turns','sections','source_documents']:
                 db.execute(f'DELETE FROM {table} WHERE course_id=?',(cid,))
             db.execute("DELETE FROM calibration_snapshots WHERE user_id=? AND scope_type='course' AND scope_id=?",(session,cid))
             db.execute('DELETE FROM courses WHERE id=? AND session_id=?',(cid,session))
@@ -193,4 +196,9 @@ class CourseManagementStorage:
                 db.execute('INSERT INTO course_graphs VALUES(?,?,?)',(new,json.dumps(structure,ensure_ascii=False),time))
             for conflict in db.execute('SELECT * FROM source_conflicts WHERE course_id=?',(cid,)).fetchall():
                 db.execute('INSERT INTO source_conflicts VALUES(?,?,?,?,?,?,0,?,NULL)',(secrets.token_urlsafe(16),new,mapping[conflict['source_a']],mapping[conflict['source_b']],json.dumps(remap(json.loads(conflict['content_json'])),ensure_ascii=False),conflict['teaching_expression'],time))
+        from .learning.canonical import KnowledgeMappingEngine
+        try:KnowledgeMappingEngine(self).scan(session,new)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception('复制课程的语义关联待重试')
         return self.course(session,new)

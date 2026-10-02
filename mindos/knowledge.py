@@ -126,6 +126,11 @@ class KnowledgeStorage:
         with self.connect() as db:
             db.execute('INSERT OR IGNORE INTO course_graphs VALUES(?,?,?)',
                        (course_id, json.dumps(graph, ensure_ascii=False), timestamp()))
+        from .learning.canonical import KnowledgeMappingEngine
+        try:KnowledgeMappingEngine(self).scan(session_id,course_id)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning('课程语义关联待重试：%s',type(exc).__name__)
         return self.graph(session_id, course_id)
 
     def complete_index(self,session_id,course_id,value,expected_graph):
@@ -155,6 +160,11 @@ class KnowledgeStorage:
             db.execute('INSERT INTO course_graphs VALUES(?,?,?) ON CONFLICT(course_id) DO UPDATE SET graph_json=excluded.graph_json',(course_id,json.dumps(graph,ensure_ascii=False),timestamp()))
             from .revisions import bump_revision
             bump_revision(db,course_id)
+        from .learning.canonical import KnowledgeMappingEngine
+        try:KnowledgeMappingEngine(self).scan(session_id,course_id)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning('课程语义关联待重试：%s',type(exc).__name__)
         return graph
 
     def atom(self, session_id, course_id, atom_id, *, unlocked=False):

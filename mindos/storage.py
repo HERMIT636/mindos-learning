@@ -124,6 +124,10 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
             from .learning.calibration import migrate as migrate_calibration
             migrate_authentic(db)
             migrate_calibration(db)
+            from .learning.canonical import migrate as migrate_canonical
+            from .learning.personal import migrate as migrate_personal
+            migrate_canonical(db)
+            migrate_personal(db)
 
     @contextmanager
     def connect(self):
@@ -473,6 +477,8 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
             LearningLoopService(self).submitted(db,graded,confidence,hints,times)
             from .learning.final import FinalAssessmentService
             FinalAssessmentService(self).on_submit(db,session_id,course_id,graded)
+            from .learning.cross_course import CrossCourseVerification
+            CrossCourseVerification.on_submit(db,session_id,course_id,graded)
         return {"id": quiz_id, "score": score, "total": len(answers),
                 "results": [{"correct": a == item["answer"], **item}
                             for a, item in zip(user_answers, answers)]}

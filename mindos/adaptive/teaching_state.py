@@ -135,4 +135,6 @@ class LearningStateManager:
                  'weak_prerequisite':[a['title'] for a in prereqs if a.get('rate') is not None and a['rate']<60],
                  'common_mistakes':[m['description'] for m in knowledge.get('learning_loop',{}).get('misconceptions',[]) if m['atom_id'] in ids],
                  'repair_managed':True}
+        from ..learning.personal import InheritedKnowledgePrior
+        state['relevant_personal_prior']=InheritedKnowledgePrior(self.store).list(user,cid,ids,refresh=False)['priors'][:6]
         return state,context

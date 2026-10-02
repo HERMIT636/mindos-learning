@@ -114,6 +114,8 @@ class ContentGenerator:
     def prepare(self,user,cid,section,question='',atom_id=None,mode='lesson',feedback=None,request_id=None):
         kind=feedback or feedback_from_message(question)
         if kind:self.store.save_teaching_feedback(user,cid,section['id'],kind,atom_id,request_id)
+        from ..learning.personal import InheritedKnowledgePrior
+        InheritedKnowledgePrior(self.store).refresh(user,cid)
         state,knowledge=self.states.read(user,cid,section['ordinal'],atom_id)
         scope=self.scope.context(user,cid,section['id'])
         action=self.engine.decide(state,knowledge,scope,question,mode,kind)

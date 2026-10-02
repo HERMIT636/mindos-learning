@@ -215,4 +215,10 @@ class ProductionStorage:
             db.execute('UPDATE production_batches SET status=?,feedback=?,result_json=? WHERE id=?',
                        (status,feedback,json.dumps(result,ensure_ascii=False),batch_id))
             db.execute('UPDATE source_documents SET processing_status=? WHERE id=?',(status,batch['source_id']))
+        if action=='verify':
+            from .learning.canonical import KnowledgeMappingEngine
+            try:KnowledgeMappingEngine(self).scan(session_id,course_id)
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).warning('课程语义关联待重试：%s',type(exc).__name__)
         return self.batch(session_id,course_id,batch_id)

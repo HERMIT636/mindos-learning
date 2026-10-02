@@ -159,6 +159,8 @@ class CourseTutorService:
             context['final_assessment']={'dimension':final_quiz['item']['dimension'],'course_state':final['mastery_state'],'guidance':'先引导独立思考，只给方向或问题；只有用户明确要求标准答案才可以直接解答。任何求助均保存 hint_used，不作为独立终局证据。'}
         from .teaching import TeachingOrchestrator
         context['teaching_context'] = TeachingOrchestrator(self.store).context(session,cid,section['id'])
+        from .learning.personal import InheritedKnowledgePrior
+        context['relevant_personal_prior']=InheritedKnowledgePrior(self.store).relevant(session,cid,ids)
         return course,context,atoms
 
     def chat(self,session,cid,payload,model,search_factory):

@@ -24,7 +24,10 @@ class ATIEEngine:
             elif re.search(r'什么是|是什么意思|定义是什么',message):
                 forms,structure,check=['concept','example'],1,False;compact=True
             elif re.search(r'区别|比较|\bvs\b',message,re.I):forms,structure,check=['comparison','concept'],2,False
-        return {'action':action,'goal':scope['purpose'],'depth':limits['depth'],'presentation':forms,'need_check':check,
+        priors=state.get('relevant_personal_prior',[])
+        verified=any(p['status']=='verified_in_course' and p['prior_strength'] in {'strong','moderate'} for p in priors)
+        if verified and not feedback and action in {'INTRODUCE','EXPLAIN'}:reason='当前课程已独立验证相关基础；简短回顾，重点讲当前小节的新角度'
+        return {'verified_basics':[p['course_atom_id'] for p in priors if p['status']=='verified_in_course' and p['prior_strength'] in {'strong','moderate'}],'relevant_personal_prior':priors,'reduce_repeated_basics':verified and not feedback,'action':action,'goal':scope['purpose'],'depth':limits['depth'],'presentation':forms,'need_check':check,
                 'structure_level':structure,'allow_formulas':limits['allow_formulas'],'allowed_depth':limits['allowed_depth'],
                 'forbidden_topics':scope['future_atoms'],'core_atoms':scope['core_atoms'],'related_atoms':scope['related_atoms'],
                 'backtrack_targets':knowledge.get('weak_prerequisite',[]) if action=='BACKTRACK' else [],

@@ -35,6 +35,7 @@
   const recommendations=node('ul');for(const a of report.recommendations)recommendations.append(node('li',a.reason));root.append(recommendations);
   if(report.summary?.summary)root.append(node('p',report.summary.summary,'final-explanation'));
   const controls=node('div','','action-row');controls.append(button('刷新掌握报告',()=>operation(cid,'report')),button(report.summary?.summary?'查看已保存的报告说明':'生成一段通俗说明',async()=>{const next=await api(endpoint(cid,'report'),{summary:true});if(current(cid))reportView(root,next,cid);}));root.append(controls,node('small',r.boundary,'muted'));
+  window.MindOSAuthentic?.render(root,report,cid);
  }
  function render(data){
   const root=$('course-final-panel');if(!root)return;root.replaceChildren();const cid=data.course.id,version=++generation,f=data.course_final;

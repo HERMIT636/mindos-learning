@@ -68,8 +68,13 @@ class CourseTutorStorage:
                     self.record_teaching_action(db,session,cid,context['section_id'],atom_id,teaching_package)
             from .learning.service import LearningLoopService
             from .learning.evidence import mark_help
-            mark_help(db,cid,context.get('section_id'),atom_id)
-            LearningLoopService(self).signal(db,session,cid,context.get('section_id'),[atom_id] if atom_id else [],'tutor_interaction','assistant:'+exchange_id)
+            if context.get('authentic_task_id'):
+                task=db.execute("SELECT status FROM authentic_tasks WHERE id=? AND user_id=? AND course_id=?",(context['authentic_task_id'],session,cid)).fetchone()
+                if not task or task[0]!='created':raise ValueError('开放任务已提交或暂缓，请刷新')
+                db.execute('UPDATE authentic_tasks SET hint_used=1 WHERE id=?',(context['authentic_task_id'],))
+            else:
+                mark_help(db,cid,context.get('section_id'),atom_id)
+                LearningLoopService(self).signal(db,session,cid,context.get('section_id'),[atom_id] if atom_id else [],'tutor_interaction','assistant:'+exchange_id)
         return self.assistant_exchange(session,cid,exchange_id)
 
     def save_assistant_position(self,session,cid,x,y):
@@ -89,6 +94,20 @@ class CourseTutorService:
     def context(self,session,cid,current,message):
         course=self.store._knowledge_course(session,cid)
         if not isinstance(current,dict):raise ValueError('当前学习上下文格式无效')
+        task_id=current.get('authentic_task_id')
+        if task_id:
+            from .learning.authentic import AuthenticAssessmentService
+            task=AuthenticAssessmentService(self.store).get(session,cid,task_id)['task']
+            if task['status']!='created':raise ValueError('开放任务当前不可求助')
+            atom=self.store.atom(session,cid,task['atom_id'],unlocked=True);section=course['sections'][atom['section']-1]
+            from .teaching import TeachingOrchestrator
+            context={'today':stamp()[:10],'course':{k:course[k] for k in ['id','title','goal','learner_level','level','source_policy','content_revision']},
+                'current_context':{'section_ordinal':atom['section'],'section_title':section['title'],'knowledge_atom_id':atom['id'],'knowledge_title':atom['title'],'authentic_task_id':task_id},
+                'assessment_mode':'authentic','authentic_task':{'id':task_id,'task_type':task['task_type'],'prompt':task['prompt'],'guidance':'默认帮助理解任务并提出引导问题；仅用户明确要求直接答案时可以解答。所有求助都留下提示标记，本次任务不用于校准。'},
+                'knowledge_atoms':[atom],'knowledge_relations':[],'pending_quiz_questions':[], 'teaching_context':TeachingOrchestrator(self.store).context(session,cid,section['id'])}
+            # Mark before the model call; failed help requests cannot erase independence.
+            AuthenticAssessmentService(self.store).hint(session,cid,task_id)
+            return course,context,[atom]
         from .learning.final import FinalAssessmentService
         final=FinalAssessmentService(self.store).status(session,cid)
         final_quiz=final['current_quiz'] if final['plan'] and final['plan']['status']=='active' and not final['plan']['stale'] else None
@@ -152,7 +171,7 @@ class CourseTutorService:
             if old[0]['content']!=question:raise ValueError('重复请求编号对应了不同问题')
             return self._response(old)
         course,context,atoms=self.context(session,cid,payload.get('current_context',{}),question)
-        history=self.store.assistant_history(session,cid)['messages'][-12:]
+        history=[] if context.get('assessment_mode')=='authentic' else self.store.assistant_history(session,cid)['messages'][-12:]
         route_error=None
         try:
             route=model.plan_course_tutor(context,question,[{'id':a['id'],'title':a['title'],'section':a['section']} for a in atoms])
@@ -196,6 +215,7 @@ class CourseTutorService:
         related=[{'id':a['id'],'title':a['title'],'section':a['section']} for a in atoms if a['id'] in requested][:6]
         if not related:related=[{'id':a['id'],'title':a['title'],'section':a['section']} for a in atoms if a['id']==context['current_context']['knowledge_atom_id'] or a['title'].casefold() in question.casefold()][:4]
         current=context['current_context'];saved_context={k:current[k] for k in ['section_ordinal','section_title','knowledge_atom_id','knowledge_title']}|{'course_title':course['title'],'section_id':section['id'],'validation':result['validation']}
+        if current.get('authentic_task_id'):saved_context['authentic_task_id']=current['authentic_task_id']
         messages=self.store.save_assistant_exchange(session,cid,exchange_id,question,answer,current['knowledge_atom_id'],saved_context,related,search,result)
         return self._response(messages)
 

@@ -157,8 +157,9 @@ class CourseManagementStorage:
             drafts=[r[0] for r in db.execute('SELECT id FROM course_drafts WHERE confirmed_course_id=?',(cid,))]
             for draft in drafts:db.execute('DELETE FROM draft_documents WHERE draft_id=?',(draft,))
             db.execute('DELETE FROM course_drafts WHERE confirmed_course_id=?',(cid,))
-            for table in ['learning_prediction_outcomes','learning_prediction_snapshots','course_mastery_reports','course_mastery_states','course_repair_plans','final_assessment_plans','course_final_completion','loop_events','knowledge_state_history','learning_misconceptions','knowledge_states','learning_evidence','repair_sessions','returning_sessions','loop_activity','content_history','teaching_actions','teaching_feedback','teaching_preferences','lesson_teaching_records','assistant_message','assistant_position','production_batches','source_conflicts','discovery_runs','course_graphs','atom_content','atom_turns','learning_events','quizzes','tutor_turns','sections','source_documents']:
+            for table in ['calibration_matches','authentic_results','authentic_tasks','learning_prediction_outcomes','learning_prediction_snapshots','course_mastery_reports','course_mastery_states','course_repair_plans','final_assessment_plans','course_final_completion','loop_events','knowledge_state_history','learning_misconceptions','knowledge_states','learning_evidence','repair_sessions','returning_sessions','loop_activity','content_history','teaching_actions','teaching_feedback','teaching_preferences','lesson_teaching_records','assistant_message','assistant_position','production_batches','source_conflicts','discovery_runs','course_graphs','atom_content','atom_turns','learning_events','quizzes','tutor_turns','sections','source_documents']:
                 db.execute(f'DELETE FROM {table} WHERE course_id=?',(cid,))
+            db.execute("DELETE FROM calibration_snapshots WHERE user_id=? AND scope_type='course' AND scope_id=?",(session,cid))
             db.execute('DELETE FROM courses WHERE id=? AND session_id=?',(cid,session))
 
     def copy_course(self,session,cid,title=None):

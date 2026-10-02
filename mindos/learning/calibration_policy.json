@@ -1,0 +1,12 @@
+{
+  "version": "calibration-v1",
+  "windows_days": [1, 7, 14, 30],
+  "window_tolerance_ratio": 0.3,
+  "mastery_buckets": [[0, 0.2], [0.2, 0.4], [0.4, 0.6], [0.6, 0.8], [0.8, 1]],
+  "minimum_bucket_samples": 5,
+  "minimum_calibration_samples": 20,
+  "authentic_agreement_high": 0.75,
+  "authentic_disagreement_gap": 0.3,
+  "evaluator_minimum_confidence": 0.75,
+  "immediate_repeat_hours": 24
+}

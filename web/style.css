@@ -37,3 +37,12 @@
 .final-defer {margin-top:1.5rem;}
 .final-reasons li {line-height:1.9;}
 @media(max-width:600px){.final-scenario,.final-repair {padding:.95rem;}.final-defer button {width:100%;}.final-question .option {align-items:flex-start;}.final-metrics {font-size:.92rem;}}
+
+/* Open verification stays a quiet continuation of the course report. */
+.authentic-verification{margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border,#384358)}
+.authentic-prompt,.authentic-answer{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.85;margin:1rem 0}
+.authentic-input{display:block;width:100%;box-sizing:border-box;min-height:180px;resize:vertical;margin:.8rem 0;line-height:1.8;padding:1rem;border-radius:12px;background:var(--panel,#121b30);color:inherit;border:1px solid var(--border,#384358)}
+.authentic-criterion{margin:1rem 0;padding:1rem;border-left:3px solid #8e9dff;background:rgba(120,140,255,.05);border-radius:0 8px 8px 0}
+.authentic-criterion blockquote{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;margin:.8rem 0 0;color:var(--muted,#b1bdd4)}
+.authentic-rubric{margin:1rem 0}.authentic-rubric p{line-height:1.7}.calibration-debug{max-height:500px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:600px){.authentic-verification .action-row{display:flex;flex-wrap:wrap}.authentic-verification .button{flex:1 1 140px}.authentic-verification select{max-width:100%;width:100%}}

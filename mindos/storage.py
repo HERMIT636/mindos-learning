@@ -120,6 +120,10 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
             migrate(db)
             from .learning.final import migrate as migrate_final
             migrate_final(db)
+            from .learning.authentic import migrate as migrate_authentic
+            from .learning.calibration import migrate as migrate_calibration
+            migrate_authentic(db)
+            migrate_calibration(db)
 
     @contextmanager
     def connect(self):
@@ -415,6 +419,11 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
                                  (course_id, section_id)).fetchone()
             if pending:
                 return self._quiz_public(dict(pending))
+            from .learning.calibration import capture_prediction
+            from .learning.state import empty
+            for atom in {a for q in questions for a in q.get('atom_ids',[])}:
+                raw=db.execute('SELECT state_json FROM knowledge_states WHERE user_id=? AND course_id=? AND atom_id=?',(session_id,course_id,atom)).fetchone()
+                capture_prediction(db,session_id,course_id,atom,json.loads(raw[0]) if raw else empty(atom),salt=quiz_id)
             db.execute("INSERT INTO quizzes(id,course_id,section_id,questions_json,answers_json,user_answers_json,score,created_at,submitted_at) VALUES(?,?,?,?,?,?,?,?,?)",
                        (quiz_id, course_id, section_id, json.dumps(questions, ensure_ascii=False),
                         json.dumps(answers, ensure_ascii=False), None, None, now(), None))

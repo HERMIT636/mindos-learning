@@ -9,11 +9,13 @@ const CourseAssistant=(()=>{
  }
  function current(){
   if(!state.data || !['course','dashboard','growth'].includes(state.page))return null;
+  if(state.authenticTask?.course_id===state.courseId)return {authentic_task_id:state.authenticTask.id};
   const atom=state.courseMode==='map' && !$('atom-panel').hidden?state.atomDetail?.atom:null;
   return {section_ordinal:atom?.section || state.data.section.ordinal,knowledge_atom_id:atom?.id || null,atom_mode:state.atomMode || 'quick'};
  }
  function label(){
   const c=current();if(!c){$('assistant-course').textContent='选择一门课程，导师才知道从哪里开始。';$('assistant-context').textContent='学习记忆按课程隔离。';$('assistant-insight').textContent='先进入课程，或从驾驶舱选择当前课程。不会在没有学习证据时推断你的能力。';return;}
+  if(c.authentic_task_id){$('assistant-course').textContent=`当前课程：${state.data.course.title}`;$('assistant-context').textContent='开放能力检测 · 当前任务';$('assistant-insight').textContent='我会先引导你理解任务。求助会保存提示记录，本次不用于校准；不会改变掌握状态。';return;}
   const section=state.data.course.sections.find(s=>s.ordinal===c.section_ordinal);
   $('assistant-course').textContent=`当前课程：${state.data.course.title}`;
   const final=state.data.course_final;

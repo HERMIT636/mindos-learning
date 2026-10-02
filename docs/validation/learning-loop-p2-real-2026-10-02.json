@@ -1,0 +1,584 @@
+{
+  "date": "2026-10-02",
+  "fixture": "Synthetic QKV course only. Personal database opened read-only exclusively for encrypted model configuration. No learner history used.",
+  "checks": {
+    "explanation": {
+      "passed": true,
+      "task": {
+        "task_type": "explanation",
+        "atom_ids": [
+          "qkv"
+        ],
+        "prompt": "请用3到10分钟的口头或书面回答，解释Transformer中Query、Key、Value三者的角色分工：为什么需要分别设置Q、K、V，而不是只用一个向量同时完成匹配与内容聚合？请结合“当前需求—匹配依据—被聚合内容”的因果链条说明，并给出一个一句话类比，说明若Q和K的角色混淆会导致什么后果。",
+        "rubric": {
+          "criteria": [
+            {
+              "id": "role_definition",
+              "description": "准确说明Query表达当前需求、Key用于匹配、Value提供被聚合内容，三者角色不混淆。",
+              "weight": 0.3
+            },
+            {
+              "id": "causal_chain",
+              "description": "解释Q与K比较产生权重，再用权重对V加权求和的因果过程，说明为什么输出由匹配结果和内容共同决定。",
+              "weight": 0.3
+            },
+            {
+              "id": "separation_reason",
+              "description": "说明分离Q、K、V的必要性：匹配空间与内容空间可以不同，若合并会导致匹配或聚合能力受限。",
+              "weight": 0.25
+            },
+            {
+              "id": "analogy_consequence",
+              "description": "给出合理类比并指出Q/K混淆会导致检索错位或聚合内容与需求不匹配的后果。",
+              "weight": 0.15
+            }
+          ]
+        },
+        "expected_concepts": [
+          "Query表达当前需求或查询意图",
+          "Key作为匹配依据，与Query比较产生注意力权重",
+          "Value提供实际被加权聚合的内容",
+          "注意力权重由Q与K的相似度决定，再对V加权求和",
+          "Q、K、V分离允许匹配特征与内容特征解耦",
+          "混淆Q和K会导致匹配错位或检索到不相关内容"
+        ],
+        "forbidden_shortcuts": [
+          "只背诵“Q是查询、K是键、V是值”而不解释因果关系",
+          "把Q、K、V说成完全相同的向量，忽略角色分工",
+          "只写公式而不说明匹配与聚合的先后逻辑",
+          "用“注意力就是加权平均”一句话代替角色解释"
+        ],
+        "difficulty": "standard",
+        "minutes": 6,
+        "source_domain": "文本序列与Transformer",
+        "target_domain": "图书馆参考咨询",
+        "shared_principle": "先根据当前需求与匹配依据计算相关度，再按相关度聚合被选中的内容，匹配与内容可以分离。",
+        "surface_difference": "Transformer用向量和点积计算权重，图书馆参考咨询用问题描述和书目标签匹配，再用书籍内容回答读者。",
+        "novelty_reason": "图书馆参考咨询是日常信息检索场景，不涉及神经网络矩阵运算，但同样存在“需求—匹配—内容”的分工。",
+        "structure": "读者问题对应Query，书目标签或索引对应Key，书籍正文对应Value；问题与标签匹配得到相关书目，再按相关度组合或推荐书籍内容。",
+        "novelty_check": {
+          "passed": true,
+          "normalized_similarity": 0.0,
+          "keyword_overlap": 0.0,
+          "rule": "lexical-novelty-v1",
+          "boundary": "进行了文本和结构级陌生性检查；不能证明语义陌生或事实正确。",
+          "structural_check": true
+        }
+      }
+    },
+    "design": {
+      "passed": true,
+      "task": {
+        "task_type": "design",
+        "atom_ids": [
+          "qkv"
+        ],
+        "prompt": "请在3到10分钟内，为课程设计一个用于验证初学者是否真正理解QKV角色分工的微型诊断任务，并完成两项分析与一项设计方案。\n\n首先，给出一个错误说法（例如把Q当作被聚合内容，或把K当作当前需求），说明它为什么看起来合理、但违背了QKV的因果机制。\n\n其次，提出一个能让“只死记QKV字面含义”的学习者暴露问题的具体识别信号，并解释这个信号与QKV角色分工之间的因果联系。\n\n最后，设计一个不超过10分钟的小型验证方案：说明验证目标、给学习者提供什么样的输入情境、要求学习者输出什么、如何根据输出判断其是否理解了“Query表达当前需求，Key用于匹配，Value提供被聚合内容”。方案要能区分“理解角色分工”和“只会背QKV三个字母”。",
+        "rubric": {
+          "criteria": [
+            {
+              "id": "misconception_design",
+              "description": "给出的错误说法确实违背QKV角色分工，并用因果机制说明其错在哪里，而不是只贴标签。",
+              "weight": 0.3
+            },
+            {
+              "id": "diagnostic_signal",
+              "description": "提出的识别信号能区分“死记字面含义”与“理解QKV因果分工”，并说明信号与机制之间的因果联系。",
+              "weight": 0.3
+            },
+            {
+              "id": "mini_validation_plan",
+              "description": "小型验证方案包含明确的验证目标、输入情境、学习者输出和判断标准，时间控制在10分钟内且可操作。",
+              "weight": 0.4
+            }
+          ]
+        },
+        "expected_concepts": [
+          "Query表达当前需求，Key用于匹配，Value提供被聚合的内容",
+          "Q与K比较产生权重，权重用于加权组合V",
+          "Q、K、V角色分工的因果链：当前需求→匹配依据→被聚合内容",
+          "混淆Q与K、Q与V或K与V会导致匹配或聚合失败",
+          "诊断信号应能暴露学习者是否只记住字母对应，而不是理解功能角色"
+        ],
+        "forbidden_shortcuts": [
+          "只让学习者背出Query、Key、Value的全称或字面意思",
+          "用选择题判断QKV角色分工",
+          "设计一个需要完整Transformer实现或大型项目的任务",
+          "只描述正确流程，不设计错误说法或诊断信号"
+        ],
+        "difficulty": "standard",
+        "minutes": 8,
+        "source_domain": "Transformer中的QKV机制",
+        "target_domain": "招聘匹配系统",
+        "shared_principle": "都需要用一个当前需求（查询）去和一组特征（键）匹配，再按匹配权重聚合出最终内容（值）。",
+        "surface_difference": "Transformer用向量和注意力权重处理文本序列；招聘系统用职位需求、候选人技能标签和简历内容做匹配。",
+        "novelty_reason": "招聘匹配是日常业务场景，不是课程内直接讲过的Transformer例子，学习者需要把QKV角色映射到职位需求、候选人标签和简历内容上。",
+        "structure": "先给出一个错误说法并分析其为何违背QKV因果机制；再提出一个诊断信号，说明它如何暴露只背字面含义的学习者；最后设计一个10分钟内的迷你验证任务，包含输入情境、学习者输出和判断标准。",
+        "novelty_check": {
+          "passed": true,
+          "normalized_similarity": 0.1606,
+          "keyword_overlap": 0.1129,
+          "rule": "lexical-novelty-v1",
+          "boundary": "进行了文本和结构级陌生性检查；不能证明语义陌生或事实正确。",
+          "structural_check": true
+        }
+      }
+    },
+    "open_transfer": {
+      "passed": true,
+      "task": {
+        "task_type": "open_transfer",
+        "atom_ids": [
+          "qkv"
+        ],
+        "prompt": "在文本Transformer中，QKV的角色分工是：Query表达当前需求，Key作为匹配依据，Value提供被聚合的内容，从而完成信息的选择与加权组合。请你将这个机制迁移到课程之外的领域，自选一个具体的新领域（例如餐厅点餐、图书馆找书、医院分诊、音乐推荐等），在3到10分钟内用口头或书面方式完成以下任务：1）明确说出原领域（文本序列）和新领域分别是什么；2）概括两个领域共同遵循的“需求—匹配—聚合”原理；3）说明两个领域在表面上至少两个明显差异；4）解释为什么这个新领域对只学过文本QKV的人来说具有陌生性；5）给出从Q/K/V到新领域元素的结构映射，并说明如果混淆其中两个角色会导致什么后果。",
+        "rubric": {
+          "criteria": [
+            {
+              "id": "domain_declaration",
+              "description": "清晰声明原领域（文本序列或Transformer）和目标领域（课程外领域），目标领域具体且不是文本Transformer本身。",
+              "weight": 0.15
+            },
+            {
+              "id": "shared_principle",
+              "description": "准确概括共同原理：用当前需求与可匹配特征比较产生权重，再按权重聚合候选内容，体现Q/K/V的因果分工。",
+              "weight": 0.25
+            },
+            {
+              "id": "surface_difference",
+              "description": "指出两个领域在表面上的至少两个明显差异，例如数据形态、交互方式、实时性、参与者角色等。",
+              "weight": 0.15
+            },
+            {
+              "id": "mapping_structure",
+              "description": "给出Q、K、V到新领域元素的对位映射，并说明混淆Q与K或Q与V等角色时会导致的匹配错误或聚合错误。",
+              "weight": 0.25
+            },
+            {
+              "id": "novelty_reason",
+              "description": "解释目标领域对文本QKV学习者为何陌生，例如没有注意力分数、没有矩阵乘法、有物理空间或人类决策约束。",
+              "weight": 0.2
+            }
+          ]
+        },
+        "expected_concepts": [
+          "Query表达当前任务或主体的即时需求。",
+          "Key是与需求进行匹配的特征或索引。",
+          "Value是实际被加权聚合的内容或资源。",
+          "匹配权重由Query和Key的相似度决定。",
+          "聚合结果是Value按权重组合而成。",
+          "角色分工使匹配与内容聚合解耦，避免用同一向量同时承担两种功能。"
+        ],
+        "forbidden_shortcuts": [
+          "只重复QKV三个字母的含义，不迁移到新领域。",
+          "把新领域仅当作比喻，不给出Q/K/V到具体元素的结构映射。",
+          "混淆Query和Value，声称Query本身就是被聚合的内容。",
+          "混淆Key和Query，声称匹配依据就是当前需求本身。",
+          "忽略共同原理，只罗列两个领域表面相似词。"
+        ],
+        "difficulty": "standard",
+        "minutes": 8,
+        "source_domain": "文本序列中的Transformer注意力机制",
+        "target_domain": "自选课程外领域，例如餐厅点餐、图书馆找书、医院分诊、音乐推荐等",
+        "shared_principle": "由当前需求发起查询，用匹配依据筛选候选，再按匹配程度加权聚合并输出内容，即‘需求—匹配—聚合’的信息选择与组合机制。",
+        "surface_difference": "文本序列中Q/K/V是向量，通过点积和softmax计算权重，处理的是词元表示；新领域通常是人类活动或物理对象，匹配可能靠规则、标签、距离或人工判断，聚合结果可能是实际物品、服务或决策。",
+        "novelty_reason": "新领域没有注意力矩阵、嵌入向量和梯度训练，学习者必须剥离数学形式，仅保留角色分工的因果结构，面对的是具体、离散、可能带约束的现实情境。",
+        "structure": "先声明原领域与目标领域；再概括共同原理；然后指出表面差异与陌生性；接着建立Q/K/V到新领域元素的结构映射；最后说明角色混淆的后果。",
+        "novelty_check": {
+          "passed": true,
+          "normalized_similarity": 0.2563,
+          "keyword_overlap": 0.1987,
+          "rule": "lexical-novelty-v1",
+          "boundary": "进行了文本和结构级陌生性检查；不能证明语义陌生或事实正确。",
+          "structural_check": true
+        }
+      }
+    },
+    "evaluation": {
+      "passed": true,
+      "answer": "查询表示这次想找到的信息，键是各条记录用于比较的特征，值是记录真正提供的内容。先把查询和各个键比较，匹配程度决定每个值的权重，再按权重组合值，所以条件与内容不能混同。这样不是无差别平均，但也可能受到匹配特征质量的影响。",
+      "evaluation": {
+        "available": true,
+        "criteria": [
+          {
+            "id": "domain_declaration",
+            "passed": false,
+            "score": 0,
+            "evidence": "查询表示这次想找到的信息，键是各条记录用于比较的特征，值是记录真正提供的内容。"
+          },
+          {
+            "id": "shared_principle",
+            "passed": true,
+            "score": 0.6,
+            "evidence": "先把查询和各个键比较，匹配程度决定每个值的权重，再按权重组合值，所以条件与内容不能混同。"
+          },
+          {
+            "id": "surface_difference",
+            "passed": false,
+            "score": 0,
+            "evidence": "查询表示这次想找到的信息，键是各条记录用于比较的特征，值是记录真正提供的内容。"
+          },
+          {
+            "id": "mapping_structure",
+            "passed": false,
+            "score": 0.4,
+            "evidence": "查询表示这次想找到的信息，键是各条记录用于比较的特征，值是记录真正提供的内容。"
+          },
+          {
+            "id": "novelty_reason",
+            "passed": false,
+            "score": 0,
+            "evidence": "这样不是无差别平均，但也可能受到匹配特征质量的影响。"
+          }
+        ],
+        "overall_score": 0.25,
+        "confidence": 0.65,
+        "misconception_candidates": [
+          "没有明确声明课程外的新领域，只把Query、Key、Value替换为‘查询/键/值’的泛化说法。",
+          "没有指出文本序列与目标领域之间的表面差异。",
+          "没有解释新领域对文本QKV学习者的陌生性。"
+        ],
+        "model_overall_score": 0.25,
+        "boundary": "模型辅助评分尚未经过真实学习者有效性验证，不改变掌握状态。"
+      }
+    },
+    "invalid_evidence_repair": {
+      "passed": true,
+      "fault_injection": "First completed evaluation quote intentionally replaced by nonexistent synthetic text; second evaluation uses real model.",
+      "evaluation": {
+        "available": true,
+        "criteria": [
+          {
+            "id": "domain_declaration",
+            "passed": false,
+            "score": 0,
+            "evidence": "查询表示这次想找到的信息，键是各条记录用于比较的特征，值是记录真正提供的内容。"
+          },
+          {
+            "id": "shared_principle",
+            "passed": true,
+            "score": 0.7,
+            "evidence": "先把查询和各个键比较，匹配程度决定每个值的权重，再按权重组合值，所以条件与内容不能混同。"
+          },
+          {
+            "id": "surface_difference",
+            "passed": false,
+            "score": 0,
+            "evidence": "查询表示这次想找到的信息，键是各条记录用于比较的特征，值是记录真正提供的内容。"
+          },
+          {
+            "id": "mapping_structure",
+            "passed": false,
+            "score": 0.2,
+            "evidence": "这样不是无差别平均，但也可能受到匹配特征质量的影响。"
+          },
+          {
+            "id": "novelty_reason",
+            "passed": false,
+            "score": 0,
+            "evidence": "查询表示这次想找到的信息，键是各条记录用于比较的特征，值是记录真正提供的内容。"
+          }
+        ],
+        "overall_score": 0.225,
+        "confidence": 0.85,
+        "misconception_candidates": [
+          "把Query等同于“想找到的信息”，可能模糊Query是需求向量而非被检索内容本身的区别。"
+        ],
+        "model_overall_score": 0.22,
+        "boundary": "模型辅助评分尚未经过真实学习者有效性验证，不改变掌握状态。"
+      }
+    },
+    "state_mismatch": {
+      "passed": true,
+      "result": {
+        "classification": "high_state_low_authentic",
+        "reason_code": "AUTHENTIC_STATE_MISMATCH",
+        "action": "reassess",
+        "message": "检测到能力证据之间存在明显差异。建议主动进行一次新的独立应用或迁移检测；不会自动降低掌握状态。"
+      }
+    }
+  },
+  "boundary": "真实模型结构检查不等于评分有效性证明。评分可信度、题目语义陌生性仍需真实学习者验证。",
+  "raw_parsed_model_outputs": [
+    {
+      "stage": "authentic_generation",
+      "parsed": {
+        "task_type": "explanation",
+        "atom_ids": [
+          "qkv"
+        ],
+        "prompt": "请用3到10分钟的口头或书面回答，解释Transformer中Query、Key、Value三者的角色分工：为什么需要分别设置Q、K、V，而不是只用一个向量同时完成匹配与内容聚合？请结合“当前需求—匹配依据—被聚合内容”的因果链条说明，并给出一个一句话类比，说明若Q和K的角色混淆会导致什么后果。",
+        "rubric": {
+          "criteria": [
+            {
+              "id": "role_definition",
+              "description": "准确说明Query表达当前需求、Key用于匹配、Value提供被聚合内容，三者角色不混淆。",
+              "weight": 0.3
+            },
+            {
+              "id": "causal_chain",
+              "description": "解释Q与K比较产生权重，再用权重对V加权求和的因果过程，说明为什么输出由匹配结果和内容共同决定。",
+              "weight": 0.3
+            },
+            {
+              "id": "separation_reason",
+              "description": "说明分离Q、K、V的必要性：匹配空间与内容空间可以不同，若合并会导致匹配或聚合能力受限。",
+              "weight": 0.25
+            },
+            {
+              "id": "analogy_consequence",
+              "description": "给出合理类比并指出Q/K混淆会导致检索错位或聚合内容与需求不匹配的后果。",
+              "weight": 0.15
+            }
+          ]
+        },
+        "expected_concepts": [
+          "Query表达当前需求或查询意图",
+          "Key作为匹配依据，与Query比较产生注意力权重",
+          "Value提供实际被加权聚合的内容",
+          "注意力权重由Q与K的相似度决定，再对V加权求和",
+          "Q、K、V分离允许匹配特征与内容特征解耦",
+          "混淆Q和K会导致匹配错位或检索到不相关内容"
+        ],
+        "forbidden_shortcuts": [
+          "只背诵“Q是查询、K是键、V是值”而不解释因果关系",
+          "把Q、K、V说成完全相同的向量，忽略角色分工",
+          "只写公式而不说明匹配与聚合的先后逻辑",
+          "用“注意力就是加权平均”一句话代替角色解释"
+        ],
+        "difficulty": "standard",
+        "minutes": 6,
+        "source_domain": "文本序列与Transformer",
+        "target_domain": "图书馆参考咨询",
+        "shared_principle": "先根据当前需求与匹配依据计算相关度，再按相关度聚合被选中的内容，匹配与内容可以分离。",
+        "surface_difference": "Transformer用向量和点积计算权重，图书馆参考咨询用问题描述和书目标签匹配，再用书籍内容回答读者。",
+        "novelty_reason": "图书馆参考咨询是日常信息检索场景，不涉及神经网络矩阵运算，但同样存在“需求—匹配—内容”的分工。",
+        "structure": "读者问题对应Query，书目标签或索引对应Key，书籍正文对应Value；问题与标签匹配得到相关书目，再按相关度组合或推荐书籍内容。",
+        "novelty_check": {
+          "passed": true,
+          "normalized_similarity": 0.0,
+          "keyword_overlap": 0.0,
+          "rule": "lexical-novelty-v1",
+          "boundary": "进行了文本和结构级陌生性检查；不能证明语义陌生或事实正确。",
+          "structural_check": true
+        }
+      }
+    },
+    {
+      "stage": "authentic_generation",
+      "parsed": {
+        "task_type": "design",
+        "atom_ids": [
+          "qkv"
+        ],
+        "prompt": "请在3到10分钟内，为课程设计一个用于验证初学者是否真正理解QKV角色分工的微型诊断任务，并完成两项分析与一项设计方案。\n\n首先，给出一个错误说法（例如把Q当作被聚合内容，或把K当作当前需求），说明它为什么看起来合理、但违背了QKV的因果机制。\n\n其次，提出一个能让“只死记QKV字面含义”的学习者暴露问题的具体识别信号，并解释这个信号与QKV角色分工之间的因果联系。\n\n最后，设计一个不超过10分钟的小型验证方案：说明验证目标、给学习者提供什么样的输入情境、要求学习者输出什么、如何根据输出判断其是否理解了“Query表达当前需求，Key用于匹配，Value提供被聚合内容”。方案要能区分“理解角色分工”和“只会背QKV三个字母”。",
+        "rubric": {
+          "criteria": [
+            {
+              "id": "misconception_design",
+              "description": "给出的错误说法确实违背QKV角色分工，并用因果机制说明其错在哪里，而不是只贴标签。",
+              "weight": 0.3
+            },
+            {
+              "id": "diagnostic_signal",
+              "description": "提出的识别信号能区分“死记字面含义”与“理解QKV因果分工”，并说明信号与机制之间的因果联系。",
+              "weight": 0.3
+            },
+            {
+              "id": "mini_validation_plan",
+              "description": "小型验证方案包含明确的验证目标、输入情境、学习者输出和判断标准，时间控制在10分钟内且可操作。",
+              "weight": 0.4
+            }
+          ]
+        },
+        "expected_concepts": [
+          "Query表达当前需求，Key用于匹配，Value提供被聚合的内容",
+          "Q与K比较产生权重，权重用于加权组合V",
+          "Q、K、V角色分工的因果链：当前需求→匹配依据→被聚合内容",
+          "混淆Q与K、Q与V或K与V会导致匹配或聚合失败",
+          "诊断信号应能暴露学习者是否只记住字母对应，而不是理解功能角色"
+        ],
+        "forbidden_shortcuts": [
+          "只让学习者背出Query、Key、Value的全称或字面意思",
+          "用选择题判断QKV角色分工",
+          "设计一个需要完整Transformer实现或大型项目的任务",
+          "只描述正确流程，不设计错误说法或诊断信号"
+        ],
+        "difficulty": "standard",
+        "minutes": 8,
+        "source_domain": "Transformer中的QKV机制",
+        "target_domain": "招聘匹配系统",
+        "shared_principle": "都需要用一个当前需求（查询）去和一组特征（键）匹配，再按匹配权重聚合出最终内容（值）。",
+        "surface_difference": "Transformer用向量和注意力权重处理文本序列；招聘系统用职位需求、候选人技能标签和简历内容做匹配。",
+        "novelty_reason": "招聘匹配是日常业务场景，不是课程内直接讲过的Transformer例子，学习者需要把QKV角色映射到职位需求、候选人标签和简历内容上。",
+        "structure": "先给出一个错误说法并分析其为何违背QKV因果机制；再提出一个诊断信号，说明它如何暴露只背字面含义的学习者；最后设计一个10分钟内的迷你验证任务，包含输入情境、学习者输出和判断标准。",
+        "novelty_check": {
+          "passed": true,
+          "normalized_similarity": 0.1606,
+          "keyword_overlap": 0.1129,
+          "rule": "lexical-novelty-v1",
+          "boundary": "进行了文本和结构级陌生性检查；不能证明语义陌生或事实正确。",
+          "structural_check": true
+        }
+      }
+    },
+    {
+      "stage": "authentic_generation",
+      "parsed": {
+        "task_type": "open_transfer",
+        "atom_ids": [
+          "qkv"
+        ],
+        "prompt": "在文本Transformer中，QKV的角色分工是：Query表达当前需求，Key作为匹配依据，Value提供被聚合的内容，从而完成信息的选择与加权组合。请你将这个机制迁移到课程之外的领域，自选一个具体的新领域（例如餐厅点餐、图书馆找书、医院分诊、音乐推荐等），在3到10分钟内用口头或书面方式完成以下任务：1）明确说出原领域（文本序列）和新领域分别是什么；2）概括两个领域共同遵循的“需求—匹配—聚合”原理；3）说明两个领域在表面上至少两个明显差异；4）解释为什么这个新领域对只学过文本QKV的人来说具有陌生性；5）给出从Q/K/V到新领域元素的结构映射，并说明如果混淆其中两个角色会导致什么后果。",
+        "rubric": {
+          "criteria": [
+            {
+              "id": "domain_declaration",
+              "description": "清晰声明原领域（文本序列或Transformer）和目标领域（课程外领域），目标领域具体且不是文本Transformer本身。",
+              "weight": 0.15
+            },
+            {
+              "id": "shared_principle",
+              "description": "准确概括共同原理：用当前需求与可匹配特征比较产生权重，再按权重聚合候选内容，体现Q/K/V的因果分工。",
+              "weight": 0.25
+            },
+            {
+              "id": "surface_difference",
+              "description": "指出两个领域在表面上的至少两个明显差异，例如数据形态、交互方式、实时性、参与者角色等。",
+              "weight": 0.15
+            },
+            {
+              "id": "mapping_structure",
+              "description": "给出Q、K、V到新领域元素的对位映射，并说明混淆Q与K或Q与V等角色时会导致的匹配错误或聚合错误。",
+              "weight": 0.25
+            },
+            {
+              "id": "novelty_reason",
+              "description": "解释目标领域对文本QKV学习者为何陌生，例如没有注意力分数、没有矩阵乘法、有物理空间或人类决策约束。",
+              "weight": 0.2
+            }
+          ]
+        },
+        "expected_concepts": [
+          "Query表达当前任务或主体的即时需求。",
+          "Key是与需求进行匹配的特征或索引。",
+          "Value是实际被加权聚合的内容或资源。",
+          "匹配权重由Query和Key的相似度决定。",
+          "聚合结果是Value按权重组合而成。",
+          "角色分工使匹配与内容聚合解耦，避免用同一向量同时承担两种功能。"
+        ],
+        "forbidden_shortcuts": [
+          "只重复QKV三个字母的含义，不迁移到新领域。",
+          "把新领域仅当作比喻，不给出Q/K/V到具体元素的结构映射。",
+          "混淆Query和Value，声称Query本身就是被聚合的内容。",
+          "混淆Key和Query，声称匹配依据就是当前需求本身。",
+          "忽略共同原理，只罗列两个领域表面相似词。"
+        ],
+        "difficulty": "standard",
+        "minutes": 8,
+        "source_domain": "文本序列中的Transformer注意力机制",
+        "target_domain": "自选课程外领域，例如餐厅点餐、图书馆找书、医院分诊、音乐推荐等",
+        "shared_principle": "由当前需求发起查询，用匹配依据筛选候选，再按匹配程度加权聚合并输出内容，即‘需求—匹配—聚合’的信息选择与组合机制。",
+        "surface_difference": "文本序列中Q/K/V是向量，通过点积和softmax计算权重，处理的是词元表示；新领域通常是人类活动或物理对象，匹配可能靠规则、标签、距离或人工判断，聚合结果可能是实际物品、服务或决策。",
+        "novelty_reason": "新领域没有注意力矩阵、嵌入向量和梯度训练，学习者必须剥离数学形式，仅保留角色分工的因果结构，面对的是具体、离散、可能带约束的现实情境。",
+        "structure": "先声明原领域与目标领域；再概括共同原理；然后指出表面差异与陌生性；接着建立Q/K/V到新领域元素的结构映射；最后说明角色混淆的后果。",
+        "novelty_check": {
+          "passed": true,
+          "normalized_similarity": 0.2563,
+          "keyword_overlap": 0.1987,
+          "rule": "lexical-novelty-v1",
+          "boundary": "进行了文本和结构级陌生性检查；不能证明语义陌生或事实正确。",
+          "structural_check": true
+        }
+      }
+    },
+    {
+      "stage": "authentic_evaluation",
+      "parsed": {
+        "criteria": [
+          {
+            "id": "domain_declaration",
+            "passed": false,
+            "score": 0,
+            "evidence": "查询表示这次想找到的信息，键是各条记录用于比较的特征，值是记录真正提供的内容。"
+          },
+          {
+            "id": "shared_principle",
+            "passed": true,
+            "score": 0.6,
+            "evidence": "先把查询和各个键比较，匹配程度决定每个值的权重，再按权重组合值，所以条件与内容不能混同。"
+          },
+          {
+            "id": "surface_difference",
+            "passed": false,
+            "score": 0,
+            "evidence": "查询表示这次想找到的信息，键是各条记录用于比较的特征，值是记录真正提供的内容。"
+          },
+          {
+            "id": "mapping_structure",
+            "passed": false,
+            "score": 0.4,
+            "evidence": "查询表示这次想找到的信息，键是各条记录用于比较的特征，值是记录真正提供的内容。"
+          },
+          {
+            "id": "novelty_reason",
+            "passed": false,
+            "score": 0,
+            "evidence": "这样不是无差别平均，但也可能受到匹配特征质量的影响。"
+          }
+        ],
+        "overall_score": 0.25,
+        "confidence": 0.65,
+        "misconception_candidates": [
+          "没有明确声明课程外的新领域，只把Query、Key、Value替换为‘查询/键/值’的泛化说法。",
+          "没有指出文本序列与目标领域之间的表面差异。",
+          "没有解释新领域对文本QKV学习者的陌生性。"
+        ],
+        "model_overall_score": 0.25
+      }
+    },
+    {
+      "stage": "authentic_evaluation",
+      "parsed": {
+        "criteria": [
+          {
+            "id": "domain_declaration",
+            "passed": false,
+            "score": 0,
+            "evidence": "查询表示这次想找到的信息，键是各条记录用于比较的特征，值是记录真正提供的内容。"
+          },
+          {
+            "id": "shared_principle",
+            "passed": true,
+            "score": 0.7,
+            "evidence": "先把查询和各个键比较，匹配程度决定每个值的权重，再按权重组合值，所以条件与内容不能混同。"
+          },
+          {
+            "id": "surface_difference",
+            "passed": false,
+            "score": 0,
+            "evidence": "查询表示这次想找到的信息，键是各条记录用于比较的特征，值是记录真正提供的内容。"
+          },
+          {
+            "id": "mapping_structure",
+            "passed": false,
+            "score": 0.2,
+            "evidence": "这样不是无差别平均，但也可能受到匹配特征质量的影响。"
+          },
+          {
+            "id": "novelty_reason",
+            "passed": false,
+            "score": 0,
+            "evidence": "查询表示这次想找到的信息，键是各条记录用于比较的特征，值是记录真正提供的内容。"
+          }
+        ],
+        "overall_score": 0.225,
+        "confidence": 0.85,
+        "misconception_candidates": [
+          "把Query等同于“想找到的信息”，可能模糊Query是需求向量而非被检索内容本身的区别。"
+        ],
+        "model_overall_score": 0.22
+      }
+    }
+  ]
+}

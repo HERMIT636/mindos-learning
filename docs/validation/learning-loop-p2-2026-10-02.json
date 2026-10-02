@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-02",
+  "baseline": "019cce7",
+  "automated": {
+    "command": "python3 -m unittest discover -s tests -v",
+    "tests": 239,
+    "new_p2_tests": 39,
+    "passed": true,
+    "duration_seconds": 24.947,
+    "environment": "System Python with temporary bundled pure-Python pypdf link. Disposable databases only."
+  },
+  "browser": {
+    "engine": "Microsoft Edge via Playwright",
+    "passed_suites": [
+      "authentic",
+      "final",
+      "loop",
+      "presentation",
+      "universe",
+      "management"
+    ],
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 1100
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "authentic_checks": [
+      "report entry",
+      "open transfer",
+      "server multiline draft and refresh",
+      "weighted rubric feedback with actual answer quotes",
+      "submitted refresh",
+      "idempotent repeated submission",
+      "tutor direct-answer hint exclusion",
+      "unchanged P1 judgment",
+      "return report",
+      "no overflow",
+      "no page errors"
+    ]
+  },
+  "frozen_policy_sha256": {
+    "mindos/learning/learning_policy.json": "6fadff4ea74d7ffad3fc3be5c323bef1aa24efe02e910eba886d4cb735098fbd",
+    "mindos/learning/final_policy.json": "d16ad38855194c0410e0fae45e838ee378fa76bf84bf4fccd93197655cf6cabc",
+    "mindos/learning/state.py": "4c8fd399d6931ff84f86dbb059c41088e0fe9f067f6bf69b4da05a4dcda87a5c",
+    "mindos/learning/course_mastery.py": "299ca4fc2450586882c2f24a76eb76721da0680fbc7496683ffe72a98b2beb51"
+  },
+  "self_review": {
+    "no_new_state_writer": true,
+    "shadow_preserves_state_versions_and_report_hash": true,
+    "failure_score_null": true,
+    "actual_quotes_one_repair": true,
+    "server_sticky_hint": true,
+    "owner_and_unlocked_non_deprecated_guards": true,
+    "independent_mcq_llm_scores_separate": true,
+    "continuous_shadow_not_binary_brier": true,
+    "policy_versions_separate": true,
+    "time_and_cursor_guards": true,
+    "nearest_window_outcome_dedup": true,
+    "minimum_sample_guards": true,
+    "cached_incremental_matching": true,
+    "no_user_code_execution": true,
+    "no_personal_course_real_test": true
+  },
+  "boundary": "Time-window and bias checks use synthetic data; no claim of real longitudinal learner outcomes or LLM scoring validity. Real-model JSON covers synthetic structure and scoring protocol only."
+}

@@ -32,7 +32,7 @@ from .web_search import PublicSourceSearch, SearchUnavailable, WebSearch
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
 LOGGER = logging.getLogger("mindos")
-STATIC = {"/components/mindos/course-final.js": ("components/mindos/course-final.js", "text/javascript; charset=utf-8"),"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
+STATIC = {"/components/mindos/authentic.js": ("components/mindos/authentic.js", "text/javascript; charset=utf-8"),"/components/mindos/course-final.js": ("components/mindos/course-final.js", "text/javascript; charset=utf-8"),"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
           "/components/teaching/teaching-blocks.js": ("components/teaching/teaching-blocks.js", "text/javascript; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/components/CourseManager/course-manager.js": ("components/CourseManager/course-manager.js", "text/javascript; charset=utf-8"),
@@ -278,6 +278,17 @@ class MindOSHandler(BaseHTTPRequestHandler):
         if parsed.path in STATIC:
             name, content_type = STATIC[parsed.path]
             self._send(HTTPStatus.OK, (WEB / name).read_bytes(), content_type)
+        elif parsed.path=='/api/debug/learning/calibration':
+            if os.getenv('MINDOS_DEBUG_LEARNING')!='1':self._json(HTTPStatus.NOT_FOUND,{'error':'页面或接口不存在'});return
+            from .learning.calibration import CalibrationService
+            self._json(HTTPStatus.OK,CalibrationService(self.server.storage).policy(self._session()))
+        elif re.fullmatch(r'/api/courses/[A-Za-z0-9_-]+/calibration',parsed.path):
+            from .learning.calibration import CalibrationService
+            self._json(HTTPStatus.OK,CalibrationService(self.server.storage).course(self._session(),parsed.path.split('/')[3]))
+        elif re.fullmatch(r'/api/courses/[A-Za-z0-9_-]+/authentic/[A-Za-z0-9_-]+',parsed.path):
+            from .learning.authentic import AuthenticAssessmentService
+            parts=parsed.path.split('/')
+            self._json(HTTPStatus.OK,AuthenticAssessmentService(self.server.storage).get(self._session(),parts[3],parts[5]))
         elif re.fullmatch(r'/api/lessons/[A-Za-z0-9_-]+/teaching-context',parsed.path):
             lesson_id = parsed.path.split('/')[3]
             with self.server.storage.connect() as db:
@@ -364,6 +375,22 @@ class MindOSHandler(BaseHTTPRequestHandler):
     def _post(self) -> None:
         self._check_local_request()
         path = urlsplit(self.path).path
+        authentic=re.fullmatch(r'/api/courses/([A-Za-z0-9_-]+)/authentic/(start|[A-Za-z0-9_-]+/(?:submit|draft|defer|hint))',path)
+        if authentic:
+            from .learning.authentic import AuthenticAssessmentService
+            cid,op=authentic.groups();payload=self._request_json(90000);user=self._session();self._owned_course(cid);service=AuthenticAssessmentService(self.server.storage)
+            if set(payload)&{'score','valid_for_calibration','hint_used','mastery','evaluation'}:raise ValueError('评分与独立性只能由服务器确定')
+            if op=='start':result=service.start(user,cid,payload.get('atom_id'),payload.get('task_type'),self._model(),payload.get('difficulty','standard'))
+            else:
+                tid,operation=op.split('/')
+                if operation=='submit':
+                    try:model=self._model()
+                    except (ValueError,ModelUnavailable):model=None
+                    result=service.submit(user,cid,tid,payload.get('answer'),model)
+                elif operation=='draft':result=service.draft(user,cid,tid,payload.get('answer'))
+                elif operation=='hint':result=service.hint(user,cid,tid)
+                else:result=service.defer(user,cid,tid)
+            self._json(HTTPStatus.OK,result);return
         final=re.fullmatch(r'/api/courses/([A-Za-z0-9_-]+)/final/([a-z-]+|remediation/(?:start|target))',path)
         if final:
             from .learning.final import FinalAssessmentService

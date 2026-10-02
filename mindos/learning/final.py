@@ -243,8 +243,8 @@ class FinalAssessmentService:
         # Link only previous predictions before saving this result's prediction.
         evidence=[r[0] for r in db.execute('SELECT id FROM learning_evidence WHERE course_id=? AND event_key LIKE ?',(cid,'quiz:'+row['id']+':%'))]
         result_cursor=db.execute('SELECT MAX(rowid) FROM learning_evidence WHERE course_id=? AND event_key LIKE ?',(cid,'quiz:'+row['id']+':%')).fetchone()[0]
-        for prediction in db.execute('SELECT id,evidence_cursor FROM learning_prediction_snapshots WHERE user_id=? AND course_id=? ORDER BY created_at DESC,rowid DESC LIMIT 5',(user,cid)).fetchall():
-            if result_cursor is None or prediction['evidence_cursor']>=result_cursor:continue
+        for prediction in db.execute('SELECT id,evidence_cursor,created_at FROM learning_prediction_snapshots WHERE user_id=? AND course_id=? ORDER BY created_at DESC,rowid DESC LIMIT 5',(user,cid)).fetchall():
+            if result_cursor is None or prediction['evidence_cursor']>=result_cursor or date(prediction['created_at'])>=date(row['submitted_at']):continue
             db.execute('INSERT OR IGNORE INTO learning_prediction_outcomes(user_id,course_id,prediction_id,quiz_id,evidence_ids_json,score,total,created_at) VALUES(?,?,?,?,?,?,?,?)',(user,cid,prediction[0],row['id'],json.dumps(evidence),row['score'],len(json.loads(row['answers_json'])),row['submitted_at']))
         if row['assessment_kind'].startswith('final_'):
             plan=load_plan(db.execute('SELECT * FROM final_assessment_plans WHERE id=?',(row['loop_session_id'],)).fetchone())

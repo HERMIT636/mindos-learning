@@ -216,7 +216,9 @@ class GrowthService:
         if g['status'] not in {'active','achieved'}:raise ValueError('请先恢复目标，再生成路线')
         if automatic and previous and previous['status']=='stale':return {'pending_replan':True,'reason':'目标或能力结构已变化，请确认后重新规划。',**self.roadmap(user,gid)}
         if automatic and previous and (clock()-datetime.fromisoformat(previous['created_at'])).total_seconds()<POLICY['replanning']['min_seconds_between_major_replans']:return {'throttled':True,**self.roadmap(user,gid)}
-        plan=GrowthPlanner().build(g,g['graph'],a,inputs,model,previous);plan['gap_snapshot']={gap['capability_id']:gap['status'] for gap in a['gaps']};plan['final_snapshot']={cid:v['mastery_state']['status'] for cid,v in inputs['finals'].items()};rid=identifier();now=iso(clock())
+        from .execution_planner import PlanRealityAnalyzer
+        pace_context=PlanRealityAnalyzer(self.store).context(user,gid)
+        plan=GrowthPlanner().build(g,g['graph'],a,inputs,model,previous,pace_context=pace_context);plan['gap_snapshot']={gap['capability_id']:gap['status'] for gap in a['gaps']};plan['final_snapshot']={cid:v['mastery_state']['status'] for cid,v in inputs['finals'].items()};rid=identifier();now=iso(clock())
         with self.store.connect() as db:
             db.execute('BEGIN IMMEDIATE');current=self._owned(db,user,gid)
             if current['goal_model_version']!=g['goal_model_version']:raise ValueError('目标已变化，请重新生成路线')
@@ -302,7 +304,10 @@ class GrowthService:
         elif t['task_type'] in {'review','cross_course_verify','micro_practice'}:route.update(destination='atom',prior_id=meta.get('prior_id'),assessment='review' if t['task_type']=='review' else 'diagnostic')
         elif t['task_type']=='final_assessment':route['destination']='final'
         elif t['task_type']=='authentic_assessment':route.update(destination='authentic',assessment=meta.get('assessment','design'))
-        return {'route':route}
+        from .execution import activity
+        from .pace import DurationEstimator
+        prediction=DurationEstimator(self.store,user).predict(t['estimated_minutes'],activity(t['task_type']))
+        return {'route':route,'study_session_suggestion':{'growth_task_id':tid,'course_id':route.get('course_id'),'atom_id':route.get('atom_id'),'activity_type':activity(t['task_type']),'title':t['title'],'source':'growth',**prediction}}
     def link_course(self,user,gid,tid,cid):
         g=self.goal(user,gid);self.store.managed_course(user,cid)
         with self.store.connect() as db:
@@ -347,31 +352,22 @@ class GrowthService:
         if not t or plan['status']!='active':raise ValueError('课程建议属于旧路线，请重新规划')
         return {'goal_title':g['title'],'target_capabilities':t['metadata']['target_capabilities'],'scope':'优先覆盖所列目标缺口；必要基础保留在完整章节中，通过验证后可简短回顾。'}
     def dashboard(self,user):
-        goals=self.goals(user)['goals'];active=[g for g in goals if g['status']=='active'];items=[];budgets=[g['weekly_time_budget_minutes'] for g in active if g['weekly_time_budget_minutes'] is not None]
+        goals=self.goals(user)['goals'];active=[g for g in goals if g['status']=='active'];items=[]
         for g in active:
             plan=self.roadmap(user,g['id'])['roadmap']
             if not plan or plan['status']!='active':continue
+            graph=self.goal(user,g['id'])['graph'];caps={c['id']:c for c in graph['capabilities']}
+            parents={e['from'] for e in graph['dependencies'] if e['relation']=='prerequisite'}
             for t in plan['tasks']:
+                if t['metadata'].get('deferred_to_later_batch') or t['metadata'].get('deadline_deferred_optional'):continue
                 if t['status'] not in {'ready','active'} or t['stage_ordinal']!=plan.get('current_stage'):continue
-                items.append({'goal_id':g['id'],'goal_title':g['title'],'task_id':t['id'],'title':t['title'],'reason':t.get('reason',REASONS.get(t['reason_code'],'请检查当前任务要求。')),'task_type':t['task_type'],'course_id':t['target_id'],'atom_id':t['metadata'].get('atom_id'),'estimated_minutes':t['estimated_minutes'],'priority':(0 if t['status']=='active' else 1,0 if t['pinned'] else 1,g['priority'],t['priority'])})
+                items.append({'goal_id':g['id'],'goal_title':g['title'],'task_id':t['id'],'title':t['title'],'reason':t.get('reason',REASONS.get(t['reason_code'],'请检查当前任务要求。')),'task_type':t['task_type'],'course_id':t['target_id'],'atom_id':t['metadata'].get('atom_id'),'estimated_minutes':t['estimated_minutes'],'status':t['status'],'critical':caps.get(t['capability_id'],{}).get('importance')=='critical','prerequisite':t['capability_id'] in parents,'pinned':t['pinned'],'priority':(0 if t['status']=='active' else 1,0 if t['pinned'] else 1,g['priority'],t['priority'])})
         # Read the original scheduler once; no new review policy or evidence writes.
-        if active:
-            inputs=GrowthInputReader(self.store).read(user)
-            for c in sorted(inputs['courses'].values(),key=lambda c:c['sort_order']):
-                if c['deleted_at'] or c['status']!='active' or any(i.get('course_id')==c['id'] for i in items):continue
-                items.append({'title':c['title'],'reason':'继续你正在学习的课程，章节仍由你手动推进。','task_type':'continue_course','course_id':c['id'],'atom_id':None,'estimated_minutes':POLICY['minutes']['continue_course'],'priority':(3,0,0,c['sort_order'])})
-                break
-            for r in inputs['reviews']:items.append({'title':r['title'],'reason':r['reason'],'task_type':'review','course_id':r['course_id'],'atom_id':r['atom_id'],'estimated_minutes':r['minutes'],'priority':(-1,r['priority'],0,0)})
-        items.sort(key=lambda i:i['priority']);limit=min(budgets) if budgets else None;daily=math.ceil(limit/5) if limit else None;selected=[];remaining=daily;weekly=[];week_left=limit
-        seen=set()
-        for item in items:
-            key=(item.get('course_id'),item.get('atom_id'),item['task_type']) if item.get('course_id') else item.get('task_id')
-            if key in seen:continue
-            seen.add(key);item={k:v for k,v in item.items() if k!='priority'}
-            if week_left is None or week_left>0:
-                w={**item,'planned_minutes':item['estimated_minutes'] if week_left is None else min(item['estimated_minutes'],week_left)};weekly.append(w)
-                if week_left is not None:week_left-=w['planned_minutes']
-            if len(selected)<3 and (remaining is None or remaining>0):
-                item['planned_minutes']=item['estimated_minutes'] if remaining is None else min(item['estimated_minutes'],remaining);selected.append(item)
-                if remaining is not None:remaining-=item['planned_minutes']
-        return {'goals':active[:3],'today':selected,'weekly':weekly,'weekly_budget':limit,'today_budget':daily,'boundary':'时间为规则估计；较长任务可分次进行。不是严格日程或实际用时统计，建议不会自动创建课程或推进章节。'}
+        inputs=GrowthInputReader(self.store).read(user)
+        for c in sorted(inputs['courses'].values(),key=lambda c:c['sort_order']):
+            if c['deleted_at'] or c['status']!='active' or any(i.get('course_id')==c['id'] for i in items):continue
+            items.append({'title':c['title'],'reason':'继续你正在学习的课程，章节仍由你手动推进。','task_type':'continue_course','course_id':c['id'],'atom_id':None,'estimated_minutes':POLICY['minutes']['continue_course'],'priority':(3,0,0,c['sort_order'])})
+            break
+        for r in inputs['reviews']:items.append({'title':r['title'],'reason':r['reason'],'task_type':'review','course_id':r['course_id'],'atom_id':r['atom_id'],'estimated_minutes':r['minutes'],'priority':(-1,r['priority'],0,0)})
+        from .execution_planner import AdaptiveDailyLoadPlanner
+        return AdaptiveDailyLoadPlanner(self.store).build(user,active,items)

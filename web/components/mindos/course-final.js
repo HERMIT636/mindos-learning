@@ -7,7 +7,7 @@
  const percent=v=>v===null||v===undefined?'未测':Math.round(v*100)+'%';
  function button(text,callback,primary=false){const b=node('button',text,'button '+(primary?'primary':'secondary'));b.type='button';b.onclick=()=>action(b,'正在处理…',()=>callback(b));return b;}
  async function reload(cid){const ordinal=state.data?.section.ordinal;const data=await api('/api/course?'+new URLSearchParams({course_id:cid,ordinal}));if(current(cid))renderCourse(data);}
- async function operation(cid,op,body={}){const r=await api(endpoint(cid,op),body);if(!current(cid))return;if(r.available===false)showNotice(r.note||r.rationale?.join(' ')||'暂时没有可用检测，未测状态会保留。');await reload(cid);}
+ async function operation(cid,op,body={}){if(op==='start')window.MindOSStudy?.suggestFor('final_assessment',cid,null,20);const r=await api(endpoint(cid,op),body);if(!current(cid))return;if(r.available===false)showNotice(r.note||r.rationale?.join(' ')||'暂时没有可用检测，未测状态会保留。');await reload(cid);}
  function quiz(root,info,cid){
   const q=info.questions[0],form=node('form','','final-question');form.dataset.quizId=info.id;
   form.append(node('p',names[info.item.dimension]+' · '+info.item.reason,'eyebrow'));

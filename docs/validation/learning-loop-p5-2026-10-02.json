@@ -1,0 +1,81 @@
+{
+  "date": "2026-10-02",
+  "baseline_commit": "855bae5a5eea24473834936cfa877179e28df0b9",
+  "automated_tests": {
+    "total_passed": 353,
+    "seconds": 45.295,
+    "previous_tests": 304,
+    "new_p5_tests": 49,
+    "last_p5_tests_passed": 49
+  },
+  "browser_suites": [
+    "execution",
+    "growth",
+    "personal",
+    "authentic",
+    "final",
+    "loop",
+    "presentation",
+    "universe",
+    "management"
+  ],
+  "browser_suites_passed": 9,
+  "execution_browser_recheck": true,
+  "viewports": [
+    1440,
+    390
+  ],
+  "reduced_motion": true,
+  "page_errors": 0,
+  "horizontal_overflow": false,
+  "live_model_checks": {
+    "live_structured_stages": true,
+    "program_order_preserved": true,
+    "dependencies_preserved": true,
+    "program_gap_analysis_unchanged": true,
+    "no_model_mastery_fields": true,
+    "context_bounded_no_session_history": true
+  },
+  "personal_database_unchanged": true,
+  "frozen_sha256": {
+    "state.py": "4c8fd399d6931ff84f86dbb059c41088e0fe9f067f6bf69b4da05a4dcda87a5c",
+    "learning_policy.json": "6fadff4ea74d7ffad3fc3be5c323bef1aa24efe02e910eba886d4cb735098fbd",
+    "course_mastery.py": "299ca4fc2450586882c2f24a76eb76721da0680fbc7496683ffe72a98b2beb51",
+    "final_policy.json": "d16ad38855194c0410e0fae45e838ee378fa76bf84bf4fccd93197655cf6cabc",
+    "calibration.py": "606f85bfb96d7c1d73837db638845f611e18ca05493127de4ae7eb26e3fd50de",
+    "calibration_policy.json": "6da6412e2226d8cd2225a2a43bbdf8be61ca01660e28369e3c1a7c9326cb837e",
+    "personal.py": "029aef62de961c0000e7edea4eded01ea2fde0cb10bea3d075383f2a595cadba",
+    "canonical.py": "ef347e2b8615369fba2483bc6960727bf3dd67f92c8fbdc9cc6b4e69ea0b3969",
+    "personal_knowledge_policy.json": "7df6ffc9b17cf50ca211c154dee9ea08c3e06dc16f58ad44bfe9d4625f8010e4",
+    "growth_gap.py": "a904e564c0fdbc2124139217f25240aa01ed5d0b4fcf6ff77717706b83c6431d",
+    "growth_graph.py": "63f08415706b36a1af74d979d0c58dffe73562ac8b3f3d41a0df3d124c0b3bea"
+  },
+  "mastery_isolation": true,
+  "session_end_does_not_complete_growth_task": true,
+  "voluntary_only": true,
+  "privacy": "No focus/input/OS/window/camera telemetry; checkpoints only for an explicitly started local session.",
+  "session_recovery": "Paused refresh, active page close/reopen, real stale-session API recovery in disposable fixture.",
+  "boundaries": [
+    "Timing is not knowledge evidence or a focus measurement.",
+    "Under 3 valid samples: rule fallback.",
+    "Interrupted/abandoned/partial/outlier/unreasonable/invalid records excluded from pace.",
+    "Deadline is heuristic, no probability or automatic roadmap/goal mutation.",
+    "Multiple goal budgets use conservative shared minimum.",
+    "Manual total-time adjustments attributed to start date.",
+    "Optional timebox notification is not implemented."
+  ],
+  "self_audit_items": 22,
+  "self_audit_document": "docs/learning-loop-p5.md",
+  "root_publish_sync": "verified after source copy",
+  "final_verification": {
+    "publish": {
+      "tests_passed": 353,
+      "seconds": 45.405
+    },
+    "project_root": {
+      "tests_passed": 353,
+      "seconds": 46.534
+    },
+    "reviewable_files_identical": 217
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "date": "2026-10-02",
+  "synthetic_only": true,
+  "live_model_calls": true,
+  "pace_context": {
+    "planned_weekly_minutes": 300,
+    "observed_weekly_capacity_range_minutes": [
+      135,
+      165
+    ],
+    "deadline_risk": "unlikely",
+    "boundary": "执行数据只用于时间与负载规划，不用于人格、自律或能力判断。不得判断掌握或改变必要能力、程序顺序。"
+  },
+  "checks": {
+    "live_structured_stages": true,
+    "program_order_preserved": true,
+    "dependencies_preserved": true,
+    "program_gap_analysis_unchanged": true,
+    "no_model_mastery_fields": true,
+    "context_bounded_no_session_history": true
+  },
+  "all_passed": true,
+  "personal_database_unchanged": true,
+  "gaps": [
+    {
+      "name": "Attention",
+      "status": "sufficient",
+      "required_level": "application"
+    },
+    {
+      "name": "KV Cache",
+      "status": "partial",
+      "required_level": "application"
+    },
+    {
+      "name": "GQA",
+      "status": "conflicted",
+      "required_level": "application"
+    }
+  ],
+  "stages": [
+    {
+      "title": "基础机制理解",
+      "objective": "理解并应用 Attention 与 GQA 机制，为推理优化建立理论基础。",
+      "capability_ids": [
+        "OYxotRCyOpvafGXt",
+        "lF63DAQ6Rb2rZAvh"
+      ],
+      "id": "8UCjiPd-ZqHsAW2E",
+      "ordinal": 1,
+      "status": "planned",
+      "gate": {
+        "type": "capability_gate",
+        "requirements": [
+          {
+            "capability_id": "OYxotRCyOpvafGXt",
+            "minimum": "application"
+          },
+          {
+            "capability_id": "lF63DAQ6Rb2rZAvh",
+            "minimum": "application"
+          }
+        ]
+      },
+      "estimated_minutes": 8
+    },
+    {
+      "title": "KV 缓存机制与应用",
+      "objective": "在 Attention 和 GQA 的基础上，理解并应用 KV Cache 机制。",
+      "capability_ids": [
+        "p3pIsyaN3gsNx_5n"
+      ],
+      "id": "u3HYtiOp701uSu_y",
+      "ordinal": 2,
+      "status": "planned",
+      "gate": {
+        "type": "capability_gate",
+        "requirements": [
+          {
+            "capability_id": "p3pIsyaN3gsNx_5n",
+            "minimum": "application"
+          }
+        ]
+      },
+      "estimated_minutes": 25
+    }
+  ],
+  "model_outputs": [
+    {
+      "stage": "growth_stages",
+      "raw": "{\n  \"stages\": [\n    {\n      \"title\": \"基础机制理解\",\n      \"objective\": \"理解并应用 Attention 与 GQA 机制，为推理优化建立理论基础。\",\n      \"capability_ids\": [\n        \"OYxotRCyOpvafGXt\",\n        \"lF63DAQ6Rb2rZAvh\"\n      ]\n    },\n    {\n      \"title\": \"KV 缓存机制与应用\",\n      \"objective\": \"在 Attention 和 GQA 的基础上，理解并应用 KV Cache 机制。\",\n      \"capability_ids\": [\n        \"p3pIsyaN3gsNx_5n\"\n      ]\n    }\n  ]\n}"
+    },
+    {
+      "stage": "growth_stages",
+      "parsed": {
+        "stages": [
+          {
+            "title": "基础机制理解",
+            "objective": "理解并应用 Attention 与 GQA 机制，为推理优化建立理论基础。",
+            "capability_ids": [
+              "OYxotRCyOpvafGXt",
+              "lF63DAQ6Rb2rZAvh"
+            ]
+          },
+          {
+            "title": "KV 缓存机制与应用",
+            "objective": "在 Attention 和 GQA 的基础上，理解并应用 KV Cache 机制。",
+            "capability_ids": [
+              "p3pIsyaN3gsNx_5n"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "boundary": "仅验证当前配置模型接收摘要后仍遵守结构与程序顺序；不证明耗时预测准确或教育效果。未读取个人课程或提交个人执行历史。"
+}

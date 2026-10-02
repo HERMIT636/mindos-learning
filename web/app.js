@@ -334,6 +334,7 @@ function renderCourse(data) {
   MindOSUniverse.renderCourse(data);
   MindOSLearningLoop.render(data);
   MindOSCourseFinal.render(data);
+  window.MindOSStudy?.course();
 }
 
 function respondToTeaching({kind,question,button,referenceTurn,selfExplanation,checkQuestion,courseId=state.courseId,ordinal=state.data?.section.ordinal}){

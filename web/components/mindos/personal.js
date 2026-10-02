@@ -28,7 +28,7 @@
     else card.append(node('p',p.status==='stale'?'历史验证已间隔较久，建议快速回忆。':'可以快速确认已有基础，也可以直接正常学习。'));
     const quizRoot=node('div');card.append(quizRoot);
     const show=async q=>{if(!alive())return;renderKnowledgeTests(quizRoot,[q],async()=>{await atom(cid,aid);});};
-    card.append(make(p.quiz_id?'查看基础验证':'快速确认已有基础',async()=>{const r=await api(`/api/courses/${cid}/knowledge/priors/${p.id}/verify`,{});if(r.quiz.available===false){showNotice(r.quiz.note);return;}await show(r.quiz);}));
+    card.append(make(p.quiz_id?'查看基础验证':'快速确认已有基础',async()=>{window.MindOSStudy?.suggestFor('cross_course_verify',cid,aid,8);const r=await api(`/api/courses/${cid}/knowledge/priors/${p.id}/verify`,{});if(r.quiz.available===false){showNotice(r.quiz.note);return;}await show(r.quiz);}));
     if(p.quiz)await show(p.quiz);
     card.append(make('正常学习',()=>{$('atom-content').scrollIntoView({block:'center',behavior:'smooth'});}));
    }

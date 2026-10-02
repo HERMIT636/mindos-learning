@@ -17,6 +17,7 @@
  }
  function answerMetadata(form,count){return {confidence:Array.from({length:count},(_,i)=>form.querySelector(`[data-confidence-index="${i}"]`)?.value||null)};}
  async function check(cid,atom,purpose,session=null){
+  window.MindOSStudy?.suggestFor(purpose==='review'?'review':purpose==='diagnostic'?'cross_course_verify':'micro_practice',cid,atom,purpose==='review'?5:8);
   const quiz=await api(endpoint(cid,'assessment'),{atom_id:atom,purpose,session_id:session?.id||''});if(!current(cid))return;
   if(quiz.available===false){showNotice(quiz.note);return;}
   memory=session?{cid,kind:purpose==='remediation'?'repair':'returning',id:session.id}:null;displayQuiz={...quiz,cid,atom_id:atom};render(state.data);

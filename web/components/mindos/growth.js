@@ -38,6 +38,7 @@
   if(g.graph?.capabilities?.length){const gaps=await api(path(g.id,'gaps'));if(token!==request||state.page!=='growth-roadmap')return;const section=node('section','','card growth-gaps');section.append(node('h2','目标缺口'),node('p',gaps.completion.label,'growth-completion'));
    const grid=node('div','','growth-gap-grid');for(const gap of gaps.gaps){const row=node('article','','growth-gap');row.dataset.gap=gap.status;row.append(node('strong',gap.name),node('p',gap.label),node('small',`${importance[gap.importance]} · 需要${depth[gap.required_level]} · ${gap.planning_confidence}`,'muted'));grid.append(row);}section.append(node('p',`已有依据 ${gaps.summary.sufficient||0} · 关键缺口 ${gaps.critical_gaps.length} · 待验证 ${(gaps.summary.unknown||0)+(gaps.summary.ready_to_verify||0)+(gaps.summary.conflicted||0)}`),grid,node('small',gaps.boundary,'muted'));root.append(section);
    if(roadmap.roadmap)renderRoadmap(root,g,roadmap,version,evaluated);else root.append(button('生成成长路线',async()=>{await api(path(g.id,'roadmap/generate'),{});await show(g.id);},true));}
+  await window.MindOSStudy?.execution(root,g);
   if(new URLSearchParams(location.search).get('debug_learning')==='1'&&g.graph?.capabilities?.length)root.append(button('查看成长规划开发记录',async()=>{const d=await api('/api/debug/learning/growth/'+g.id+'/gaps');root.append(node('pre',JSON.stringify({goal:g,gaps:d,roadmap},null,2),'calibration-debug'));}));
  }
  function newGoal(root){const form=node('section','','card growth-create');root.querySelector('.growth-create')?.remove();root.prepend(form);form.append(node('h2','新增学习目标'));const values=goalFields(form);form.append(button('保存并分析能力',async()=>{const r=await api('/api/goals',values());selected=r.goal.id;await api(path(selected,'analyze'),{});await show(selected);},true));}
@@ -69,9 +70,9 @@
     row.append(task);}section.append(row);}
   section.append(node('small','路线由规则安排，阶段标题可由模型协助组织。合理运行不代表已证明是最优教育路径。','muted'));
  }
- async function startTask(gid,tid){const r=(await api(path(gid,`tasks/${tid}/start`),{})).route;selected=gid;
+ async function startTask(gid,tid){const result=await api(path(gid,`tasks/${tid}/start`),{}),r=result.route;selected=gid;window.MindOSStudy?.suggest(result.study_session_suggestion);
   if(r.destination==='growth'){showNotice(r.note);return;}
-  if(r.destination==='create_course'){showWelcome();creation={growth_goal_id:gid,growth_task_id:tid};$('course-title-input').value=r.title;$('course-goal-input').value=r.goal;returnBar();return;}
+  if(r.destination==='create_course'){showWelcome();window.MindOSStudy?.suggest(result.study_session_suggestion);creation={growth_goal_id:gid,growth_task_id:tid};$('course-title-input').value=r.title;$('course-goal-input').value=r.goal;returnBar();return;}
   creation=null;await openCourse(r.course_id,undefined,r.destination==='atom'?'stars':'learn');if(state.courseId!==r.course_id||!state.data)throw Error('课程未能打开，请重试');returnBar();
   if(r.destination==='atom'){await openAtom(r.atom_id);if(r.prior_id){const data=await api(`/api/courses/${r.course_id}/knowledge/priors/${r.prior_id}/verify`,{});const root=$('atom-tests');if(root&&data.quiz?.available!==false)renderKnowledgeTests(root,[data.quiz],async()=>{await openAtom(r.atom_id);});}else{MindOSUniverse.viewCourse('learn');await MindOSLearningLoop.check(r.course_id,r.atom_id,r.assessment);}}
   if(r.destination==='final')$('course-final-panel')?.scrollIntoView({block:'start'});
@@ -81,7 +82,7 @@
  async function attach(cid,task){if(!pendingPractice||cid!==pendingPractice.cid||task?.status!=='created')return;const p=pendingPractice;await api(path(p.gid,`tasks/${p.tid}/artifact`),{authentic_task_id:task.id});pendingPractice=null;}
  function creationContext(){return creation||{};}
  async function courseCreated(cid){if(!creation)return;await api(path(creation.growth_goal_id,`tasks/${creation.growth_task_id}/link-course`),{course_id:cid});creation=null;}
- function resetCreation(){creation=null;}
+ function resetCreation(){creation=null;window.MindOSStudy?.clearSuggestion();}
  document.addEventListener('DOMContentLoaded',()=>{$('growth-roadmap-open').onclick=()=>show().catch(e=>showNotice(e.message));});
  window.MindOSGrowth={show,startTask,attach,creationContext,courseCreated,resetCreation};
 })();

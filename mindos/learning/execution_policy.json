@@ -1,0 +1,44 @@
+{
+  "version": "execution-v1",
+  "session": {
+    "stale_active_minutes": 180,
+    "max_reasonable_session_minutes": 240,
+    "max_adjusted_minutes": 1440,
+    "checkpoint_seconds": 30
+  },
+  "pace": {
+    "rolling_samples": 60,
+    "minimum_samples_medium": 3,
+    "minimum_samples_high": 10,
+    "minimum_multiplier": 0.6,
+    "maximum_multiplier": 2.0,
+    "outlier_ratio_min": 0.2,
+    "outlier_ratio_max": 4.0
+  },
+  "daily": {
+    "default_active_days_per_week": 5,
+    "max_today_tasks": 3,
+    "max_week_tasks": 8,
+    "multi_goal_fairness": true
+  },
+  "deadline": {
+    "risk_buffer": 1.2,
+    "minimum_observed_weeks": 2
+  },
+  "reality": {
+    "lookback_weeks": 4,
+    "below_plan_ratio": 0.7,
+    "repeated_abandonment_count": 3,
+    "frequent_pause_count": 5
+  },
+  "activity_minutes": {
+    "course_learning": 25,
+    "review": 5,
+    "cross_course_verify": 8,
+    "final_assessment": 20,
+    "authentic_assessment": 15,
+    "micro_practice": 10,
+    "goal_task": 5,
+    "free_study": 25
+  }
+}

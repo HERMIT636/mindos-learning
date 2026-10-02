@@ -10,13 +10,13 @@ TRIGGERS={'COURSE_MASTERED','COURSE_COMPLETED_WITH_GAPS','CAPABILITY_VERIFIED','
 REASONS={'GOAL_GAP_MISSING':'目标要求这项能力，目前还缺少相关依据。','GOAL_GAP_PARTIAL':'已有部分基础，继续补齐目标要求的应用或理解。','GOAL_GAP_STALE':'这项前置能力需要先检查是否还记得。','GOAL_GAP_CONFLICT':'历史表现有冲突，先独立验证再决定下一步。','GOAL_GAP_TRANSFER_UNVERIFIED':'迁移能力还未测，优先使用陌生情境验证。','GOAL_GAP_PRACTICE_MISSING':'知识学习不能替代实践，需要独立完成并检查结果。','VERIFY_EXISTING_KNOWLEDGE':'已有相关基础，先用短测确认，避免完整重学。','REUSE_EXISTING_COURSE':'已有课程覆盖相关能力，优先继续当前课程。','CREATE_COURSE_REQUIRED':'现有课程尚未明确覆盖这项能力，建议审查一门范围较小的新课程。','FINAL_REQUIRED':'课程内容已完成，但掌握检测仍未满足，先完成现有终局检测。','MAPPING_REVIEW_REQUIRED':'可能关联到已有知识，请先审查关联，暂不当作确定覆盖。','CAPABILITY_VERIFIED':'已有结果支持当前能力要求，无需重复安排基础学习。','MAJOR_MISCONCEPTION':'关键能力仍有已确认误区，先回到课程中的补强流程。'}
 
 class GrowthPlanner:
-    def stages(self,goal,graph,sequence,model=None):
+    def stages(self,goal,graph,sequence,model=None,pace_context=None):
         if model:
             failure=''
             for attempt in range(2):
                 try:
-                    payload={'goal':goal['title'],'capabilities':graph['capabilities'],'program_order':sequence,'hard_dependencies':[e for e in graph['dependencies'] if e['relation']=='prerequisite'],'schema':STAGE_SCHEMA,'repair_reason':failure}
-                    raw=model.growth_stages(payload) if hasattr(model,'growth_stages') else model._json('只把目标能力组织成简明阶段，不判断用户现状，不生成任务或完成状态。严格按program_order顺序分组，每项能力恰好出现一次，不得自行重排。前置不得位于后续阶段。每阶段最多4项能力。返回schema的JSON。',json.dumps(payload,ensure_ascii=False),max_tokens=2600,diagnostic_stage='growth_stages')
+                    payload={'goal':goal['title'],'capabilities':graph['capabilities'],'program_order':sequence,'hard_dependencies':[e for e in graph['dependencies'] if e['relation']=='prerequisite'],'schema':STAGE_SCHEMA,'repair_reason':failure,'pace_context':pace_context}
+                    raw=model.growth_stages(payload) if hasattr(model,'growth_stages') else model._json('只把目标能力组织成简明阶段，不判断用户现状，不生成任务或完成状态。严格按program_order顺序分组，每项能力恰好出现一次，不得自行重排。前置不得位于后续阶段。每阶段最多4项能力。执行数据只用于时间与负载规划，不用于人格、自律或能力判断。不得据此判断掌握、改变能力或顺序。返回schema的JSON。',json.dumps(payload,ensure_ascii=False),max_tokens=2600,diagnostic_stage='growth_stages')
                     Draft202012Validator(STAGE_SCHEMA).validate(raw)
                     flat=[cid for s in raw['stages'] for cid in s['capability_ids']]
                     if len(flat)!=len(sequence) or set(flat)!=set(sequence):raise ValueError('阶段必须完整覆盖且不能重复能力')
@@ -31,7 +31,7 @@ class GrowthPlanner:
                     if hasattr(model,'_diagnostic'):model._diagnostic({'stage':'growth_stage_validation','attempt':attempt+1,'failure_reason':failure})
         return [{'title':'补齐与验证 · '+str(i//4+1),'objective':'依次满足这部分目标要求，再进入后续阶段。','capability_ids':sequence[i:i+4]} for i in range(0,len(sequence),4)],'rule_organization'
 
-    def build(self,goal,graph,analysis,inputs,model=None,previous=None):
+    def build(self,goal,graph,analysis,inputs,model=None,previous=None,pace_context=None):
         gaps={g['capability_id']:g for g in analysis['gaps']};caps={c['id']:c for c in graph['capabilities']}
         inherited={t['key']:t for t in (previous or {}).get('tasks',[])}
         ancestors=set();stack=[c['id'] for c in caps.values() if c['importance']=='critical']
@@ -42,7 +42,7 @@ class GrowthPlanner:
         def rank(cid):
             g=gaps[cid];base=0 if cid in ancestors or g['importance']=='critical' else 1 if g['importance']=='supporting' else 2
             return base*10+{'conflicted':0,'stale':1,'missing':2,'partial':3,'unknown':4,'ready_to_verify':4,'practice_missing':5,'sufficient':6}[g['status']]
-        sequence=order(graph,rank);stages,organization=self.stages(goal,graph,sequence,model)
+        sequence=order(graph,rank);stages,organization=self.stages(goal,graph,sequence,model,pace_context)
         tasklist=[];new_courses=0;verifications=0
         deadline_short=False
         if goal.get('deadline'):deadline_short=(datetime.fromisoformat(goal['deadline']).date()-datetime.now(ZoneInfo('Asia/Shanghai')).date()).days<=14

@@ -10,6 +10,7 @@
   const body=node('div');root.append(body);
   async function show(task){
    if(!alive(cid,root))return;
+   if(task?.status==='created')window.MindOSStudy?.suggestFor('authentic_assessment',cid,task.atom_id,15);
    if(typeof MindOSGrowth!=='undefined')await MindOSGrowth.attach(cid,task);
    body.replaceChildren();state.authenticTask=task?.status==='created'?{...task,course_id:cid}:null;
    if(!task||['deferred','unavailable'].includes(task.status)){choose();return;}

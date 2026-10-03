@@ -29,6 +29,7 @@ async function api(path, body) {
   if(version!==navigationVersion)throw new Error('页面已切换，本次结果已保存在原课程。');
   if (!response.ok) throw new Error(data.error || '请求失败，请稍后重试');
   for(const value of [data,data.course,data.draft])if(value&&typeof value==='object')responseVersions.set(value,version);
+  if(body!==undefined)MindOSKnowledgeUniverse.notifyChange(path,'POST');
   return data;
 }
 
@@ -392,7 +393,7 @@ async function bootstrap() {
       $('settings').hidden = false;
       showNotice('创建课程审查稿需要先配置 AI 模型；默认资料检索无需额外密钥。');
     }
-    await MindOSUniverse.showDashboard();
+    if(location.hash==='#knowledge-universe')await MindOSKnowledgeUniverse.show({restore:true});else await MindOSUniverse.showDashboard();
   } catch (error) { showNotice(error.message); }
 }
 

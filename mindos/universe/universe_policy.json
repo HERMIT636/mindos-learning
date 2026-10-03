@@ -1,0 +1,10 @@
+{
+  "version": "universe-v1",
+  "max_visible_stars": 200,
+  "max_visible_edges": 600,
+  "max_visible_galaxies": 60,
+  "max_visible_nebulae": 60,
+  "default_view": "galaxy",
+  "enable_animation": true,
+  "cache_seconds": 30
+}

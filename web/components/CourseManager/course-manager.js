@@ -6,7 +6,7 @@ const CourseManager = (() => {
     const options={method};
     if(body!==undefined){options.headers={'Content-Type':'application/json'};options.body=JSON.stringify(body);}
     const response=await fetch(path,options);const data=await response.json();
-    if(!response.ok)throw new Error(data.error || '课程操作失败');return data;
+    if(!response.ok)throw new Error(data.error || '课程操作失败');MindOSKnowledgeUniverse.notifyChange(path,method);return data;
   }
   function button(text, callback, className='button secondary') {
     const item=node('button',text,className);item.type='button';item.addEventListener('click',callback);return item;

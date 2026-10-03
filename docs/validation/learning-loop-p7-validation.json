@@ -1,0 +1,92 @@
+{
+  "date": "2026-10-03",
+  "status": "P7 Complete",
+  "baseline": "6ef9ff39257cb02d8b79dfca42c6a40e2f3b3bc2",
+  "automated_tests": {
+    "publish": {
+      "tests": 611,
+      "seconds": 63.55,
+      "passed": true
+    },
+    "root": {
+      "tests": 611,
+      "seconds": 61.688,
+      "passed": true
+    }
+  },
+  "new_tests": 118,
+  "prior_regression_tests": 493,
+  "browser": {
+    "passed": true,
+    "suites": [
+      "tutor_quality",
+      "tutor_p6",
+      "execution",
+      "growth",
+      "personal",
+      "authentic",
+      "final",
+      "loop",
+      "presentation",
+      "universe",
+      "management",
+      "tutor",
+      "universe_p7"
+    ],
+    "suite_count": 13,
+    "p7": {
+      "desktop": [
+        1440,
+        1000
+      ],
+      "mobile": [
+        390,
+        844
+      ],
+      "visible_nodes": 200,
+      "draw_p95_ms": 1.5,
+      "frame_p50_ms": 6.300000011920929,
+      "frame_p95_ms": 8.5,
+      "checks": [
+        "profile entry",
+        "3 levels",
+        "read-only selection",
+        "owned current tutor context",
+        "no per-chat graph refresh",
+        "drag/resize/history refresh",
+        "genuine P0 update",
+        "future scope",
+        "search outside 200",
+        "bounded pages",
+        "zoom/pan/pinch",
+        "keyboard selection after pan",
+        "reduced motion",
+        "mobile overflow",
+        "return navigation"
+      ],
+      "boundary": "Headless Edge measurements on this machine, not a guarantee across devices."
+    }
+  },
+  "real_model": {
+    "passed": true,
+    "scenarios": 1,
+    "personal_database_unchanged": true,
+    "artifact": "learning-loop-p7-model.json"
+  },
+  "frozen": {
+    "files": 68,
+    "mismatches": [],
+    "compared_to_baseline_git_blobs": true
+  },
+  "data_boundary": "Query-only universe; no new knowledge/evidence schema, no mastery writes. Real independent submissions still use the existing engine. Synthetic courses only.",
+  "directory_sync": {
+    "files": 290,
+    "mismatches": []
+  },
+  "limitations": [
+    "Calibration and personal profiles are existing snapshots, never rebuilt by P7.",
+    "Course graph JSON still requires server-side scans; bounded responses and rendering are not constant-time queries.",
+    "Measured desktop rendering on this machine does not guarantee 60fps on other devices.",
+    "Other tabs/processes are not pushed in real time; use refresh or a subsequent query after cache expiry."
+  ]
+}

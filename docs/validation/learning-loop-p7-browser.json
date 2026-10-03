@@ -1,0 +1,32 @@
+{
+  "desktop": [
+    1440,
+    1000
+  ],
+  "mobile": [
+    390,
+    844
+  ],
+  "visible_nodes": 200,
+  "draw_p95_ms": 1.5,
+  "frame_p50_ms": 6.300000011920929,
+  "frame_p95_ms": 8.5,
+  "checks": [
+    "profile entry",
+    "3 levels",
+    "read-only selection",
+    "owned current tutor context",
+    "no per-chat graph refresh",
+    "drag/resize/history refresh",
+    "genuine P0 update",
+    "future scope",
+    "search outside 200",
+    "bounded pages",
+    "zoom/pan/pinch",
+    "keyboard selection after pan",
+    "reduced motion",
+    "mobile overflow",
+    "return navigation"
+  ],
+  "boundary": "Headless Edge measurements on this machine, not a guarantee across devices."
+}

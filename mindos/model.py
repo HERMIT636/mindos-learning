@@ -152,6 +152,14 @@ class ModelGateway:
             json.dumps({'course':course,'gaps':requirements},ensure_ascii=False),max_tokens=6000,
             diagnostic_stage='search_task_generator')
 
+    def tutor_json(self, payload, repair_reason=''):
+        from .tutor.protocol import prompt,SCHEMA
+        system='\n'.join(prompt(name) for name in ['context_builder','strategy_selector','explanation','socratic','observation'])
+        system+='\n严格符合以下 JSON Schema：'+json.dumps(SCHEMA,ensure_ascii=False)
+        if repair_reason:system+='\n上一轮格式或范围检查未通过，请重新生成有效回答。检查提示：'+repair_reason[:500]
+        # Do not persist raw tutor replies before the P6 schema/scope validator accepts them.
+        return self._json(system,json.dumps(payload,ensure_ascii=False),max_tokens=4500)
+
     def plan_course_tutor(self, context, question, atoms):
         return self._json(
             '你是MindOS课程助教回答规划教师。先理解问题，只判断是否需要外部检索并选择关联的已开放知识点。教学策略由ATIE决定，不在此生成。'

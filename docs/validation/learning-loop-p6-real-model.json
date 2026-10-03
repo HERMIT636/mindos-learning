@@ -1,0 +1,488 @@
+{
+  "date": "2026-10-03",
+  "synthetic_only": true,
+  "live_model_calls": true,
+  "checks": {
+    "all_live_answers_schema_valid": true,
+    "question_specific_strategy": true,
+    "correct_course_context_sent": true,
+    "verified_basics_not_forced_to_relearn": true,
+    "context_bounded": true,
+    "first_answer_focuses_on_reason": true,
+    "comparison_visible": true,
+    "single_socratic_question": true,
+    "learning_and_execution_unchanged": true
+  },
+  "all_passed": true,
+  "personal_database_unchanged": true,
+  "context_checks": [
+    {
+      "course": "Transformer原理",
+      "context_characters": 2452,
+      "known_concepts": [
+        "same-local-id"
+      ],
+      "avoid_repeating_basics": true,
+      "state_source": "independent_quiz"
+    },
+    {
+      "course": "Transformer原理",
+      "context_characters": 2103,
+      "known_concepts": [
+        "same-local-id"
+      ],
+      "avoid_repeating_basics": true,
+      "state_source": "weighted_evidence"
+    },
+    {
+      "course": "Transformer原理",
+      "context_characters": 2769,
+      "known_concepts": [
+        "same-local-id"
+      ],
+      "avoid_repeating_basics": true,
+      "state_source": "weighted_evidence"
+    }
+  ],
+  "responses": [
+    {
+      "answer": "你说的“把Q当成K”，其实通常不是概念没懂，而是两者太像：都是同一个输入序列各自投影出来的向量，形状一样，看起来就像在互相比较自己。要分开它们，抓住一句话：Q是本次要去找什么，K是每个位置能被找的标签。前者是“问题”，后者是“门牌”，本来就是同一批位置的两套身份，所以容易混。\n\n第一步：先明确这次要找什么。当前位置生成Q，它代表“我现在需要从别处取回什么样的信息”。\n第二步：拿Q去和每个位置的K比对。K像标签或门牌，比对得到的是“有多相关”，而不是那条信息本身的内容。\n第三步：把相关度变成权重。相关度经过归一化，变成一组加起来为1的权重，表示每个位置该分到多少注意力。\n第四步：用权重对V加权求和。V才是真正被搬运的内容；权重决定每个位置贡献多少。\n第五步：得到当前位的输出。于是当前位拿到的不是某一条孤立信息，而是按相关性混合后的结果。\n第六步：为什么必须分两步。如果跳过匹配直接平均汇总，所有位置贡献一样，就丢掉了“谁更相关”；如果不汇总只取最相关的一条，又太硬、不平稳，还会丢失其他有用线索。先匹配再加权，正是在“找得准”和“聚合得多”之间取平衡。\n\nQ 当前需求：我要找什么\nK 各个位置的门牌：我能被谁找到\n相关度分数：Q与每个K的匹配程度\n权重：归一化后各位置的重要性\nV 各位置真正提供的内容\n输出：按权重汇总后的信息\n提出需求\n提供匹配特征\n转成权重\n决定各V贡献多少\n提供被汇总的内容\n\nQ负责提问，K负责被提问和匹配，V负责被搬运。Attention的整体逻辑就是：用Q和K决定“看哪里、看多重”，再用这些权重要求V“把内容拿过来并混在一起”。所以匹配和汇总是两个不同目标，缺了匹配就不知该看谁，缺了汇总就只能看到碎片。\n\n如果某个位置和当前Q的相关度特别低，它的K和V分别会怎样影响最终输出？想想K在权重形成中的作用，以及V在汇总时的作用，再说说这个位置是不是完全不参与。",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "title": "先回应你的卡点",
+          "content": "你说的“把Q当成K”，其实通常不是概念没懂，而是两者太像：都是同一个输入序列各自投影出来的向量，形状一样，看起来就像在互相比较自己。要分开它们，抓住一句话：Q是本次要去找什么，K是每个位置能被找的标签。前者是“问题”，后者是“门牌”，本来就是同一批位置的两套身份，所以容易混。"
+        },
+        {
+          "type": "steps",
+          "title": "Attention为什么先匹配再汇总",
+          "steps": [
+            "第一步：先明确这次要找什么。当前位置生成Q，它代表“我现在需要从别处取回什么样的信息”。",
+            "第二步：拿Q去和每个位置的K比对。K像标签或门牌，比对得到的是“有多相关”，而不是那条信息本身的内容。",
+            "第三步：把相关度变成权重。相关度经过归一化，变成一组加起来为1的权重，表示每个位置该分到多少注意力。",
+            "第四步：用权重对V加权求和。V才是真正被搬运的内容；权重决定每个位置贡献多少。",
+            "第五步：得到当前位的输出。于是当前位拿到的不是某一条孤立信息，而是按相关性混合后的结果。",
+            "第六步：为什么必须分两步。如果跳过匹配直接平均汇总，所有位置贡献一样，就丢掉了“谁更相关”；如果不汇总只取最相关的一条，又太硬、不平稳，还会丢失其他有用线索。先匹配再加权，正是在“找得准”和“聚合得多”之间取平衡。"
+          ]
+        },
+        {
+          "type": "diagram",
+          "title": "Q与K不是同一角色",
+          "data": {
+            "nodes": [
+              {
+                "id": "q",
+                "label": "Q 当前需求：我要找什么"
+              },
+              {
+                "id": "k",
+                "label": "K 各个位置的门牌：我能被谁找到"
+              },
+              {
+                "id": "score",
+                "label": "相关度分数：Q与每个K的匹配程度"
+              },
+              {
+                "id": "weight",
+                "label": "权重：归一化后各位置的重要性"
+              },
+              {
+                "id": "v",
+                "label": "V 各位置真正提供的内容"
+              },
+              {
+                "id": "out",
+                "label": "输出：按权重汇总后的信息"
+              }
+            ],
+            "edges": [
+              {
+                "from": "q",
+                "to": "score",
+                "label": "提出需求"
+              },
+              {
+                "from": "k",
+                "to": "score",
+                "label": "提供匹配特征"
+              },
+              {
+                "from": "score",
+                "to": "weight",
+                "label": "转成权重"
+              },
+              {
+                "from": "weight",
+                "to": "out",
+                "label": "决定各V贡献多少"
+              },
+              {
+                "from": "v",
+                "to": "out",
+                "label": "提供被汇总的内容"
+              }
+            ]
+          }
+        },
+        {
+          "type": "paragraph",
+          "title": "一句话记住分工",
+          "content": "Q负责提问，K负责被提问和匹配，V负责被搬运。Attention的整体逻辑就是：用Q和K决定“看哪里、看多重”，再用这些权重要求V“把内容拿过来并混在一起”。所以匹配和汇总是两个不同目标，缺了匹配就不知该看谁，缺了汇总就只能看到碎片。"
+        },
+        {
+          "type": "question",
+          "title": "小检查",
+          "content": "如果某个位置和当前Q的相关度特别低，它的K和V分别会怎样影响最终输出？想想K在权重形成中的作用，以及V在汇总时的作用，再说说这个位置是不是完全不参与。"
+        }
+      ],
+      "strategy": "step_by_step",
+      "fallback": false,
+      "attempts": 1,
+      "search": {
+        "status": "not_needed",
+        "sources": [],
+        "note": "本次没有联网检索。"
+      },
+      "observations": [
+        {
+          "id": "wN5mbllSU7A6EjFqMIrFqw",
+          "course_id": "0Zf88n2bdQLDebMCd-5d6A",
+          "atom_id": "same-local-id",
+          "observation_type": "confusion_signal",
+          "description": "用户表示有时仍会把Q当成K，说明Q与K的角色区分存在不稳定，但用户已能说出各自职责。",
+          "status": "candidate",
+          "created_at": "2026-10-03T09:22:20.608164+00:00",
+          "quiz_id": null,
+          "recommendations": [],
+          "verification": {},
+          "boundary": "导师观察，仅作待验证线索；不直接改变掌握状态。"
+        }
+      ]
+    },
+    {
+      "answer": "Q和K不是两种不同东西，而是同一批信息在注意力里扮演的两个角色。你可以先记住一句话：Q是“我这次要找什么”，K是“我身上有什么特征可供别人来匹配”。两者配合，才能算出每个位置该看谁、看多少。\n\n维度 | Q（查询） | K（键）\n角色 | 提问方，表达当前的需求 | 被查询方，提供自身可匹配的特征\n关注方向 | 从我的角度出发，主动去找 | 被动地等着被别人比对\n功能 | 决定“我要和谁匹配” | 决定“别人能不能认出我、匹配度多高”\n配对结果 | Q和所有K逐个比对后，得到一组相似度分数 | 每个K给出一份相似度贡献，供打分使用\n常见直觉 | 像在图书馆说出想找的主题 | 像每本书的标签/关键词\n\n所以Q和K的核心区别在于“谁在问、谁在答”。注意力要用Q去和每个K算一个分数，分数越高表示这个K所在的位置越符合当前Q的需求；这些分数再用来决定后面从各个V里抽取多少内容。换句话说，Q和K负责“决定看哪里”，V负责“实际取走什么内容”。\n\n还有一个容易忽略的点：Q和K通常来自同一个输入，只是各自乘以不同的变换矩阵，所以它们不是两套外来数据，而是同一批内容被投影成了两种“用途”。这也是为什么同一个位置既可以向外发问，也可以被别人匹配。",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Q和K不是两种不同东西，而是同一批信息在注意力里扮演的两个角色。你可以先记住一句话：Q是“我这次要找什么”，K是“我身上有什么特征可供别人来匹配”。两者配合，才能算出每个位置该看谁、看多少。"
+        },
+        {
+          "type": "comparison",
+          "title": "Q 与 K 的分工",
+          "columns": [
+            "维度",
+            "Q（查询）",
+            "K（键）"
+          ],
+          "rows": [
+            [
+              "角色",
+              "提问方，表达当前的需求",
+              "被查询方，提供自身可匹配的特征"
+            ],
+            [
+              "关注方向",
+              "从我的角度出发，主动去找",
+              "被动地等着被别人比对"
+            ],
+            [
+              "功能",
+              "决定“我要和谁匹配”",
+              "决定“别人能不能认出我、匹配度多高”"
+            ],
+            [
+              "配对结果",
+              "Q和所有K逐个比对后，得到一组相似度分数",
+              "每个K给出一份相似度贡献，供打分使用"
+            ],
+            [
+              "常见直觉",
+              "像在图书馆说出想找的主题",
+              "像每本书的标签/关键词"
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "所以Q和K的核心区别在于“谁在问、谁在答”。注意力要用Q去和每个K算一个分数，分数越高表示这个K所在的位置越符合当前Q的需求；这些分数再用来决定后面从各个V里抽取多少内容。换句话说，Q和K负责“决定看哪里”，V负责“实际取走什么内容”。"
+        },
+        {
+          "type": "paragraph",
+          "content": "还有一个容易忽略的点：Q和K通常来自同一个输入，只是各自乘以不同的变换矩阵，所以它们不是两套外来数据，而是同一批内容被投影成了两种“用途”。这也是为什么同一个位置既可以向外发问，也可以被别人匹配。"
+        }
+      ],
+      "strategy": "comparison",
+      "fallback": false,
+      "attempts": 1,
+      "search": {
+        "status": "not_needed",
+        "sources": [],
+        "note": "本次没有联网检索。"
+      },
+      "observations": [
+        {
+          "id": "wN5mbllSU7A6EjFqMIrFqw",
+          "course_id": "0Zf88n2bdQLDebMCd-5d6A",
+          "atom_id": "same-local-id",
+          "observation_type": "confusion_signal",
+          "description": "用户表示有时仍会把Q当成K，说明Q与K的角色区分存在不稳定，但用户已能说出各自职责。",
+          "status": "candidate",
+          "created_at": "2026-10-03T09:22:20.608164+00:00",
+          "quiz_id": null,
+          "recommendations": [],
+          "verification": {},
+          "boundary": "导师观察，仅作待验证线索；不直接改变掌握状态。"
+        }
+      ]
+    },
+    {
+      "answer": "Softmax 常被当成一个“数学黑箱”，但它其实解决的是一个很日常的问题：把一堆任意大小的数字，变成一组“加起来等于 1 的占比”。\n\n在注意力里，我们先用量化分数衡量每个位置和当前需求有多匹配，这些分数可以有正有负、有的大有的小。接下来要把它们变成“分给各位置的注意力比例”。你觉得，直接把分数除以它们的总和，会遇到什么麻烦？\n\n如果某个匹配分数是负数，或者所有分数加起来刚好是 0，直接“分数除以总和”这种办法会出什么问题？",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Softmax 常被当成一个“数学黑箱”，但它其实解决的是一个很日常的问题：把一堆任意大小的数字，变成一组“加起来等于 1 的占比”。"
+        },
+        {
+          "type": "paragraph",
+          "content": "在注意力里，我们先用量化分数衡量每个位置和当前需求有多匹配，这些分数可以有正有负、有的大有的小。接下来要把它们变成“分给各位置的注意力比例”。你觉得，直接把分数除以它们的总和，会遇到什么麻烦？"
+        },
+        {
+          "type": "question",
+          "content": "如果某个匹配分数是负数，或者所有分数加起来刚好是 0，直接“分数除以总和”这种办法会出什么问题？"
+        }
+      ],
+      "strategy": "socratic",
+      "fallback": false,
+      "attempts": 1,
+      "search": {
+        "status": "not_needed",
+        "sources": [],
+        "note": "本次没有联网检索。"
+      },
+      "observations": [
+        {
+          "id": "wN5mbllSU7A6EjFqMIrFqw",
+          "course_id": "0Zf88n2bdQLDebMCd-5d6A",
+          "atom_id": "same-local-id",
+          "observation_type": "confusion_signal",
+          "description": "用户表示有时仍会把Q当成K，说明Q与K的角色区分存在不稳定，但用户已能说出各自职责。",
+          "status": "candidate",
+          "created_at": "2026-10-03T09:22:20.608164+00:00",
+          "quiz_id": null,
+          "recommendations": [],
+          "verification": {},
+          "boundary": "导师观察，仅作待验证线索；不直接改变掌握状态。"
+        }
+      ]
+    }
+  ],
+  "model_outputs": [
+    {
+      "stage": "p6_tutor_answer",
+      "parsed": {
+        "learning_relevant": true,
+        "strategy": "step_by_step",
+        "message_type": "explanation",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "title": "先回应你的卡点",
+            "content": "你说的“把Q当成K”，其实通常不是概念没懂，而是两者太像：都是同一个输入序列各自投影出来的向量，形状一样，看起来就像在互相比较自己。要分开它们，抓住一句话：Q是本次要去找什么，K是每个位置能被找的标签。前者是“问题”，后者是“门牌”，本来就是同一批位置的两套身份，所以容易混。"
+          },
+          {
+            "type": "steps",
+            "title": "Attention为什么先匹配再汇总",
+            "steps": [
+              "第一步：先明确这次要找什么。当前位置生成Q，它代表“我现在需要从别处取回什么样的信息”。",
+              "第二步：拿Q去和每个位置的K比对。K像标签或门牌，比对得到的是“有多相关”，而不是那条信息本身的内容。",
+              "第三步：把相关度变成权重。相关度经过归一化，变成一组加起来为1的权重，表示每个位置该分到多少注意力。",
+              "第四步：用权重对V加权求和。V才是真正被搬运的内容；权重决定每个位置贡献多少。",
+              "第五步：得到当前位的输出。于是当前位拿到的不是某一条孤立信息，而是按相关性混合后的结果。",
+              "第六步：为什么必须分两步。如果跳过匹配直接平均汇总，所有位置贡献一样，就丢掉了“谁更相关”；如果不汇总只取最相关的一条，又太硬、不平稳，还会丢失其他有用线索。先匹配再加权，正是在“找得准”和“聚合得多”之间取平衡。"
+            ]
+          },
+          {
+            "type": "diagram",
+            "title": "Q与K不是同一角色",
+            "data": {
+              "nodes": [
+                {
+                  "id": "q",
+                  "label": "Q 当前需求：我要找什么"
+                },
+                {
+                  "id": "k",
+                  "label": "K 各个位置的门牌：我能被谁找到"
+                },
+                {
+                  "id": "score",
+                  "label": "相关度分数：Q与每个K的匹配程度"
+                },
+                {
+                  "id": "weight",
+                  "label": "权重：归一化后各位置的重要性"
+                },
+                {
+                  "id": "v",
+                  "label": "V 各位置真正提供的内容"
+                },
+                {
+                  "id": "out",
+                  "label": "输出：按权重汇总后的信息"
+                }
+              ],
+              "edges": [
+                {
+                  "from": "q",
+                  "to": "score",
+                  "label": "提出需求"
+                },
+                {
+                  "from": "k",
+                  "to": "score",
+                  "label": "提供匹配特征"
+                },
+                {
+                  "from": "score",
+                  "to": "weight",
+                  "label": "转成权重"
+                },
+                {
+                  "from": "weight",
+                  "to": "out",
+                  "label": "决定各V贡献多少"
+                },
+                {
+                  "from": "v",
+                  "to": "out",
+                  "label": "提供被汇总的内容"
+                }
+              ]
+            }
+          },
+          {
+            "type": "paragraph",
+            "title": "一句话记住分工",
+            "content": "Q负责提问，K负责被提问和匹配，V负责被搬运。Attention的整体逻辑就是：用Q和K决定“看哪里、看多重”，再用这些权重要求V“把内容拿过来并混在一起”。所以匹配和汇总是两个不同目标，缺了匹配就不知该看谁，缺了汇总就只能看到碎片。"
+          },
+          {
+            "type": "question",
+            "title": "小检查",
+            "content": "如果某个位置和当前Q的相关度特别低，它的K和V分别会怎样影响最终输出？想想K在权重形成中的作用，以及V在汇总时的作用，再说说这个位置是不是完全不参与。"
+          }
+        ],
+        "related_atom_ids": [
+          "attention",
+          "same-local-id"
+        ],
+        "observations": [
+          {
+            "atom_id": "same-local-id",
+            "observation_type": "confusion_signal",
+            "description": "用户表示有时仍会把Q当成K，说明Q与K的角色区分存在不稳定，但用户已能说出各自职责。",
+            "supporting_quote": "我已经理解QKV各自的职责，但有时仍会把Q当成K",
+            "confidence": 0.7
+          }
+        ],
+        "memories": [
+          {
+            "memory_type": "important_insight",
+            "content": "用户已能陈述QKV各自职责，但Q与K的角色在实际判断中仍可能混淆。",
+            "supporting_quote": "我已经理解QKV各自的职责，但有时仍会把Q当成K"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "p6_tutor_answer",
+      "parsed": {
+        "learning_relevant": true,
+        "strategy": "comparison",
+        "message_type": "explanation",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Q和K不是两种不同东西，而是同一批信息在注意力里扮演的两个角色。你可以先记住一句话：Q是“我这次要找什么”，K是“我身上有什么特征可供别人来匹配”。两者配合，才能算出每个位置该看谁、看多少。"
+          },
+          {
+            "type": "comparison",
+            "title": "Q 与 K 的分工",
+            "columns": [
+              "维度",
+              "Q（查询）",
+              "K（键）"
+            ],
+            "rows": [
+              [
+                "角色",
+                "提问方，表达当前的需求",
+                "被查询方，提供自身可匹配的特征"
+              ],
+              [
+                "关注方向",
+                "从我的角度出发，主动去找",
+                "被动地等着被别人比对"
+              ],
+              [
+                "功能",
+                "决定“我要和谁匹配”",
+                "决定“别人能不能认出我、匹配度多高”"
+              ],
+              [
+                "配对结果",
+                "Q和所有K逐个比对后，得到一组相似度分数",
+                "每个K给出一份相似度贡献，供打分使用"
+              ],
+              [
+                "常见直觉",
+                "像在图书馆说出想找的主题",
+                "像每本书的标签/关键词"
+              ]
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": "所以Q和K的核心区别在于“谁在问、谁在答”。注意力要用Q去和每个K算一个分数，分数越高表示这个K所在的位置越符合当前Q的需求；这些分数再用来决定后面从各个V里抽取多少内容。换句话说，Q和K负责“决定看哪里”，V负责“实际取走什么内容”。"
+          },
+          {
+            "type": "paragraph",
+            "content": "还有一个容易忽略的点：Q和K通常来自同一个输入，只是各自乘以不同的变换矩阵，所以它们不是两套外来数据，而是同一批内容被投影成了两种“用途”。这也是为什么同一个位置既可以向外发问，也可以被别人匹配。"
+          }
+        ],
+        "related_atom_ids": [
+          "same-local-id"
+        ],
+        "observations": [],
+        "memories": []
+      }
+    },
+    {
+      "stage": "p6_tutor_answer",
+      "parsed": {
+        "learning_relevant": true,
+        "strategy": "socratic",
+        "message_type": "question",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "content": "Softmax 常被当成一个“数学黑箱”，但它其实解决的是一个很日常的问题：把一堆任意大小的数字，变成一组“加起来等于 1 的占比”。"
+          },
+          {
+            "type": "paragraph",
+            "content": "在注意力里，我们先用量化分数衡量每个位置和当前需求有多匹配，这些分数可以有正有负、有的大有的小。接下来要把它们变成“分给各位置的注意力比例”。你觉得，直接把分数除以它们的总和，会遇到什么麻烦？"
+          },
+          {
+            "type": "question",
+            "content": "如果某个匹配分数是负数，或者所有分数加起来刚好是 0，直接“分数除以总和”这种办法会出什么问题？"
+          }
+        ],
+        "related_atom_ids": [
+          "same-local-id"
+        ],
+        "observations": [],
+        "memories": []
+      }
+    }
+  ],
+  "boundary": "使用临时合成课程和经原有小测提交的基础证据，只读取真实模型配置；这是有限场景的运行验证，不证明一般教学效果或误区诊断准确率。"
+}

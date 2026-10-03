@@ -1,10 +1,12 @@
 /* AssistantButton, AssistantPanel, ChatMessage, ChatInput and DraggableAssistant. */
 const CourseAssistant=(()=>{
  let courseId=null, contextKey='', generation=0, expanded=false, messages=[], hasMore=false, loadingHistory=false;
- let position=null, pointer=null, suppressClick=false,nextFeedback=null,nextContext=null;const pending=new Set(),positions=new Map();
+ let panelRect=null, panelPointer=null, observations=[], position=null, pointer=null, suppressClick=false,nextFeedback=null,nextContext=null;const pending=new Set(),positions=new Map();
  const root=$('course-assistant'),toggle=$('assistant-toggle'),panel=$('assistant-panel');
  async function request(cid,suffix,method='GET',body){
-  const response=await fetch(`/api/courses/${encodeURIComponent(cid)}/assistant/${suffix}`,body===undefined?{method}:{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const route=suffix.startsWith('history')?`/api/tutor/conversations?context_id=${encodeURIComponent(cid)}${suffix.includes('?')?'&'+suffix.split('?')[1]:''}`:suffix==='chat'?'/api/tutor/chat':`/api/courses/${encodeURIComponent(cid)}/assistant/${suffix}`;
+  if(suffix==='chat')body={...body,context_id:cid};
+  const response=await fetch(route,body===undefined?{method}:{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const data=await response.json();if(!response.ok)throw new Error(data.error || '助教暂时不可用');return data;
  }
  function current(){
@@ -32,8 +34,9 @@ const CourseAssistant=(()=>{
  function clamp(point){return {x:Math.max(8,Math.min(point.x,Math.max(8,innerWidth-64))),y:Math.max(8,Math.min(point.y,Math.max(8,innerHeight-64)))};}
  function DraggableAssistant(point){
   position=clamp(point);toggle.style.left=`${position.x}px`;toggle.style.top=`${position.y}px`;
-  const width=Math.min(380,innerWidth-16),height=Math.min(580,innerHeight-100);
-  panel.style.width=`${width}px`;panel.style.maxHeight=`${height}px`;
+  if(panelRect){placePanel();return;}
+  const width=Math.min(430,innerWidth-16),height=Math.min(680,innerHeight-40);
+  panel.style.width=`${width}px`;panel.style.height=`${height}px`;panel.style.maxHeight=`${height}px`;
   panel.style.left=`${Math.max(8,Math.min(position.x+56-width,innerWidth-width-8))}px`;
   panel.style.top=`${Math.max(8,Math.min(position.y-height-10,innerHeight-height-8))}px`;
  }
@@ -46,7 +49,7 @@ const CourseAssistant=(()=>{
   const item=node('article','',`assistant-chat-message ${message.role}`);item.dataset.messageId=message.id;
   item.append(node('strong',message.role==='user'?'你的问题':'课程助教'));
   const text=node('div','','assistant-message-content');
-  if(message.role==='assistant')MindOSTeaching.render(text,message.blocks?.length?message.blocks:MindOSTeaching.fromText(message.content),{action:message.teaching_action,onFeedback:feedback=>{
+  if(message.role==='assistant')MindOSTutor.render(text,message.blocks?.length?message.blocks:[{type:"paragraph",content:message.content}],{action:message.teaching_action,onFeedback:feedback=>{
    if($('assistant-question').disabled)return;
    $('assistant-question').value=feedback.question+' 请参考这段讲解：'+message.content.slice(0,900);nextFeedback=feedback.kind;
    nextContext=message.context?.section_ordinal?{section_ordinal:message.context.section_ordinal,knowledge_atom_id:message.context.knowledge_atom_id}:null;
@@ -63,6 +66,7 @@ const CourseAssistant=(()=>{
   return item;
  }
  function AssistantPanel(scroll=true){
+  renderObservations();
   const history=$('assistant-messages');history.replaceChildren(...messages.map(ChatMessage));
   if(!messages.length)history.append(node('p',courseId?'哪里没理解，直接问我。我会结合这门课程和当前小节解释。':'先选择一门课程，让导师带着课程和学习记录解释。','muted'));
   $('assistant-history-more').hidden=!hasMore;
@@ -78,14 +82,14 @@ const CourseAssistant=(()=>{
   panel.hidden=!expanded;toggle.setAttribute('aria-expanded',String(expanded));label();
  }
  async function sync(){
-  const c=current();if(!c){if(!position){let saved=null;try{saved=JSON.parse(localStorage.getItem('mindos-global-tutor-position'));}catch(_){}DraggableAssistant(saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)?saved:{x:innerWidth-64,y:innerHeight-80});}if(courseId!==null){generation++;courseId=null;messages=[];hasMore=false;expanded=false;nextFeedback=null;nextContext=null;}loadingHistory=false;AssistantButton();AssistantPanel();return;}
+  const c=current();if(!c){if(!position){let saved=null;try{saved=JSON.parse(localStorage.getItem('mindos-global-tutor-position'));}catch(_){}DraggableAssistant(saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)?saved:{x:innerWidth-64,y:innerHeight-80});}if(courseId!==null){generation++;courseId=null;messages=[];observations=[];panelRect=null;hasMore=false;expanded=false;nextFeedback=null;nextContext=null;}loadingHistory=false;AssistantButton();AssistantPanel();return;}
   const cid=state.data.course.id;
   if(cid===courseId){contextKey=JSON.stringify(c);AssistantButton();return;}
-  pointer=null;courseId=cid;const version=++generation;contextKey=JSON.stringify(c);expanded=false;messages=[];hasMore=false;loadingHistory=true;nextFeedback=null;nextContext=null;error('');$('assistant-question').value='';
+  pointer=null;panelPointer=null;observations=[];courseId=cid;loadPanelRect(cid);const version=++generation;contextKey=JSON.stringify(c);expanded=false;messages=[];hasMore=false;loadingHistory=true;nextFeedback=null;nextContext=null;error('');$('assistant-question').value='';
   DraggableAssistant(positions.get(cid) || {x:innerWidth-80,y:innerHeight-80});AssistantButton();AssistantPanel();
   try{
    const result=await request(cid,'history');if(courseId!==cid || version!==generation)return;
-   messages=result.messages;hasMore=result.has_more;
+   messages=result.messages;hasMore=result.has_more;loadObservations(cid,version);
    if(result.position){positions.set(cid,result.position);DraggableAssistant(result.position);}
    AssistantPanel();
   }catch(e){if(courseId===cid && version===generation)error(e.message);}
@@ -109,16 +113,30 @@ const CourseAssistant=(()=>{
   try{
    const feedback=nextFeedback;nextFeedback=null;nextContext=null;
    const result=await request(cid,'chat','POST',{message:question,request_id:requestId,current_context:c,...(feedback?{feedback}: {})});
-   if(cid===courseId && version===generation){messages.push(...result.messages);$('assistant-question').value='';AssistantPanel();}
+   if(cid===courseId && version===generation){messages.push(...result.messages);observations=result.observations||[];$('tutor-memory-indicator').textContent=result.memory_note||'只保留学习相关问答；疑似误区待检测。';$('assistant-question').value='';AssistantPanel();renderObservations();}
   }catch(e){if(cid===courseId && version===generation)error(e.message);}
   finally{pending.delete(cid);AssistantButton();if(cid===courseId){$('assistant-send').textContent='发送问题';AssistantPanel(false);$('assistant-question').focus();}}
  }
  $('assistant-question').addEventListener('input',()=>{nextFeedback=null;nextContext=null;});
  $('assistant-chat-form').addEventListener('submit',ChatInput);
  $('assistant-history-more').addEventListener('click',async()=>{
-  const cid=courseId,version=generation;if(!messages.length)return;
-  try{const result=await request(cid,'history?before='+messages[0].id);if(cid!==courseId || version!==generation)return;messages=[...result.messages,...messages];hasMore=result.has_more;AssistantPanel(false);}catch(e){if(courseId===cid)error(e.message);}
+  const cid=courseId,version=generation;const first=messages.find(m=>Number.isInteger(m.id));if(!first)return;
+  try{const result=await request(cid,'history?before='+first.id);if(cid!==courseId || version!==generation)return;messages=[...result.messages,...messages];hasMore=result.has_more;AssistantPanel(false);}catch(e){if(courseId===cid)error(e.message);}
  });
+ function loadPanelRect(cid){try{panelRect=JSON.parse(localStorage.getItem('mindos-tutor-panel-'+cid));if(!panelRect||!['x','y','width','height'].every(k=>Number.isFinite(panelRect[k])))panelRect=null;}catch(_){panelRect=null;}}
+ function placePanel(){if(!panelRect)return;const width=Math.min(Math.max(320,panelRect.width),innerWidth-16),height=Math.min(Math.max(420,panelRect.height),innerHeight-16);const x=Math.max(8,Math.min(panelRect.x,innerWidth-width-8)),y=Math.max(8,Math.min(panelRect.y,innerHeight-height-8));Object.assign(panel.style,{left:x+'px',top:y+'px',width:width+'px',height:height+'px',maxHeight:height+'px'});}
+ function rememberPanel(){if(courseId&&panelRect)localStorage.setItem('mindos-tutor-panel-'+courseId,JSON.stringify(panelRect));}
+ function startPanel(event,resize){if(event.button!==0||(!resize&&event.target.closest('button')))return;const r=panel.getBoundingClientRect();panelRect={x:r.x,y:r.y,width:r.width,height:r.height};panelPointer={id:event.pointerId,x:event.clientX,y:event.clientY,rect:{...panelRect},resize};event.currentTarget.setPointerCapture(event.pointerId);}
+ for(const [id,resize]of [['assistant-drag-handle',false],['assistant-resize-handle',true]]){
+  const handle=$(id);handle.addEventListener('pointerdown',e=>startPanel(e,resize));handle.addEventListener('pointermove',e=>{if(!panelPointer||panelPointer.id!==e.pointerId)return;const p=panelPointer,dx=e.clientX-p.x,dy=e.clientY-p.y;panelRect={...p.rect,...(p.resize?{width:p.rect.width+dx,height:p.rect.height+dy}:{x:p.rect.x+dx,y:p.rect.y+dy})};placePanel();});
+  handle.addEventListener('pointerup',()=>{panelPointer=null;const r=panel.getBoundingClientRect();panelRect={x:r.x,y:r.y,width:r.width,height:r.height};rememberPanel();});handle.addEventListener('pointercancel',()=>{panelPointer=null;});
+  handle.addEventListener('keydown',e=>{if(!e.altKey||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const r=panel.getBoundingClientRect(),dx=e.key==='ArrowLeft'?-20:e.key==='ArrowRight'?20:0,dy=e.key==='ArrowUp'?-20:e.key==='ArrowDown'?20:0;panelRect=resize?{x:r.x,y:r.y,width:r.width+dx,height:r.height+dy}:{x:r.x+dx,y:r.y+dy,width:r.width,height:r.height};placePanel();rememberPanel();});
+ }
+ async function tutorRequest(path,body){const response=await fetch('/api/tutor/'+path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw Error(data.error||'导师建议暂不可用');return data;}
+ async function loadObservations(cid,version){try{const result=await tutorRequest('observations?context_id='+encodeURIComponent(cid));if(courseId===cid&&generation===version){observations=result.observations;renderObservations();}}catch(e){if(courseId===cid)error(e.message);}}
+ function renderObservations(){const root=$('tutor-observations');root.replaceChildren();const candidate=observations.find(o=>o.status==='candidate'&&(!o.verification?.quiz_id||o.verification?.outcome==='practice_only')&&['possible_gap','possible_misconception','confusion_signal'].includes(o.observation_type));if(!candidate){const checked=observations.find(o=>o.verification?.outcome);if(checked)root.append(node('p',checked.verification.outcome==='check_passed'?'独立短检测已通过，候选线索不会当作已确认误区。':checked.verification.outcome==='practice_only'?'这次有求助记录，只作练习；可重新进行独立短检测。':'独立短检测仍有困难，建议回看这个知识点；错误不能直接确认导师猜测的具体误区。','muted'));return;}const card=node('div','','tutor-observation-card');card.append(node('strong','待验证的学习线索'),node('p',candidate.description),node('p','这是导师建议，不是确认的误区。','muted'));const verify=node('button','做一个独立短检测','button secondary'),dismiss=node('button','忽略这条建议','icon-button');verify.type=dismiss.type='button';const cid=courseId,version=generation;verify.onclick=async()=>{verify.disabled=true;try{const r=await tutorRequest('observations/'+candidate.id+'/verify',{});if(courseId!==cid||generation!==version)return;if(r.quiz?.available===false){error(r.note);return;}if(r.quiz)showVerification(root,r,cid,version);else error(r.note);}catch(e){if(courseId===cid)error(e.message);}finally{verify.disabled=false;}};dismiss.onclick=async()=>{try{await tutorRequest('observations/'+candidate.id+'/dismiss',{});await loadObservations(cid,version);}catch(e){if(courseId===cid)error(e.message);}};card.append(verify,dismiss);for(const suggestion of candidate.recommendations||[]){const button=node('button',suggestion.kind==='recommend_replan'?'查看成长路线':'查看开放练习','button secondary');button.type='button';button.onclick=async()=>{try{expanded=false;AssistantButton();if(suggestion.kind==='recommend_replan'){await MindOSGrowth.show(suggestion.goal_id);return;}if(state.page!=='course')await openCourse(cid);if(state.courseId!==cid)return;let host=$('tutor-authentic-practice');if(!host){host=node('section');host.id='tutor-authentic-practice';$('course-view').append(host);}host.replaceChildren();await MindOSAuthentic.render(host,null,cid);const select=host.querySelector('select');if(select)select.value=suggestion.atom_id;host.scrollIntoView({block:'start'});}catch(e){showNotice(e.message);}};card.append(button,node('p',suggestion.note,'muted'));}root.append(card);}
+ function showVerification(root,result,cid,version){const quiz=result.quiz;root.replaceChildren();const box=node('div','','tutor-verification');box.append(node('h3','先独立回答'),node('p','只有本次答题结果进入原有学习检测，导师猜测不会进入掌握记录。','muted'));const form=node('form');quiz.questions.forEach((q,i)=>{const group=node('fieldset');group.append(node('legend',q.prompt));for(const[value,text]of Object.entries(q.choices)){const label=node('label','','option'),input=document.createElement('input');input.type='radio';input.name='tutor-answer-'+i;input.value=value;input.required=true;label.append(input,document.createTextNode(text));group.append(label);}MindOSLearningLoop.answerInputs(group,i,quiz,cid);form.append(group);});const submit=node('button','提交独立回答','button primary');submit.type='submit';form.append(submit);form.onsubmit=async e=>{e.preventDefault();const answers=quiz.questions.map((_,i)=>form.querySelector(`[name="tutor-answer-${i}"]:checked`)?.value);if(answers.some(a=>!a))return;submit.disabled=true;try{await api('/api/quizzes/submit',{course_id:cid,quiz_id:quiz.id,answers,...MindOSLearningLoop.answerMetadata(form,answers.length)});if(courseId!==cid||generation!==version)return;await loadObservations(cid,version);const data=await api('/api/course?'+new URLSearchParams({course_id:cid,ordinal:current()?.section_ordinal||state.data.section.ordinal}));if(courseId!==cid||generation!==version)return;if(state.page==='course')renderCourse(data);else state.data=data;error('短检测已保存。需要复习时，可从课程学习建议继续。');}catch(err){if(courseId===cid)error(err.message);}finally{submit.disabled=false;}};box.append(form);root.append(box);}
+ $('tutor-clear-history').onclick=async()=>{if(!courseId||pending.has(courseId))return;const cid=courseId,version=generation;try{const response=await fetch('/api/tutor/conversations',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({context_id:cid})});const r=await response.json();if(!response.ok)throw Error(r.error);if(courseId===cid&&generation===version){messages=[];observations=[];hasMore=false;AssistantPanel();$('tutor-memory-indicator').textContent=r.note;}}catch(e){if(courseId===cid)error(e.message);}};
  let scheduled=false;const observer=new MutationObserver(()=>{if(scheduled)return;scheduled=true;queueMicrotask(()=>{scheduled=false;sync();});});
  for(const id of ['course-view','welcome','review-view','course-management','chapter-mode','map-mode','atom-panel'])observer.observe($(id),{attributes:true,attributeFilter:['hidden']});
  for(const id of ['section-title','atom-title','course-title'])observer.observe($(id),{childList:true,subtree:true});

@@ -1955,3 +1955,18 @@ fieldset {
 .study-dialog .study-edit{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
 @media(max-width:600px){.study-session-bar{padding:10px;gap:8px}.study-session-copy{flex-basis:calc(100% - 80px)}.study-entry{padding:12px}.study-entry strong,.study-entry small{flex-basis:100%}.study-dialog{padding:16px}.study-dialog .growth-form{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.study-session-bar,.study-entry{animation:none;transition:none}}
+
+/* P6: a moveable reading window, with compact context and safe native cards. */
+#assistant-drag-handle{cursor:grab;touch-action:none;user-select:none;flex-shrink:0}
+#assistant-drag-handle:active{cursor:grabbing}
+#assistant-resize-handle{position:absolute;right:3px;bottom:3px;background:transparent;border:0;color:var(--cyan);cursor:nwse-resize;touch-action:none;padding:3px;font-size:17px}
+.assistant-panel .assistant-messages{min-height:110px;flex:1;overscroll-behavior:contain}
+.assistant-panel .assistant-insight{max-height:65px;overflow:auto;flex-shrink:0}
+#tutor-memory-indicator{font-size:11px;line-height:1.45}
+#tutor-clear-history{font-size:11px;align-self:flex-start}
+#tutor-observations{max-height:180px;overflow:auto;flex-shrink:0}
+.tutor-observation-card,.tutor-verification{padding:10px;border:1px solid #476686;border-radius:10px;background:#162940}
+.tutor-observation-card p{margin:6px 0;line-height:1.5;font-size:12px}
+.assistant-message-content .teaching-block{margin:10px 0;line-height:1.85}
+.tutor-code-card pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#080f1d;padding:12px;border-radius:8px}
+@media(max-width:600px){.assistant-panel{padding:12px}.assistant-panel .assistant-boundary{font-size:10px}.assistant-panel form textarea{max-height:80px}.tutor-verification .option{font-size:12px}}

@@ -2,7 +2,7 @@
 from pathlib import Path
 import argparse,shutil
 
-DIRECTORIES=('mindos','web','tests','docs','scripts','.github')
+DIRECTORIES=('mindos','web','tests','docs','scripts','prompts','.github')
 FILES=('.env.example','.gitattributes','.gitignore','CONTRIBUTING.md','LICENSE','README.md','ROADMAP.md','requirements.txt','MindOS_最终设计大纲.md')
 EXCLUDED={'__pycache__','.pytest_cache','node_modules'}
 

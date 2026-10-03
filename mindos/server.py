@@ -33,7 +33,7 @@ from .web_search import PublicSourceSearch, SearchUnavailable, WebSearch
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
 LOGGER = logging.getLogger("mindos")
-STATIC = {"/components/mindos/study.js": ("components/mindos/study.js", "text/javascript; charset=utf-8"),"/components/mindos/growth.js": ("components/mindos/growth.js", "text/javascript; charset=utf-8"),"/components/mindos/personal.js": ("components/mindos/personal.js", "text/javascript; charset=utf-8"),"/components/mindos/authentic.js": ("components/mindos/authentic.js", "text/javascript; charset=utf-8"),"/components/mindos/course-final.js": ("components/mindos/course-final.js", "text/javascript; charset=utf-8"),"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
+STATIC = {"/components/mindos/tutor.js": ("components/mindos/tutor.js", "text/javascript; charset=utf-8"),"/components/mindos/study.js": ("components/mindos/study.js", "text/javascript; charset=utf-8"),"/components/mindos/growth.js": ("components/mindos/growth.js", "text/javascript; charset=utf-8"),"/components/mindos/personal.js": ("components/mindos/personal.js", "text/javascript; charset=utf-8"),"/components/mindos/authentic.js": ("components/mindos/authentic.js", "text/javascript; charset=utf-8"),"/components/mindos/course-final.js": ("components/mindos/course-final.js", "text/javascript; charset=utf-8"),"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
           "/components/teaching/teaching-blocks.js": ("components/teaching/teaching-blocks.js", "text/javascript; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/components/CourseManager/course-manager.js": ("components/CourseManager/course-manager.js", "text/javascript; charset=utf-8"),
@@ -250,6 +250,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
         self._safe_call(self._manage_mutation)
 
     def _manage_mutation(self) -> None:
+        from .tutor.api import dispatch as tutor_dispatch
+        if tutor_dispatch(self):return
         from .learning.execution_api import dispatch as execution_dispatch
         if execution_dispatch(self):return
         from .learning.growth_api import dispatch
@@ -283,6 +285,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
         self._json(HTTPStatus.OK,{'course':result})
 
     def _get(self) -> None:
+        from .tutor.api import dispatch as tutor_dispatch
+        if tutor_dispatch(self):return
         from .learning.execution_api import dispatch as execution_dispatch
         if execution_dispatch(self):return
         from .learning.growth_api import dispatch
@@ -419,6 +423,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.NOT_FOUND, {"error": "页面或接口不存在"})
 
     def _post(self) -> None:
+        from .tutor.api import dispatch as tutor_dispatch
+        if tutor_dispatch(self):return
         from .learning.execution_api import dispatch as execution_dispatch
         if execution_dispatch(self):return
         from .learning.growth_api import dispatch

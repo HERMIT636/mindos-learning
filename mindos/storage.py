@@ -132,6 +132,8 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
             migrate_growth(db)
             from .learning.execution import migrate as migrate_execution
             migrate_execution(db)
+            from .tutor.storage import migrate as migrate_tutor
+            migrate_tutor(db)
 
     @contextmanager
     def connect(self):

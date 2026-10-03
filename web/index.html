@@ -20,6 +20,7 @@
   <script src="/components/mindos/personal.js" defer></script>
   <script src="/components/mindos/universe.js" defer></script>
   <script src="/components/CourseManager/course-manager.js" defer></script>
+  <script src="/components/mindos/tutor.js" defer></script>
   <script src="/components/CourseAssistant/course-assistant.js" defer></script>
 </head>
 <body>
@@ -123,13 +124,17 @@
   <div id="course-assistant" hidden>
     <button id="assistant-toggle" class="assistant-floating" type="button" aria-label="课程智能助教" aria-controls="assistant-panel" aria-expanded="false" title="点击提问；拖动图标可调整位置"><span aria-hidden="true">✦</span><small>AI</small></button>
     <section id="assistant-panel" class="assistant-panel" hidden aria-label="AI导师学习辅助">
-      <div class="section-head"><h2>AI 导师</h2><button id="assistant-close" class="icon-button" aria-label="收起助教" type="button">×</button></div>
+      <div id="assistant-drag-handle" class="section-head" tabindex="0" aria-label="拖动导师窗口；按住 Alt 加方向键移动"><h2>AI 导师</h2><button id="assistant-close" class="icon-button" aria-label="收起助教" type="button">×</button></div>
       <p id="assistant-course"></p><p id="assistant-context" class="muted"></p><div id="assistant-insight" class="assistant-insight"></div><button id="assistant-select-course" class="button secondary" type="button" hidden>选择课程，开始提问</button>
       <p class="muted assistant-boundary">聊天不会改变掌握记录。最新信息按本课程的检索配置查找；来源旁会说明检索范围。</p>
+      <p id="tutor-memory-indicator" class="muted">只保留与学习有关的对话；疑似误区需独立检测。</p>
+      <div id="tutor-observations"></div>
+      <button id="tutor-clear-history" class="icon-button" type="button">清除本课程导师记忆</button>
       <button id="assistant-history-more" type="button" class="button secondary" hidden>加载更早的聊天</button>
       <div id="assistant-messages" class="assistant-messages" aria-live="polite"></div>
       <p id="assistant-error" role="alert"></p>
       <form id="assistant-chat-form"><label for="assistant-question">输入你的问题</label><textarea id="assistant-question" rows="2" maxlength="2000" required placeholder="例如：为什么这里要这样计算？"></textarea><button id="assistant-send" class="button primary">发送问题</button></form>
+      <button id="assistant-resize-handle" type="button" aria-label="调整导师窗口大小；按住 Alt 加方向键调整">↘</button>
     </section>
   </div>
 </body>

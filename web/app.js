@@ -385,6 +385,7 @@ async function openCourse(id, ordinal,view='learn') {
 async function bootstrap() {
   try {
     const data = await api('/api/bootstrap');
+    MindOSTutorQuality.enable(data.tutor_quality_debug_enabled);
     state.courses = data.courses; state.drafts = data.drafts;
     renderProfiles(data); renderSidebar();
     if (!data.model_ready) {

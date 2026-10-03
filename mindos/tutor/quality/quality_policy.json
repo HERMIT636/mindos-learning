@@ -1,0 +1,9 @@
+{
+  "version": "quality-v1",
+  "max_retry": 1,
+  "max_history_context": 5,
+  "depth": {"enabled": true},
+  "repetition": {"enabled": true},
+  "alignment": {"enabled": true},
+  "confidence": {"enabled": true}
+}

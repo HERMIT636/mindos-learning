@@ -66,6 +66,7 @@ const CourseAssistant=(()=>{
   return item;
  }
  function AssistantPanel(scroll=true){
+  MindOSTutorQuality.render(courseId,messages.map(m=>m.id).join(","));
   renderObservations();
   const history=$('assistant-messages');history.replaceChildren(...messages.map(ChatMessage));
   if(!messages.length)history.append(node('p',courseId?'哪里没理解，直接问我。我会结合这门课程和当前小节解释。':'先选择一门课程，让导师带着课程和学习记录解释。','muted'));

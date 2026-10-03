@@ -1,0 +1,93 @@
+{
+  "date": "2026-10-03",
+  "status": "P6.5 Complete",
+  "baseline": "77b60c384722c1628ef022e33857ab059e2f008b",
+  "baseline_tests": 407,
+  "new_tests": 86,
+  "full_tests": {
+    "root": {
+      "tests": 493,
+      "seconds": 58.784,
+      "passed": true
+    },
+    "publish": {
+      "tests": 493,
+      "seconds": 59.877,
+      "passed": true
+    }
+  },
+  "browser": {
+    "passed": true,
+    "suites": [
+      "tutor_quality",
+      "tutor_p6",
+      "tutor",
+      "execution",
+      "growth",
+      "personal",
+      "authentic",
+      "final",
+      "loop",
+      "presentation",
+      "universe",
+      "management"
+    ],
+    "screenshots": [
+      "learning-loop-p65-desktop.png",
+      "learning-loop-p65-mobile.png"
+    ],
+    "temporary_synthetic_courses_only": true
+  },
+  "real_model": {
+    "passed": true,
+    "scenarios": 3,
+    "checks": {
+      "first_two_answers_accepted": true,
+      "known_qkv_and_matrix_evidence_sent": true,
+      "does_not_redefine_matrix_basics": true,
+      "qk_reason_strategy": true,
+      "qk_confusion_comparison": true,
+      "unknown_paper_clearly_unconfirmed": true,
+      "at_most_one_retry": true,
+      "no_learning_or_pace_writes": true,
+      "three_minimal_metadata_records": true,
+      "no_full_context_or_thought_persisted": true
+    },
+    "personal_database_unchanged": true,
+    "artifact": "learning-loop-p65-real-model.json",
+    "actual_calls": 3
+  },
+  "frozen_algorithms": {
+    "files": 55,
+    "actual_and_baseline_sha_match": true,
+    "manifest": "../learning-loop-p65-frozen.json"
+  },
+  "synchronization": {
+    "files": 270,
+    "differences": 0,
+    "excludes": [
+      "local database",
+      "model credentials",
+      "API keys",
+      "caches"
+    ]
+  },
+  "self_audit": {
+    "frozen_p0_p6": true,
+    "no_second_learner_state": true,
+    "no_ai_mastery_writes": true,
+    "no_chain_of_thought_persisted": true,
+    "at_most_one_shared_retry": true,
+    "safe_unsaved_fallback": true,
+    "bounded_repetition_checks": true,
+    "depth_uses_actual_evidence_and_atie": true,
+    "goal_alignment_guard": true,
+    "tutor_drag_and_refresh": true,
+    "all_required_validation_passed": true
+  },
+  "limitations": [
+    "Quality checks use conservative lexical and structural rules, not complete semantic assessment or fact certification.",
+    "Live results cover three synthetic scenarios, not general teaching effectiveness.",
+    "Current P6 tutor API is quality-controlled; legacy compatibility endpoints keep their existing checks."
+  ]
+}

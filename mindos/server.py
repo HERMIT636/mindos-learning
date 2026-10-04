@@ -33,7 +33,7 @@ from .web_search import PublicSourceSearch, SearchUnavailable, WebSearch
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
 LOGGER = logging.getLogger("mindos")
-STATIC = {"/knowledge-space.css": ("knowledge-space.css", "text/css; charset=utf-8"),"/components/mindos/knowledge-space.js": ("components/mindos/knowledge-space.js", "text/javascript; charset=utf-8"),"/components/mindos/resource-renderer.js": ("components/mindos/resource-renderer.js", "text/javascript; charset=utf-8"),"/vendor/katex.min.js": ("vendor/katex.min.js", "text/javascript; charset=utf-8"),"/knowledge-universe.css": ("knowledge-universe.css", "text/css; charset=utf-8"),"/components/mindos/universe-renderer.js": ("components/mindos/universe-renderer.js", "text/javascript; charset=utf-8"),"/components/mindos/knowledge-universe.js": ("components/mindos/knowledge-universe.js", "text/javascript; charset=utf-8"),"/components/mindos/tutor-quality.js": ("components/mindos/tutor-quality.js", "text/javascript; charset=utf-8"),"/components/mindos/tutor.js": ("components/mindos/tutor.js", "text/javascript; charset=utf-8"),"/components/mindos/study.js": ("components/mindos/study.js", "text/javascript; charset=utf-8"),"/components/mindos/growth.js": ("components/mindos/growth.js", "text/javascript; charset=utf-8"),"/components/mindos/personal.js": ("components/mindos/personal.js", "text/javascript; charset=utf-8"),"/components/mindos/authentic.js": ("components/mindos/authentic.js", "text/javascript; charset=utf-8"),"/components/mindos/course-final.js": ("components/mindos/course-final.js", "text/javascript; charset=utf-8"),"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
+STATIC = {"/components/mindos/mission.js": ("components/mindos/mission.js", "text/javascript; charset=utf-8"), "/mission.css": ("mission.css", "text/css; charset=utf-8"),"/knowledge-space.css": ("knowledge-space.css", "text/css; charset=utf-8"),"/components/mindos/knowledge-space.js": ("components/mindos/knowledge-space.js", "text/javascript; charset=utf-8"),"/components/mindos/resource-renderer.js": ("components/mindos/resource-renderer.js", "text/javascript; charset=utf-8"),"/vendor/katex.min.js": ("vendor/katex.min.js", "text/javascript; charset=utf-8"),"/knowledge-universe.css": ("knowledge-universe.css", "text/css; charset=utf-8"),"/components/mindos/universe-renderer.js": ("components/mindos/universe-renderer.js", "text/javascript; charset=utf-8"),"/components/mindos/knowledge-universe.js": ("components/mindos/knowledge-universe.js", "text/javascript; charset=utf-8"),"/components/mindos/tutor-quality.js": ("components/mindos/tutor-quality.js", "text/javascript; charset=utf-8"),"/components/mindos/tutor.js": ("components/mindos/tutor.js", "text/javascript; charset=utf-8"),"/components/mindos/study.js": ("components/mindos/study.js", "text/javascript; charset=utf-8"),"/components/mindos/growth.js": ("components/mindos/growth.js", "text/javascript; charset=utf-8"),"/components/mindos/personal.js": ("components/mindos/personal.js", "text/javascript; charset=utf-8"),"/components/mindos/authentic.js": ("components/mindos/authentic.js", "text/javascript; charset=utf-8"),"/components/mindos/course-final.js": ("components/mindos/course-final.js", "text/javascript; charset=utf-8"),"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
           "/components/teaching/teaching-blocks.js": ("components/teaching/teaching-blocks.js", "text/javascript; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/components/CourseManager/course-manager.js": ("components/CourseManager/course-manager.js", "text/javascript; charset=utf-8"),
@@ -250,6 +250,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
         self._safe_call(self._manage_mutation)
 
     def _manage_mutation(self) -> None:
+        from .mission.api import dispatch as mission_dispatch
+        if mission_dispatch(self):return
         from .resources.api import dispatch as resource_dispatch
         if resource_dispatch(self):return
         from .universe.api import dispatch as universe_dispatch
@@ -296,6 +298,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
         self._json(HTTPStatus.OK,{'course':result})
 
     def _get(self) -> None:
+        from .mission.api import dispatch as mission_dispatch
+        if mission_dispatch(self):return
         from .resources.api import dispatch as resource_dispatch
         if resource_dispatch(self):return
         from .universe.api import dispatch as universe_dispatch
@@ -441,6 +445,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.NOT_FOUND, {"error": "页面或接口不存在"})
 
     def _post(self) -> None:
+        from .mission.api import dispatch as mission_dispatch
+        if mission_dispatch(self):return
         from .resources.api import dispatch as resource_dispatch
         if resource_dispatch(self):return
         from .universe.api import dispatch as universe_dispatch

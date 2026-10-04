@@ -1,0 +1,8 @@
+{
+ "version":"mission-v1",
+ "planning":{"max_milestones":12,"max_tasks_per_milestone":10,"max_active_milestones":1},
+ "experiments":{"max_compare_runs":5},
+ "context":{"max_recent_runs":3,"max_artifacts":4,"per_artifact_chars":3000,"total_chars":10000},
+ "uploads":{"max_bytes":31457280,"preview_chars":12000},
+ "evidence":{"direct_mastery_write":false,"requires_p2_verification":true}
+}

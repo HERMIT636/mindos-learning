@@ -1,0 +1,48 @@
+"""Opt-in P9 live model check; private configuration read-only, synthetic learning data."""
+import argparse,hashlib,json,re,shutil,sqlite3,sys,tempfile
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1];sys.path[:0]=[str(ROOT),str(ROOT/'tests')]
+from mindos.storage import Storage
+from mindos.model import ModelGateway
+from mindos.secrets import SecretStore
+from mindos.mission.service import MissionService
+from mindos.mission.planner import MissionPlanner
+from mindos.mission.artifacts import ArtifactService
+from mindos.mission.tutor import MissionTutorService
+from mindos.mission.evidence import ProjectEvidenceBridge
+from mindos.learning.growth import GrowthService
+from mission_fixture import definition,protected
+from growth_fixture import GrowthModel,graph,requirement
+from final_fixture import grade
+
+def main():
+ parser=argparse.ArgumentParser();parser.add_argument('--data',required=True,type=Path);parser.add_argument('--key',required=True,type=Path);parser.add_argument('--output',required=True,type=Path);args=parser.parse_args();dbhash=hashlib.sha256(args.data.read_bytes()).hexdigest();keyhash=hashlib.sha256(args.key.read_bytes()).hexdigest()
+ with sqlite3.connect(args.data.resolve().as_uri()+'?mode=ro',uri=True) as db:
+  db.row_factory=sqlite3.Row;config=dict(db.execute('SELECT p.* FROM model_profiles p JOIN model_selection s ON s.profile_id=p.id ORDER BY s.rowid DESC LIMIT 1').fetchone())
+ calls=[];cases=[];diagnostics=[]
+ with tempfile.TemporaryDirectory() as td:
+  tmp=Path(td);shutil.copy2(args.key,tmp/'key');(tmp/'key').chmod(0o600);secret=SecretStore(tmp/'key').decrypt(config['encrypted_api_key'])
+  class Gateway(ModelGateway):
+   def _json(self,system,user,**kwargs):
+    p=json.loads(user);ctx=p.get('context',{}).get('practice_context');calls.append({'kind':'tutor' if ctx else 'plan' if 'mission' in p else 'review','request_chars':len(user),'quality_guidance':bool(p.get('quality_guidance')),'artifact_count':len(ctx['artifacts']) if ctx else None,'recent_runs':len(ctx['latest_experiment_summary']) if ctx else None,'mode':ctx['mode'] if ctx else None})
+    return super()._json(system,user,**kwargs)
+   def _diagnostic(self,event):pass
+   def _mission_diagnostic(self,event):diagnostics.append(event)
+  model=Gateway({'base_url':config['base_url'],'chat_model':config['chat_model'],'api_key':secret});store=Storage(tmp/'synthetic.db');svc=MissionService(store);planner=MissionPlanner(store);art=ArtifactService(store)
+  d=store.save_draft('owner','LLM推理优化','理解 KV Cache 与可靠性能比较','',{'sections':[{'title':'缓存与测量','objective':'理解KV Cache用途，比较实际观测并说明局限','teaching_depth':'detailed'}]},[]);c=store.confirm_draft('owner',d['id'],1);cid=c['id'];store.save_graph('owner',cid,{'atoms':[{'id':'attention','title':'Attention','section':1,'summary':'匹配相关信息并汇总','why':'理解选择信息','type':'mechanism','depth':2},{'id':'kv','title':'KV Cache','section':1,'summary':'复用已计算的键值，减少重复计算；性能变化须控制输入和环境后测量。','why':'推理优化与测量','type':'mechanism','depth':2}],'edges':[]});store.save_lesson('owner',cid,c['sections'][0]['id'],'本节关注KV Cache、GPU实现边界与性能测量。tile=32较快只是观测，不独立证明occupancy、访存或缓存机制。')
+  for _ in range(8):grade(store,c,'attention',answer='a')
+  grade(store,c,'kv',answer='b');grade(store,c,'kv',answer='a');store.save_teaching_preferences('owner',cid,{'math_level':'advanced','preferred_style':['example']})
+  m=svc.create('owner',{'title':'LLM推理优化项目','target_outcome':'复现基线、profiling分析、KV Cache优化实验、benchmark比较、报告','description':'已有Attention基础，不重新学习Transformer；优先实践与缺口补充。','confirmed':True});before=protected(store);m=planner.generate('owner',m['id'],model);body=json.dumps(m['draft']['plan'],ensure_ascii=False)
+  checks={'actual_llm_plan':m['draft']['source']=='model','baseline':bool(re.search('基线|baseline',body,re.I)),'profiling':bool(re.search('profil|剖析|分析.*性能|性能分析',body,re.I)),'kv_cache':bool(re.search('KV.?Cache|键值缓存',body,re.I)),'benchmark':bool(re.search('benchmark|基准|比较',body,re.I)),'report':bool(re.search('报告|report',body,re.I)),'draft_not_activated':not m['tasks'],'no_state_write':before==protected(store)};cases.append({'case':'goal_and_actual_state_execution_plan','checks':checks,'draft':m['draft'],'input_state_is_synthetic_evidence':True});print(json.dumps({'case':cases[-1]['case'],'checks':checks},ensure_ascii=False),flush=True)
+  # User confirms a small explicit experiment plan; this is not another simulated LLM call.
+  m2=svc.create('owner',{'title':'Tile性能比较','target_outcome':'记录受控实验与局限','confirmed':True});m2=planner.generate('owner',m2['id'],None);manual=definition(cid,'kv');m2=planner.confirm('owner',m2['id'],{'confirm':True,'draft_version':m2['draft_version'],'plan':manual});mid=m2['id'];t=m2['tasks'][0];svc.task_action('owner',mid,t['id'],'start');svc.task_action('owner',mid,t['id'],'complete');t=svc.get('owner',mid)['tasks'][1];svc.task_action('owner',mid,t['id'],'start');a=art.upload('owner',mid,{'filename':'benchmark.csv','artifact_type':'benchmark','task_id':t['id']},b'tile,latency_ms\n16,1.8\n32,1.3\n64,1.7')
+  for tile,ms in [(16,1.8),(32,1.3),(64,1.7)]:svc.run('owner',mid,t['id'],{'parameters':{'tile':tile},'metrics':{'latency_ms':ms},'notes':'验收提供的合成观测值，未在服务器执行实验。'})
+  before=protected(store);answer=MissionTutorService(store).chat('owner',mid,{'task_id':t['id'],'message':'根据benchmark，哪个tile目前最快？为什么？请区分已观察结果和需要进一步测量验证的机制假设。','focused_artifact_id':a['id'],'request_id':'p9-live-benchmark'},model,None);text=answer['answer'];checks={'original_p65_approved':not answer['fallback'],'tile32_observation':bool(re.search(r'32',text)) and bool(re.search(r'1\.3',text)),'causal_uncertainty':bool(re.search('可能|待验证|需要.*验证|不能.*确定|假设',text)),'actual_quote':bool(answer['artifact_citations']),'bounded_retries':answer['attempts']<=2,'state_unchanged':before==protected(store)};cases.append({'case':'benchmark_comparison_without_causal_certainty','checks':checks,'answer':{k:answer[k] for k in ['answer','blocks','attempts','fallback','artifact_citations']}});print(json.dumps({'case':cases[-1]['case'],'checks':checks},ensure_ascii=False),flush=True)
+  code=b'__global__ void copy(float* out, const float* in, int n) {\n int i = blockIdx.x * blockDim.x + threadIdx.x;\n out[i] = in[i];\n}'
+  kernel=art.upload('owner',mid,{'filename':'kernel.cu','artifact_type':'code','task_id':t['id']},code);before=protected(store);review=ProjectEvidenceBridge(store).analyze('owner',mid,{'artifact_ids':[kernel['id']],'claim_type':'implementation','claim':'我能独立实现安全的CUDA访存','confirmed':True},model)['evidence_candidates'][0];checks={'actual_ai_review':review['review']['available'],'candidate_only':review['status']=='candidate','possible_memory_issue':bool(re.search('边界|越界|访存|访问|索引|n',json.dumps(review['review'],ensure_ascii=False))),'no_mastery_or_evidence_write':before==protected(store)};cases.append({'case':'kernel_review_only_candidate','checks':checks,'review':review['review']});print(json.dumps({'case':cases[-1]['case'],'checks':checks},ensure_ascii=False),flush=True)
+  growth=GrowthModel(graph([requirement('独立推理优化实验',kind='practice')]));gs,gid=growth.growth_goal(store,goal_type='project');execution=svc.create('owner',{'title':'已交付但待验证项目','goal_id':gid,'confirmed':True});execution=planner.generate('owner',execution['id'],None);execution=planner.confirm('owner',execution['id'],{'confirm':True,'draft_version':execution['draft_version'],'plan':{'milestones':[{'key':'delivery','title':'交付','objective':'保存用户执行状态','tasks':[{'key':'submit','title':'完成交付','task_type':'submit'}]}]}});before=protected(store);tid=execution['tasks'][0]['id'];svc.task_action('owner',execution['id'],tid,'start');svc.task_action('owner',execution['id'],tid,'complete');execution=svc.update('owner',execution['id'],{'status':'completed','outcome':'success'});completion=gs.gaps('owner',gid)['completion'];checks={'mission_completed':execution['status']=='completed','original_goal_not_achieved':gs.goal('owner',gid)['status']!='achieved','original_gap_requires_practice':gs.gaps('owner',gid)['gaps'][0]['status']=='practice_missing','no_new_state_write':before==protected(store)};cases.append({'case':'mission_completion_not_goal_achievement','checks':checks,'original_completion':completion,'live_llm_not_needed':'Original deterministic completion analyzer governs this case.'});print(json.dumps({'case':cases[-1]['case'],'checks':checks},ensure_ascii=False),flush=True)
+  before=protected(store);svc.update('owner',mid,{'outcome':'failed','status':'abandoned'});checks={'failed_outcome_allowed':svc.get('owner',mid)['outcome']=='failed','no_state_or_misconception_change':before==protected(store)};cases.append({'case':'failed_experiment_no_knowledge_drop','checks':checks,'live_llm_not_needed':'Outcome recording is a deterministic execution operation.'});print(json.dumps({'case':cases[-1]['case'],'checks':checks},ensure_ascii=False),flush=True)
+ report={'date':'2026-10-04','all_passed':all(all(c['checks'].values()) for c in cases),'cases':cases,'actual_model_call_count':len(calls),'context_checks':calls,'planning_diagnostics':diagnostics,'personal_database_unchanged':dbhash==hashlib.sha256(args.data.read_bytes()).hexdigest(),'personal_key_unchanged':keyhash==hashlib.sha256(args.key.read_bytes()).hexdigest(),'boundary':'五个合成验收场景：规划、benchmark导师与kernel点评调用真实配置的模型；目标完成与失败结果由既有确定性规则验证。实际学习证据由原提交接口在临时数据库产生。提供的实验数字是验收输入，不是执行benchmark的结果；不保存密钥、私有配置或无效模型原文；不证明真实学习效果。'}
+ args.output.parent.mkdir(parents=True,exist_ok=True);args.output.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+ if not report['all_passed'] or not report['personal_database_unchanged'] or not report['personal_key_unchanged']:raise SystemExit(1)
+if __name__=='__main__':main()

@@ -4,6 +4,7 @@ from pathlib import Path
 from ..tutor.storage import now
 from .protocol import POLICY,TYPES,SOURCES,ROLES,DEFAULT_ROLES,content,text,digest,resource_text
 from .processing import identify,pdf_pages,extract_pdf
+from ..safe_files import SafeFiles
 SCHEMA='''
 CREATE TABLE IF NOT EXISTS knowledge_resources (
  id TEXT PRIMARY KEY,user_id TEXT NOT NULL,resource_type TEXT NOT NULL,title TEXT NOT NULL,
@@ -31,8 +32,8 @@ class ResourceService:
   a=self.atom(user,cid,aid);c=self.store._knowledge_course(user,cid)
   return digest({'course':cid,'revision':c['content_revision'],'atom':{k:a.get(k) for k in ['id','title','summary','section','type','depth','quality_status']}})
  def _root(self):
-  if self.directory.is_symlink() or self.directory.resolve().parent!=self.store.path.parent.resolve():raise ValueError('资料目录路径无效')
-  return self.directory.resolve()
+  files=SafeFiles(self.store,'resources');files.directory=self.directory
+  return files.root()
  def _public(self,row,user,cid=None,aid=None,fingerprint=None):
   r=dict(row);meta=json.loads(r.pop('metadata_json'));r['payload']=meta.pop('payload',{});r['metadata']=meta
   r.pop('local_path',None)
@@ -81,8 +82,8 @@ class ResourceService:
    metadata['original_text_chars']=len(payload['text']);payload['text']=payload['text'][:30000];metadata['display_truncated']=True
   r=self.create(user,kind,filename,payload,'user_uploaded',metadata,mime=mime,status=status,hash_value=digest(data))
   try:
-   self._root();self.directory.mkdir(parents=True,exist_ok=True);path=self._root()/(r['id']+suffix)
-   with path.open('xb') as f:f.write(data)
+   self._root();files=SafeFiles(self.store,'resources');files.directory=self.directory
+   path=files.write(r['id'],suffix,data)
    with self.store.connect() as db:db.execute('UPDATE knowledge_resources SET local_path=? WHERE id=?',(path.name,r['id']))
   except Exception:
    self.delete(user,r['id'],True);raise
@@ -91,9 +92,8 @@ class ResourceService:
   self.get(user,rid)
   with self.store.connect() as db:row=db.execute('SELECT local_path,mime_type FROM knowledge_resources WHERE user_id=? AND id=?',(user,rid)).fetchone()
   name=row['local_path']
-  if not name or Path(name).name!=name or name not in {rid+ext for ext in ['.pdf','.png','.jpg','.txt']}:raise ValueError('本地资料路径无效')
-  root=self._root();p=root/name
-  if p.is_symlink() or p.resolve().parent!=root or not p.is_file():raise ValueError('本地资料不存在')
+  files=SafeFiles(self.store,'resources');files.directory=self.directory
+  p=files.file(rid,name,['.pdf','.png','.jpg','.txt'])
   return p,row['mime_type']
  def extract(self,user,rid,pages):
   r=self.get(user,rid)

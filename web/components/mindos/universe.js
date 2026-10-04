@@ -5,7 +5,7 @@ const MindOSUniverse=(()=>{
  const title=(eyebrow,heading,description='')=>{const box=node('div','','universe-heading');box.append(node('p',eyebrow,'eyebrow'),node('h2',heading));if(description)box.append(node('p',description,'muted'));return box;};
  const short=(text,n=16)=>Array.from(text||'').length>n?Array.from(text).slice(0,n).join('')+'…':text;
  const date=value=>value?new Date(value).toLocaleString('zh-CN',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'尚未学习';
- function hideStandalone(){window.MindOSKnowledgeUniverse?.hide();for(const id of ['learning-dashboard','growth-profile','growth-roadmap'])$(id).hidden=true;}
+ function hideStandalone(){window.MindOSMission?.hide();window.MindOSKnowledgeUniverse?.hide();for(const id of ['learning-dashboard','growth-profile','growth-roadmap'])$(id).hidden=true;}
  function navigation(page){state.page=page;document.querySelectorAll('.primary-nav button').forEach(b=>b.classList.toggle('active',b.id===(page==='growth-roadmap'?'growth-roadmap-open':page==='growth'?'growth-open':page==='dashboard'?'dashboard-open':'')));$('course-manager-open').classList.toggle('active',page==='courses');}
  async function showDashboard(page='dashboard',cid){
   invalidateNavigation();hideStandalone();const version=navigationVersion;navigation(page);
@@ -48,6 +48,7 @@ const MindOSUniverse=(()=>{
   grid.append(current,next);root.append(grid,CognitiveStatus(data));
   if(data.final_attention?.length){const final=node('section','','card');final.append(node('h2','内容学完后，看看掌握了哪些知识'));for(const item of data.final_attention)final.append(button(item.course_title+' · '+item.label,async()=>{await openCourse(item.course_id,undefined,'learn');$('course-final-panel').scrollIntoView({block:'start'});}));root.append(final);}
   if(data.today_reviews?.length){const reviews=node('section','','card');reviews.append(node('h2','今日复习 · 先试着回忆'));for(const r of data.today_reviews)reviews.append(button(`${r.course_title} · ${r.title} · 约${r.minutes}分钟`,async()=>{await openCourse(r.course_id,undefined,'learn');if(state.courseId===r.course_id)await MindOSLearningLoop.check(r.course_id,r.atom_id,'review');}));root.append(reviews);}
+  if(window.MindOSMission)MindOSMission.dashboard(root).catch(e=>showNotice(e.message));
   if(typeof MindOSGrowth!=='undefined'){const growth=node('section','','card');growth.append(button('管理我的学习目标',()=>MindOSGrowth.show()));if(window.MindOSStudy)MindOSStudy.today(growth,data.growth||{});root.append(growth);}
   const activity=node('section','','card');activity.append(title('RECENT ACTIVITY','最近留下的学习足迹'));Timeline(activity,data.timeline.slice(0,5));root.append(activity);
  }

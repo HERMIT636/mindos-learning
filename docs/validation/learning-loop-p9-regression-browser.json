@@ -1,0 +1,187 @@
+{
+  "date": "2026-10-04",
+  "results": [
+    {
+      "suite": "mission_p9",
+      "passed": true,
+      "seconds": 6.99,
+      "pass_lines": [
+        "PASS P9 browser {\"date\":\"2026-10-04\",\"desktop\":[1440,1000],\"mobile\":[390,844],\"checks\":[\"growth recommendation confirmed create\",\"draft-only plan then confirm\",\"explicit P5 timing end does not complete task\",\"original milestone gates\",\"CSV safe table preview\",\"P6/P65 floating tutor selected artifact citation\",\"three real user-recorded runs compared no cause\",\"confirmed reflection\",\"artifact/resource/evidence separation\",\"mobile code upload preview no overflow\",\"candidate to original independent P2 task\"],\"synthetic_model\":true,\"actual_browser_http_and_files\":true}"
+      ],
+      "rechecked_after_navigation_fix": true
+    },
+    {
+      "suite": "resources_p8",
+      "passed": true,
+      "seconds": 5.22,
+      "pass_lines": [
+        "PASS P8 browser {\"date\":\"2026-10-04\",\"desktop\":[1440,1000],\"mobile\":[390,844],\"checks\":[\"P7 star opens full space\",\"dynamic material tabs\",\"native MathML formula\",\"safe code highlight\",\"diagram zoom reset\",\"actual PNG upload and decode\",\"image caption boundary\",\"selected resource tutor citation\",\"actual PDF page 2 extraction\",\"resource-only context\",\"no automatic mastery or timer\",\"explicit P5 start\",\"original P2 authentic task\",\"mobile no overflow\"],\"simulated_model\":true,\"actual_browser_and_parsers\":true}"
+      ]
+    },
+    {
+      "suite": "universe_p7",
+      "passed": true,
+      "seconds": 5.27,
+      "pass_lines": [
+        "PASS P7 browser {\"desktop\":[1440,1000],\"mobile\":[390,844],\"visible_nodes\":200,\"draw_p95_ms\":1.600000023841858,\"frame_p50_ms\":7.099999964237213,\"frame_p95_ms\":11.600000023841858,\"checks\":[\"profile entry\",\"3 levels\",\"read-only selection\",\"owned current tutor context\",\"no per-chat graph refresh\",\"drag/resize/history refresh\",\"genuine P0 update\",\"future scope\",\"search outside 200\",\"bounded pages\",\"zoom/pan/pinch\",\"keyboard selection after pan\",\"reduced motion\",\"mobile overflow\",\"return navigation\"],\"boundary\":\"Headless Edge measurements on this machine, not a guarantee across devices.\"}"
+      ]
+    },
+    {
+      "suite": "tutor_quality",
+      "passed": true,
+      "seconds": 3.71,
+      "pass_lines": [
+        "PASS P6.5: one quality repair, developer-only minimal metadata, structured response, unchanged mastery, drag and refresh, bounded mobile layout, clear metadata and normal UI unchanged."
+      ]
+    },
+    {
+      "suite": "tutor_p6",
+      "passed": true,
+      "seconds": 5.8,
+      "pass_lines": [
+        "PASS P6: scoped tutor, paragraph/comparison/diagram cards, one-question Socratic continuation, drag/resize/refresh, selective social persistence, candidate observation → real P0 quiz → verified gap, no automatic chapter change, desktop/mobile, course isolation and clear-memory."
+      ]
+    },
+    {
+      "suite": "execution",
+      "passed": true,
+      "seconds": 33.39,
+      "pass_lines": [
+        "PASS P5: Today → open task (no timer) → explicit start → pause → refresh → resume → independent quiz → end → personalized estimate → edit history; page close/reopen recovery; interrupted UI; desktop1440/mobile390 no overflow, reduced motion."
+      ],
+      "rechecked_after_navigation_fix": true
+    },
+    {
+      "suite": "growth",
+      "passed": true,
+      "seconds": 33.37,
+      "pass_lines": [
+        "PASS P4: goal create → edit capability draft → confirm → roadmap v1 → current course independent quiz → return and evaluate → roadmap v2/reasons/history → pause/resume/edit/stale; desktop1440/mobile390 no overflow."
+      ],
+      "rechecked_after_navigation_fix": true
+    },
+    {
+      "suite": "personal",
+      "passed": true,
+      "seconds": 9.42,
+      "pass_lines": [
+        "PASS P3: related history → UI quick diagnosis → real submit → persisted verified status; candidate confirm/revoke + refresh; profile source navigation; desktop/mobile no overflow."
+      ]
+    },
+    {
+      "suite": "authentic",
+      "passed": true,
+      "seconds": 6.24,
+      "pass_lines": [
+        "PASS: 1440/390 report open transfer, multiline server draft + refresh, weighted rubric feedback, idempotent submission, return report, tutor hint exclusion, unchanged P1 judgment, submitted refresh, no overflow or page errors."
+      ],
+      "rechecked_after_navigation_fix": true
+    },
+    {
+      "suite": "final",
+      "passed": true,
+      "seconds": 10.99,
+      "pass_lines": [
+        "PASS: final content completion separate from mastery; planning, independent concept/application/novel scenario questions, persisted pending plan/question; unknown long-term memory, immutable report; P0 diagnosis/micro teaching/check and full targeted reassessment; report explanation; defer with gaps and stale submit rejection; desktop/mobile no overflow."
+      ]
+    },
+    {
+      "suite": "loop",
+      "passed": true,
+      "seconds": 4.89,
+      "pass_lines": [
+        "PASS: short diagnosis, micro teaching, persisted pending assessment, successful return to origin without advance; state reasons and unknown transfer; delayed review grows stability; returning check survives refresh and finishes; mobile."
+      ]
+    },
+    {
+      "suite": "presentation",
+      "passed": true,
+      "seconds": 3.94,
+      "pass_lines": [
+        "PASS: automatic diagram for concept lesson without manual visual mode; paragraphs and numbered lists; feedback and checkpoints on every follow-up; referenced answer context; reload; unchanged mastery/manual progression; safe text; mobile."
+      ]
+    },
+    {
+      "suite": "universe",
+      "passed": true,
+      "seconds": 4.78,
+      "pass_lines": [
+        "PASS: cockpit evidence and course isolation; unknown transfer; global mentor context and related jump; star states and filters; locked galaxy keyboard; shared quiz; real growth history; edge snap and saved position; mobile views; reduced motion; no automatic progression/mastery change."
+      ]
+    },
+    {
+      "suite": "atie",
+      "passed": true,
+      "seconds": 4.1,
+      "pass_lines": [
+        "PASS: typed beginner lesson, diagram, informal checkpoint without mastery, feedback strategy, saved math preference and formula, dedicated repair preserves lesson scope, persistent blocks, typed assistant, safe rendering, mobile"
+      ]
+    },
+    {
+      "suite": "tutor",
+      "passed": true,
+      "seconds": 5.13,
+      "pass_lines": [
+        "PASS: floating drag and refresh, history, course/atom context, related jump, dynamic source disclosure, course isolation, no mastery/progression changes, mobile, global entry with no course leakage"
+      ]
+    },
+    {
+      "suite": "architecture",
+      "passed": true,
+      "seconds": 5.57,
+      "pass_lines": [
+        "PASS: delayed lesson/course/atom responses, home navigation, explicit duplicate-definition choice, stale lesson warning, regeneration with old version and unchanged mastery"
+      ]
+    },
+    {
+      "suite": "management",
+      "passed": true,
+      "seconds": 5.77,
+      "pass_lines": [
+        "PASS: manager edit, status/archive, button and drag order persistence, copy isolation, recycle/restore/permanent delete, existing creation flow, mobile"
+      ]
+    },
+    {
+      "suite": "knowledge",
+      "passed": true,
+      "seconds": 7.59,
+      "pass_lines": []
+    },
+    {
+      "suite": "production",
+      "passed": true,
+      "seconds": 4.91,
+      "pass_lines": [
+        "PASS: text/upload -> structure -> candidates -> explicit import -> source trace -> reload -> 390px mobile; no browser errors"
+      ]
+    },
+    {
+      "suite": "discovery",
+      "passed": true,
+      "seconds": 8.32,
+      "pass_lines": [
+        "PASS: no-upload auto discovery, learner level, material-first structure, conflict import gate, confirmed expression, source trace, reload, isolated courses and mobile"
+      ]
+    }
+  ],
+  "all_passed": true,
+  "historical_validation_files_restored": true,
+  "earlier_failures": [
+    {
+      "suite": "execution",
+      "reason": "asynchronous navigation/refresh timing",
+      "passed": false
+    },
+    {
+      "suite": "growth",
+      "reason": "asynchronous navigation/refresh timing",
+      "passed": false
+    },
+    {
+      "suite": "authentic",
+      "reason": "asynchronous navigation/refresh timing",
+      "passed": false
+    }
+  ],
+  "resolution": "Growth actions remain visibly disabled until pending work settles, including the course return button; practice recommendations load separately. Original P2 refresh test now waits for the saved answer to render, rather than asserting against its loading header."
+}

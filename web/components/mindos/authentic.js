@@ -4,7 +4,7 @@
  const alive=(cid,root)=>state.page==='course'&&state.courseId===cid&&root.isConnected;
  const path=(cid,op)=>`/api/courses/${encodeURIComponent(cid)}/authentic/${op}`;
  function control(text,fn,primary=false){const b=node('button',text,'button '+(primary?'primary':'secondary'));b.type='button';b.onclick=()=>action(b,'正在处理…',fn);return b;}
- async function render(parent,report,cid,requested=null){
+ async function render(parent,report,cid,requested=null,existingTaskId=null){
   const root=node('section','','authentic-verification');parent.append(root);state.authenticTask=null;
   root.append(node('h3','进一步验证真实能力'),node('p','可选的 3–10 分钟开放任务。自己解释、分析或设计，比识别选项更进一步。模型辅助评分暂不改变课程掌握结论。','muted'));
   const body=node('div');root.append(body);
@@ -45,7 +45,7 @@
    body.append(control('查看已有开放任务',refresh),control('查看间隔后验证情况',async()=>{const result=await api(`/api/courses/${cid}/calibration`);if(!alive(cid,root))return;const box=node('div');box.append(node('p',result.boundary,'muted'));for(const [version,windows]of Object.entries(result.windows)){box.append(node('strong',version));for(const [days,sources]of Object.entries(windows))box.append(node('p',`${days} 天：独立检测 ${sources.independent_mcq.samples} 次 · 开放评分 ${sources.llm_rubric.samples} 次。${sources.independent_mcq.classification==='insufficient_future_evidence'?'证据不足，暂不判断偏差。':'已积累可分析的独立结果。'}`));}body.append(box);}));
    const params=new URLSearchParams(location.search);if(params.get('debug_learning')==='1')body.append(control('查看开发校准统计',async()=>{const r=await api('/api/debug/learning/calibration');if(alive(cid,root)){const details=node('pre',JSON.stringify(r,null,2),'calibration-debug');body.append(details);}}));
   }
-  async function refresh(){const r=await api(path(cid,'current'));await show(r.task);}
+  async function refresh(){const r=await api(path(cid,existingTaskId||'current'));await show(r.task);}
   try{if(requested){const r=await api(path(cid,'start'),requested);await show(r.task);}else await refresh();}catch(e){if(alive(cid,root))body.append(node('p',e.message,'muted'));}
  }
  window.MindOSAuthentic={render};

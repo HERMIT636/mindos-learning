@@ -1,0 +1,533 @@
+{
+  "date": "2026-10-04",
+  "all_passed": true,
+  "cases": [
+    {
+      "case": "goal_and_actual_state_execution_plan",
+      "checks": {
+        "actual_llm_plan": true,
+        "baseline": true,
+        "profiling": true,
+        "kv_cache": true,
+        "benchmark": true,
+        "report": true,
+        "draft_not_activated": true,
+        "no_state_write": true
+      },
+      "draft": {
+        "plan": {
+          "milestones": [
+            {
+              "key": "m1",
+              "ordinal": 1,
+              "title": "建立可复现基线",
+              "objective": "在固定环境下记录未优化推理的基线指标",
+              "required": true,
+              "locked": false,
+              "planned_minutes": null,
+              "due_date": null,
+              "gate": {
+                "artifact_types": [],
+                "require_run": false
+              },
+              "tasks": [
+                {
+                  "key": "baseline_env",
+                  "title": "记录基线与实验环境",
+                  "task_type": "experiment",
+                  "description": "固定设备、模型、精度、输入长度与batch，记录延迟、吞吐与显存基线，并说明计时方式",
+                  "required": true,
+                  "locked": false,
+                  "priority": 2,
+                  "estimated_minutes": 60,
+                  "dependencies": [],
+                  "artifact_types": [
+                    "benchmark",
+                    "log",
+                    "document"
+                  ],
+                  "linked_course_id": null,
+                  "linked_atom_id": null,
+                  "linked_growth_task_id": null,
+                  "resource_ids": [],
+                  "experiment": {
+                    "hypothesis": "在固定条件下可得到可重复的基线指标",
+                    "setup": "由用户填写本机设备、模型、精度、输入长度与batch",
+                    "variables": {
+                      "input_length": "待用户确定",
+                      "batch_size": "待用户确定"
+                    },
+                    "expected_result": "可比较的基线延迟、吞吐与显存占用"
+                  }
+                },
+                {
+                  "key": "baseline_repeat",
+                  "title": "重复基线并确认波动范围",
+                  "task_type": "verify",
+                  "description": "重复运行基线多次，记录指标波动范围，判断测量是否稳定",
+                  "required": true,
+                  "locked": false,
+                  "priority": 2,
+                  "estimated_minutes": 40,
+                  "dependencies": [
+                    "baseline_env"
+                  ],
+                  "artifact_types": [
+                    "benchmark",
+                    "log"
+                  ],
+                  "linked_course_id": null,
+                  "linked_atom_id": null,
+                  "linked_growth_task_id": null,
+                  "resource_ids": [],
+                  "experiment": {}
+                }
+              ]
+            },
+            {
+              "key": "m2",
+              "ordinal": 2,
+              "title": "Profiling与瓶颈分析",
+              "objective": "定位推理耗时主要来源",
+              "required": true,
+              "locked": false,
+              "planned_minutes": null,
+              "due_date": null,
+              "gate": {
+                "artifact_types": [],
+                "require_run": false
+              },
+              "tasks": [
+                {
+                  "key": "profile_trace",
+                  "title": "采集推理profiling数据",
+                  "task_type": "experiment",
+                  "description": "对基线推理采集profiling数据，覆盖prefill与decode阶段",
+                  "required": true,
+                  "locked": false,
+                  "priority": 2,
+                  "estimated_minutes": 60,
+                  "dependencies": [
+                    "baseline_env"
+                  ],
+                  "artifact_types": [
+                    "profile",
+                    "log"
+                  ],
+                  "linked_course_id": null,
+                  "linked_atom_id": null,
+                  "linked_growth_task_id": null,
+                  "resource_ids": [],
+                  "experiment": {
+                    "hypothesis": "profiling可定位主要耗时算子或阶段",
+                    "setup": "由用户在本机选择profiling工具并运行基线推理",
+                    "variables": {
+                      "profiling_tool": "待用户选择"
+                    },
+                    "expected_result": "含算子或阶段耗时占比的profiling数据"
+                  }
+                },
+                {
+                  "key": "profile_analyze",
+                  "title": "分析耗时构成并确定优化目标",
+                  "task_type": "analyze",
+                  "description": "依据profiling数据识别瓶颈，明确要优化的阶段与指标",
+                  "required": true,
+                  "locked": false,
+                  "priority": 2,
+                  "estimated_minutes": 40,
+                  "dependencies": [
+                    "profile_trace"
+                  ],
+                  "artifact_types": [
+                    "report"
+                  ],
+                  "linked_course_id": null,
+                  "linked_atom_id": null,
+                  "linked_growth_task_id": null,
+                  "resource_ids": [],
+                  "experiment": {}
+                }
+              ]
+            },
+            {
+              "key": "m3",
+              "ordinal": 3,
+              "title": "KV Cache优化实验",
+              "objective": "在已有KV Cache理解上实施并测量优化效果",
+              "required": true,
+              "locked": false,
+              "planned_minutes": null,
+              "due_date": null,
+              "gate": {
+                "artifact_types": [],
+                "require_run": false
+              },
+              "tasks": [
+                {
+                  "key": "kv_variant",
+                  "title": "实现KV Cache优化变体",
+                  "task_type": "implement",
+                  "description": "基于已有KV Cache基础，实现一种缓存优化变体（如分页/量化/复用），保留可切换开关",
+                  "required": true,
+                  "locked": false,
+                  "priority": 2,
+                  "estimated_minutes": 120,
+                  "dependencies": [
+                    "profile_analyze"
+                  ],
+                  "artifact_types": [
+                    "code"
+                  ],
+                  "linked_course_id": "naQ3Ie9DyMb_kD51I2hJtw",
+                  "linked_atom_id": "kv",
+                  "linked_growth_task_id": null,
+                  "resource_ids": [],
+                  "experiment": {}
+                },
+                {
+                  "key": "kv_experiment",
+                  "title": "对比优化前后指标",
+                  "task_type": "experiment",
+                  "description": "在同一环境与输入下对比优化前后延迟、吞吐与显存，记录一致性与数值差异",
+                  "required": true,
+                  "locked": false,
+                  "priority": 2,
+                  "estimated_minutes": 60,
+                  "dependencies": [
+                    "kv_variant"
+                  ],
+                  "artifact_types": [
+                    "benchmark",
+                    "log"
+                  ],
+                  "linked_course_id": "naQ3Ie9DyMb_kD51I2hJtw",
+                  "linked_atom_id": "kv",
+                  "linked_growth_task_id": null,
+                  "resource_ids": [],
+                  "experiment": {
+                    "hypothesis": "KV Cache优化可降低显存或提升吞吐",
+                    "setup": "由用户在本机用同一模型与输入运行开关两态",
+                    "variables": {
+                      "kv_optimization": "开启/关闭"
+                    },
+                    "expected_result": "优化前后的可比较指标与数值一致性说明"
+                  }
+                }
+              ]
+            },
+            {
+              "key": "m4",
+              "ordinal": 4,
+              "title": "Benchmark比较与独立验证",
+              "objective": "形成公平比较结论并做独立核验",
+              "required": true,
+              "locked": false,
+              "planned_minutes": null,
+              "due_date": null,
+              "gate": {
+                "artifact_types": [],
+                "require_run": false
+              },
+              "tasks": [
+                {
+                  "key": "bench_matrix",
+                  "title": "运行基准矩阵",
+                  "task_type": "experiment",
+                  "description": "在多种输入长度与batch下运行基线与优化版本，输出统一表格",
+                  "required": true,
+                  "locked": false,
+                  "priority": 2,
+                  "estimated_minutes": 90,
+                  "dependencies": [
+                    "kv_experiment"
+                  ],
+                  "artifact_types": [
+                    "benchmark",
+                    "dataset"
+                  ],
+                  "linked_course_id": null,
+                  "linked_atom_id": null,
+                  "linked_growth_task_id": null,
+                  "resource_ids": [],
+                  "experiment": {
+                    "hypothesis": "优化收益随序列长度或batch变化",
+                    "setup": "由用户在本机按固定矩阵逐项运行",
+                    "variables": {
+                      "input_length": "待用户确定",
+                      "batch_size": "待用户确定"
+                    },
+                    "expected_result": "基线与优化版本在各配置下的指标对照表"
+                  }
+                },
+                {
+                  "key": "bench_verify",
+                  "title": "独立核验基准结论",
+                  "task_type": "verify",
+                  "description": "用另一组输入或重复运行核验关键结论，检查是否存在测量偏差",
+                  "required": true,
+                  "locked": false,
+                  "priority": 2,
+                  "estimated_minutes": 45,
+                  "dependencies": [
+                    "bench_matrix"
+                  ],
+                  "artifact_types": [
+                    "benchmark",
+                    "log"
+                  ],
+                  "linked_course_id": null,
+                  "linked_atom_id": null,
+                  "linked_growth_task_id": null,
+                  "resource_ids": [],
+                  "experiment": {}
+                }
+              ]
+            },
+            {
+              "key": "m5",
+              "ordinal": 5,
+              "title": "报告与提交",
+              "objective": "汇总方法、证据与结论形成可交付报告",
+              "required": true,
+              "locked": false,
+              "planned_minutes": null,
+              "due_date": null,
+              "gate": {
+                "artifact_types": [],
+                "require_run": false
+              },
+              "tasks": [
+                {
+                  "key": "report_write",
+                  "title": "撰写优化实验报告",
+                  "task_type": "document",
+                  "description": "说明环境、方法、profiling发现、优化实现、基准结果与局限",
+                  "required": true,
+                  "locked": false,
+                  "priority": 2,
+                  "estimated_minutes": 90,
+                  "dependencies": [
+                    "bench_verify"
+                  ],
+                  "artifact_types": [
+                    "report"
+                  ],
+                  "linked_course_id": "naQ3Ie9DyMb_kD51I2hJtw",
+                  "linked_atom_id": null,
+                  "linked_growth_task_id": null,
+                  "resource_ids": [],
+                  "experiment": {}
+                },
+                {
+                  "key": "reflect_next",
+                  "title": "复盘与后续计划",
+                  "task_type": "reflect",
+                  "description": "记录未解决的瓶颈、失败尝试与下一步可验证方向",
+                  "required": true,
+                  "locked": false,
+                  "priority": 2,
+                  "estimated_minutes": 30,
+                  "dependencies": [
+                    "report_write"
+                  ],
+                  "artifact_types": [
+                    "document"
+                  ],
+                  "linked_course_id": null,
+                  "linked_atom_id": null,
+                  "linked_growth_task_id": null,
+                  "resource_ids": [],
+                  "experiment": {}
+                },
+                {
+                  "key": "submit_result",
+                  "title": "提交成果",
+                  "task_type": "submit",
+                  "description": "提交报告、基准数据与代码，附复现步骤",
+                  "required": true,
+                  "locked": false,
+                  "priority": 2,
+                  "estimated_minutes": 20,
+                  "dependencies": [
+                    "reflect_next"
+                  ],
+                  "artifact_types": [
+                    "submission",
+                    "report",
+                    "benchmark",
+                    "code"
+                  ],
+                  "linked_course_id": null,
+                  "linked_atom_id": null,
+                  "linked_growth_task_id": null,
+                  "resource_ids": [],
+                  "experiment": {}
+                }
+              ]
+            }
+          ]
+        },
+        "source": "model",
+        "failure": null,
+        "reason": "USER_REQUESTED",
+        "base_version": 0
+      },
+      "input_state_is_synthetic_evidence": true
+    },
+    {
+      "case": "benchmark_comparison_without_causal_certainty",
+      "checks": {
+        "original_p65_approved": true,
+        "tile32_observation": true,
+        "causal_uncertainty": true,
+        "actual_quote": true,
+        "bounded_retries": true,
+        "state_unchanged": true
+      },
+      "answer": {
+        "answer": "就你当前的 benchmark 记录来看，tile=32 是最快的：延迟 1.3 ms，小于 tile=16 的 1.8 ms 和 tile=64 的 1.7 ms。这是“已观察结果”，只说明在这份数据描述的这一次比较里 32 胜出，不等于它在所有环境里都最快。\n\n第一步，分清“观察”和“解释”。观察是：三次记录分别是 1.8、1.3、1.7 ms，tile=32 数值最小。解释是：为什么 32 快——这属于机制假设，还没有被这份数据证明。\n第二步，注意 benchmark 只给了三个点。每个 tile 只有一次值，没有重复测量、没有误差范围，所以不能判断 1.3 和 1.7 的差距是否稳定，也不能排除环境波动。\n第三步，考虑 tile 变大时的两种相反力量：较大 tile 可能减少访存次数（你记的假设），但 tile 太大也可能让并行度下降、利用率变差，或者造成资源浪费。32 处在中间位置最快，与这种“先降后升”的曲线形状一致，但这只是可能。\n第四步，把 KV Cache 放进来。KV Cache 的作用是复用已算好的键值、减少重复计算，它本身不解释 tile 快慢。真正要比较性能时，必须控制输入长度、batch、精度、GPU 和环境，否则 KV Cache 带来的差异会和 tile 的影响混在一起。\n第五步，要验证机制，需要补做：重复多次取中位数或均值、加误差条、固定其他变量、分别测量访存和 occupancy 等指标。只有测量支撑后，才能把“可能减少访存”写成结论。\n\n所以目前能确定的是：在这份数据里 tile=32 最快；但这不等于“32 一定最优”或“因为它减少了访存”，后者需要进一步测量验证。\n\n如果让你再补一次实验来判断 1.3 是否真的稳定优于 1.7，你会先控制哪些变量、记录什么？",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "title": "先直接回答",
+            "content": "就你当前的 benchmark 记录来看，tile=32 是最快的：延迟 1.3 ms，小于 tile=16 的 1.8 ms 和 tile=64 的 1.7 ms。这是“已观察结果”，只说明在这份数据描述的这一次比较里 32 胜出，不等于它在所有环境里都最快。"
+          },
+          {
+            "type": "steps",
+            "title": "五步",
+            "steps": [
+              "第一步，分清“观察”和“解释”。观察是：三次记录分别是 1.8、1.3、1.7 ms，tile=32 数值最小。解释是：为什么 32 快——这属于机制假设，还没有被这份数据证明。",
+              "第二步，注意 benchmark 只给了三个点。每个 tile 只有一次值，没有重复测量、没有误差范围，所以不能判断 1.3 和 1.7 的差距是否稳定，也不能排除环境波动。",
+              "第三步，考虑 tile 变大时的两种相反力量：较大 tile 可能减少访存次数（你记的假设），但 tile 太大也可能让并行度下降、利用率变差，或者造成资源浪费。32 处在中间位置最快，与这种“先降后升”的曲线形状一致，但这只是可能。",
+              "第四步，把 KV Cache 放进来。KV Cache 的作用是复用已算好的键值、减少重复计算，它本身不解释 tile 快慢。真正要比较性能时，必须控制输入长度、batch、精度、GPU 和环境，否则 KV Cache 带来的差异会和 tile 的影响混在一起。",
+              "第五步，要验证机制，需要补做：重复多次取中位数或均值、加误差条、固定其他变量、分别测量访存和 occupancy 等指标。只有测量支撑后，才能把“可能减少访存”写成结论。"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "title": "一句话收束",
+            "content": "所以目前能确定的是：在这份数据里 tile=32 最快；但这不等于“32 一定最优”或“因为它减少了访存”，后者需要进一步测量验证。"
+          },
+          {
+            "type": "question",
+            "title": "检查点",
+            "content": "如果让你再补一次实验来判断 1.3 是否真的稳定优于 1.7，你会先控制哪些变量、记录什么？"
+          }
+        ],
+        "attempts": 2,
+        "fallback": false,
+        "artifact_citations": [
+          {
+            "artifact_id": "RbsuS-3WF2eAPYs1uNHYTLeh",
+            "quote": "tile,latency_ms\n16,1.8\n32,1.3\n64,1.7",
+            "title": "benchmark.csv"
+          }
+        ]
+      }
+    },
+    {
+      "case": "kernel_review_only_candidate",
+      "checks": {
+        "actual_ai_review": true,
+        "candidate_only": true,
+        "possible_memory_issue": true,
+        "no_mastery_or_evidence_write": true
+      },
+      "review": {
+        "available": true,
+        "observations": [
+          "kernel.cu 片段是全局内存拷贝内核，未显示任何越界检查；在 i >= n 时仍会访问 out[i] 和 in[i]。",
+          "片段未显示调用侧的 grid/block 配置、n 与数组实际大小的关系，无法判断是否总有 i < n。",
+          "片段未显示错误处理、流同步、内存分配/释放或 host-device 传输代码，无法验证端到端正确性。",
+          "“安全的 CUDA 访存”主张涉及边界保护、对齐、别名、并发和内存生命周期等多个方面，当前单文件片段不足以覆盖。",
+          "片段未显示是否对 in 和 out 使用 restrict、__ldg 或其它访存修饰，也未显示对负 n 或极大规模索引的处理。"
+        ],
+        "suggested_verification": "请提供或实现一个独立任务：编写 CUDA 内核，在给定 n 下将输入数组前 n 个元素安全复制到输出数组，要求处理 n 小于、等于或大于线程总数的情况，并附带完整 host 调用、边界检查、错误处理和结果验证（例如与 CPU 参考结果比较），然后检查当 n 略小于或大于启动线程总数时是否发生越界访问。",
+        "boundary": "仅模型辅助点评，不是能力事实。"
+      }
+    },
+    {
+      "case": "mission_completion_not_goal_achievement",
+      "checks": {
+        "mission_completed": true,
+        "original_goal_not_achieved": true,
+        "original_gap_requires_practice": true,
+        "no_new_state_write": true
+      },
+      "original_completion": {
+        "achieved": false,
+        "label": "仍有目标要求待补齐或验证",
+        "critical_remaining": 1,
+        "final_pending_courses": [],
+        "practice_requirement_met": false,
+        "boundary": "程序对当前目标要求的检查，不是职业或教育认证。用户跳过任务不会改变这些条件。"
+      },
+      "live_llm_not_needed": "Original deterministic completion analyzer governs this case."
+    },
+    {
+      "case": "failed_experiment_no_knowledge_drop",
+      "checks": {
+        "failed_outcome_allowed": true,
+        "no_state_or_misconception_change": true
+      },
+      "live_llm_not_needed": "Outcome recording is a deterministic execution operation."
+    }
+  ],
+  "actual_model_call_count": 5,
+  "context_checks": [
+    {
+      "kind": "plan",
+      "request_chars": 1962,
+      "quality_guidance": false,
+      "artifact_count": null,
+      "recent_runs": null,
+      "mode": null
+    },
+    {
+      "kind": "plan",
+      "request_chars": 1975,
+      "quality_guidance": false,
+      "artifact_count": null,
+      "recent_runs": null,
+      "mode": null
+    },
+    {
+      "kind": "tutor",
+      "request_chars": 4951,
+      "quality_guidance": true,
+      "artifact_count": 1,
+      "recent_runs": 3,
+      "mode": "practice_and_course"
+    },
+    {
+      "kind": "tutor",
+      "request_chars": 4970,
+      "quality_guidance": true,
+      "artifact_count": 1,
+      "recent_runs": 3,
+      "mode": "practice_and_course"
+    },
+    {
+      "kind": "review",
+      "request_chars": 279,
+      "quality_guidance": false,
+      "artifact_count": null,
+      "recent_runs": null,
+      "mode": null
+    }
+  ],
+  "planning_diagnostics": [
+    {
+      "stage": "plan",
+      "attempt": 1,
+      "failure": "实验元数据只能用于实验任务",
+      "top_keys": [
+        "milestones"
+      ]
+    }
+  ],
+  "personal_database_unchanged": true,
+  "personal_key_unchanged": true,
+  "boundary": "五个合成验收场景：规划、benchmark导师与kernel点评调用真实配置的模型；目标完成与失败结果由既有确定性规则验证。实际学习证据由原提交接口在临时数据库产生。提供的实验数字是验收输入，不是执行benchmark的结果；不保存密钥、私有配置或无效模型原文；不证明真实学习效果。"
+}

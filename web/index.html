@@ -29,13 +29,15 @@
   <script src="/components/mindos/knowledge-universe.js" defer></script>
   <script src="/components/mindos/resource-renderer.js" defer></script>
   <script src="/components/mindos/knowledge-space.js" defer></script>
+  <script src="/components/mindos/mission.js" defer></script>
+  <link rel="stylesheet" href="/mission.css">
   <script src="/components/CourseAssistant/course-assistant.js" defer></script>
 </head>
 <body>
   <div class="layout">
     <aside class="sidebar">
       <a class="brand" href="/" id="home-link"><span class="brand-icon">✦</span><span><strong>MindOS</strong><small>你的知识宇宙</small></span></a>
-      <nav class="primary-nav" aria-label="主导航"><button id="dashboard-open" type="button"><span>◈</span> 学习驾驶舱</button><button id="growth-roadmap-open" type="button">成长路线</button><button id="growth-open" type="button"><span>⌁</span> 成长档案</button><button id="personal-open" type="button">个人知识档案</button></nav>
+      <nav class="primary-nav" aria-label="主导航"><button id="dashboard-open" type="button"><span>◈</span> 学习驾驶舱</button><button id="growth-roadmap-open" type="button">成长路线</button><button id="mission-open" type="button">实践空间</button><button id="growth-open" type="button"><span>⌁</span> 成长档案</button><button id="personal-open" type="button">个人知识档案</button></nav>
       <button id="course-manager-open" class="sidebar-add" type="button">我的课程</button>
       <p class="sidebar-label">正在探索</p>
       <nav id="course-list" aria-label="我的课程"></nav>
@@ -67,6 +69,7 @@
           </form>
         </section>
         <section id="learning-dashboard" aria-label="学习驾驶舱"><p class="muted">正在读取学习记录…</p></section>
+        <section id="mission-workspace" hidden aria-label="实践空间"></section>
         <section id="growth-roadmap" hidden class="growth-roadmap"></section>
       <section id="growth-profile" hidden aria-label="成长档案"></section>
       <section id="knowledge-space" hidden aria-label="知识学习空间"></section>

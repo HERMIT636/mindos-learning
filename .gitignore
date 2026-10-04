@@ -27,6 +27,7 @@ coverage/
 data/
 uploads/
 /resources/
+/artifacts/
 storage/
 logs/
 models/

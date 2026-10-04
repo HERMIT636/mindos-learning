@@ -99,9 +99,18 @@ class FakeProvider(BaseHTTPRequestHandler):
         elif "MindOS 学习材料生成器" in system:
             from resource_fixture import ResourceModel
             content=json.dumps(ResourceModel().resource_json(user),ensure_ascii=False)
+        elif "MindOS 实践执行规划助手" in system:
+            from mission_fixture import definition
+            c=(user.get('courses') or [{}])[0];atoms=c.get('atoms',[])
+            content=json.dumps(definition(c.get('id'),atoms[0]['id'] if atoms else None),ensure_ascii=False)
+        elif "只对实际可读产出" in system:
+            content=json.dumps({'observations':['测量条件仍需补充并独立验证。'],'suggested_verification':'新的陌生场景任务'},ensure_ascii=False)
         elif "MindOS P6 上下文感知课程导师" in system:
             from tutor_fixture import packet
-            if "resource_context" in user.get("context",{}):
+            if "practice_context" in user.get("context",{}):
+                from mission_fixture import MissionModel
+                content=json.dumps(MissionModel().mission_tutor_json(user),ensure_ascii=False)
+            elif "resource_context" in user.get("context",{}):
                 from resource_fixture import ResourceModel
                 content=json.dumps(ResourceModel().resource_tutor_json(user),ensure_ascii=False)
             else:content=json.dumps(packet(user),ensure_ascii=False)

@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-04",
+  "desktop": [
+    1440,
+    1000
+  ],
+  "mobile": [
+    390,
+    844
+  ],
+  "checks": [
+    "growth recommendation confirmed create",
+    "draft-only plan then confirm",
+    "explicit P5 timing end does not complete task",
+    "original milestone gates",
+    "CSV safe table preview",
+    "P6/P65 floating tutor selected artifact citation",
+    "three real user-recorded runs compared no cause",
+    "confirmed reflection",
+    "artifact/resource/evidence separation",
+    "mobile code upload preview no overflow",
+    "candidate to original independent P2 task"
+  ],
+  "synthetic_model": true,
+  "actual_browser_http_and_files": true
+}

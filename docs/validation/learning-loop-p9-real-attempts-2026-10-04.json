@@ -1,0 +1,77 @@
+{
+  "earlier_runs": [
+    {
+      "actual_model_calls": 5,
+      "passed": false,
+      "cases": [
+        {
+          "case": "goal_and_actual_state_execution_plan",
+          "checks": {
+            "actual_llm_plan": false,
+            "baseline": true,
+            "profiling": true,
+            "kv_cache": true,
+            "benchmark": true,
+            "report": true,
+            "draft_not_activated": true,
+            "no_state_write": true
+          }
+        },
+        {
+          "case": "benchmark_comparison_without_causal_certainty",
+          "checks": {
+            "original_p65_approved": true,
+            "tile32_observation": true,
+            "causal_uncertainty": true,
+            "actual_quote": true,
+            "bounded_retries": true,
+            "state_unchanged": true
+          }
+        },
+        {
+          "case": "kernel_review_only_candidate",
+          "checks": {
+            "actual_ai_review": true,
+            "candidate_only": true,
+            "possible_memory_issue": true,
+            "no_mastery_or_evidence_write": true
+          }
+        },
+        {
+          "case": "mission_completion_not_goal_achievement",
+          "checks": {
+            "mission_completed": true,
+            "original_goal_not_achieved": true,
+            "original_gap_requires_practice": true,
+            "no_new_state_write": true
+          }
+        },
+        {
+          "case": "failed_experiment_no_knowledge_drop",
+          "checks": {
+            "failed_outcome_allowed": true,
+            "no_state_or_misconception_change": true
+          }
+        }
+      ]
+    },
+    {
+      "actual_model_calls": 5,
+      "passed": false,
+      "planning_failures": [
+        {
+          "stage": "plan",
+          "attempt": 1,
+          "failure": "ModelStructuredOutputError"
+        },
+        {
+          "stage": "plan",
+          "attempt": 2,
+          "failure": "missing_course_for_atom"
+        }
+      ],
+      "other_four_cases_passed": true
+    }
+  ],
+  "resolution": "Full schema and concise draft requirements; resolve an omitted course ID only when the actual supplied unlocked atom belongs unambiguously to one owned course. Ambiguous or foreign references still fail. No rejected raw model contents retained."
+}

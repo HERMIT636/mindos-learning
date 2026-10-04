@@ -4,13 +4,15 @@ const CourseAssistant=(()=>{
  let panelRect=null, panelPointer=null, observations=[], position=null, pointer=null, suppressClick=false,nextFeedback=null,nextContext=null;const pending=new Set(),positions=new Map();
  const root=$('course-assistant'),toggle=$('assistant-toggle'),panel=$('assistant-panel');
  async function request(cid,suffix,method='GET',body){
+  const missionSelection=suffix==='chat'?window.MindOSMission?.selection():null;
   const resourceSelection=suffix==='chat'?window.MindOSKnowledgeSpace?.selection():null;
-  const route=suffix.startsWith('history')?`/api/tutor/conversations?context_id=${encodeURIComponent(cid)}${suffix.includes('?')?'&'+suffix.split('?')[1]:''}`:suffix==='chat'?(resourceSelection?'/api/resources/tutor/chat':'/api/tutor/chat'):`/api/courses/${encodeURIComponent(cid)}/assistant/${suffix}`;
-  if(suffix==='chat')body={...body,context_id:cid,...(resourceSelection||{})};
+  const route=suffix.startsWith('history')?`/api/tutor/conversations?context_id=${encodeURIComponent(cid)}${suffix.includes('?')?'&'+suffix.split('?')[1]:''}`:suffix==='chat'?(missionSelection?`/api/missions/${missionSelection.mission_id}/tutor/chat`:resourceSelection?'/api/resources/tutor/chat':'/api/tutor/chat'):`/api/courses/${encodeURIComponent(cid)}/assistant/${suffix}`;
+  if(suffix==='chat')body=missionSelection?{message:body.message,request_id:body.request_id,...(body.feedback?{feedback:body.feedback}:{}),task_id:missionSelection.task_id,focused_artifact_id:missionSelection.focused_artifact_id,artifact_grounded:missionSelection.artifact_grounded,pages:missionSelection.pages}:{...body,context_id:cid,...(resourceSelection||{})};
   const response=await fetch(route,body===undefined?{method}:{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const data=await response.json();if(!response.ok)throw new Error(data.error || '助教暂时不可用');return data;
  }
  function current(){
+  if(state.page==='mission')return window.MindOSMission?.selection()?.current_context||null;
   if(state.page==='universe'){const s=state.universeSelection;return s?.star.unlocked?{section_ordinal:s.star.section_ordinal,knowledge_atom_id:s.star.atom_id}:null;}
   if(!state.data || !['course','dashboard','growth'].includes(state.page))return null;
   if(state.authenticTask?.course_id===state.courseId)return {authentic_task_id:state.authenticTask.id};
@@ -18,6 +20,7 @@ const CourseAssistant=(()=>{
   return {section_ordinal:atom?.section || state.data.section.ordinal,knowledge_atom_id:atom?.id || null,atom_mode:state.atomMode || 'quick'};
  }
  function label(){
+  if(state.page==='mission'){const s=window.MindOSMission?.selection();$('assistant-course').textContent=s?'当前实践：'+s.label:'先为实践任务关联已有课程';$('assistant-context').textContent=s?'导师读取当前任务、最近实验与选中产出':'在任务设置中选择课程与知识点';$('assistant-insight').textContent='产出点评只是待验证观察；项目失败不代表知识掌握下降。';return;}
   if(state.page==='universe'&&state.universeSelection?.star.unlocked){const s=state.universeSelection;$('assistant-course').textContent='当前课程：'+s.course.name;$('assistant-context').textContent='当前星云：'+s.section.name+' · 知识点：'+s.star.name;$('assistant-insight').textContent=s.star.state_label+'。'+s.star.state_basis+'；导师每次提问重新读取实际证据。';return;}
   const c=current();if(!c){$('assistant-course').textContent='选择一门课程，导师才知道从哪里开始。';$('assistant-context').textContent='学习记忆按课程隔离。';$('assistant-insight').textContent='先进入课程，或从驾驶舱选择当前课程。不会在没有学习证据时推断你的能力。';return;}
   if(c.authentic_task_id){$('assistant-course').textContent=`当前课程：${state.data.course.title}`;$('assistant-context').textContent='开放能力检测 · 当前任务';$('assistant-insight').textContent='我会先引导你理解任务。求助会保存提示记录，本次不用于校准；不会改变掌握状态。';return;}
@@ -63,6 +66,7 @@ const CourseAssistant=(()=>{
    const related=node('div','','assistant-related');
    (message.related_knowledge || []).forEach(atom=>{const button=node('button',atom.title,'atom-chip');button.type='button';button.dataset.atomId=atom.id;button.onclick=async()=>{const cid=courseId;expanded=false;AssistantButton();if(state.page==='universe'){await MindOSKnowledgeUniverse.selectByAtom(cid,atom.id);return;}if(state.page!=='course')await openCourse(cid,undefined,'stars');else setCourseMode('map');if(state.courseId!==cid)return;await openAtom(atom.id);};related.append(button);});
    if(related.childElementCount)item.append(node('p','相关知识点'),related);
+   for(const citation of message.artifact_citations||[]){const source=node('div','','assistant-resource-source');source.append(node('strong','实践产出：'+citation.title),node('blockquote',citation.quote),node('small','引用与点评不代表能力认证。','muted'));item.append(source);}
    for(const citation of message.resource_citations||[]){const source=node('div','','assistant-resource-source');source.append(node('strong','参考材料：'+citation.title),node('blockquote',citation.quote),node('small','原文引用有效不等于事实认证。','muted'));item.append(source);}
    if(message.resource_mode==='resource_only')item.append(node('p','本次只根据选中材料回答。','muted'));
    if(message.search?.note)item.append(node('p',message.search.note,'muted'));

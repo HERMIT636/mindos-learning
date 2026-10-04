@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-04",
+  "baseline_commit": "9877ab67eeae9f0b55e110c8daf73a12004535a6",
+  "baseline_tests": 726,
+  "new_tests": 136,
+  "unit_tests": {
+    "publication": {
+      "passed": true,
+      "tests": 862,
+      "seconds": 94.073,
+      "log_sha256": "f64c91a64123e49bedeba39afc93849c8c6b7589faa2a39a749bbf01ddb4968a"
+    },
+    "project_root": {
+      "passed": true,
+      "tests": 862,
+      "seconds": 89.265,
+      "log_sha256": "10cf861c1ca22c94a154427cf372b4a98a78b070a861e8e906eddfa7c7bbd376"
+    }
+  },
+  "browser": {
+    "passed": true,
+    "suites": 20,
+    "desktop": [
+      1440,
+      1000
+    ],
+    "mobile": [
+      390,
+      844
+    ],
+    "report": "learning-loop-p9-regression-browser.json",
+    "boundary": "实际 Edge、HTTP 和文件处理；浏览器中的模型为模拟模型。"
+  },
+  "model_acceptance": {
+    "passed": true,
+    "scenarios": 5,
+    "actual_model_calls": 5,
+    "model_scenarios": 3,
+    "deterministic_scenarios": 2,
+    "report": "learning-loop-p9-real-2026-10-04.json",
+    "prior_failed_trials": "learning-loop-p9-real-attempts-2026-10-04.json",
+    "boundary": "合成场景使用真实配置模型；实验数字是验收输入，未执行真实 benchmark，不证明真实学习效果。"
+  },
+  "frozen_core": {
+    "total": 82,
+    "unchanged": 81,
+    "integration_exceptions": [
+      "mindos/resources/service.py"
+    ],
+    "boundary": {
+      "mindos/resources/service.py": "Only delegate existing canonical file path checks and exclusive writes to shared SafeFiles; P8 resource semantics unchanged."
+    }
+  },
+  "synchronization": {
+    "passed": true,
+    "publication_files": 344
+  },
+  "limitations": [
+    "项目执行无需课程；现有导师与独立验证需关联真实课程和开放知识点。",
+    "项目完成、计时、上传、AI 点评或实验失败均不自动改变掌握状态。",
+    "不执行上传代码，不读取二进制模型正文，不做 OCR 或图像理解。"
+  ]
+}

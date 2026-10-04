@@ -42,7 +42,7 @@ const MindOSKnowledgeUniverse=(()=>{
   selected=id;save();
   state.universeSelection={star,course:data.galaxy,section:data.nebula,detail:data};state.courseId=star.unlocked?star.course_id:null;
   state.data=star.unlocked?{course:{id:star.course_id,title:data.galaxy.name,current_ordinal:data.galaxy.current_ordinal,sections:[{ordinal:star.section_ordinal,title:data.nebula.name}]},section:{ordinal:star.section_ordinal},knowledge:{atoms:[]}}:null;
-  state.atomDetail=null;CourseAssistant.sync();if(focus)renderer?.focus(id);else if(renderer){renderer.focused=id;renderer.schedule();}renderDetail(data);
+  state.atomDetail=null;CourseAssistant.sync();if(focus)renderer?.focus(id);else if(renderer){renderer.focused=id;renderer.schedule();}renderDetail(data);if(focus||window.MindOSKnowledgeSpace?.active())await window.MindOSKnowledgeSpace?.show(data);
  }
  function renderDetail(data){
   const star=data.atom,detail=$('ku-detail');$('ku-bottom-tutor').disabled=!star.unlocked;detail.replaceChildren(node('p','当前星辰','eyebrow'),node('h2',star.name),node('p',star.description),node('p',`${data.galaxy.name} / ${data.nebula.name}`,'muted'),node('strong',star.state_label),node('p',star.state_basis,'muted'));
@@ -62,7 +62,7 @@ const MindOSKnowledgeUniverse=(()=>{
  function renderOrbit(e){const box=node('section','','ku-risk');box.id='ku-orbit-detail';const names=new Map((graph?.stars||[]).map(s=>[s.id,s.name]));if(state.universeSelection)names.set(state.universeSelection.star.id,state.universeSelection.star.name);if(e.other_star)names.set(e.other_star.id,e.other_star.name);box.append(node('h3','为什么连接？'),node('p',`${names.get(e.source)||'来源知识'} → ${names.get(e.target)||'关联知识'} · ${e.label}`),node('p',e.relation_type==='prerequisite'?'现有图谱把起点列为终点的前置知识，建议先理解起点。':'这是现有图谱保存的'+e.label+'，可用于比较或扩展理解。'),node('small',e.boundary+' 可视化层不补造连接原因。','muted'));$('ku-orbit-detail')?.remove();$('ku-detail').prepend(box);}
  async function selectByAtom(course,atom){const id='s-'+btoa(unescape(encodeURIComponent(JSON.stringify([course,atom])))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');await selectStar(id);}
  async function refresh(){cache.clear();if(state.page!=='universe')return;const old=selected;await load(true);if(old)try{await selectStar(old,false);}catch(e){selected=null;clearContext();error(e.message);}}
- function hide(){root.hidden=true;version++;renderer?.destroy();renderer=null;if(location.hash==='#knowledge-universe')history.replaceState(null,'',location.pathname+location.search);}
+ function hide(){window.MindOSKnowledgeSpace?.hide();root.hidden=true;version++;renderer?.destroy();renderer=null;if(location.hash==='#knowledge-universe')history.replaceState(null,'',location.pathname+location.search);}
  $('ku-course-select').onchange=e=>{if(e.target.value)enterCourse(e.target.value);};$('ku-view-select').onchange=async e=>{view=e.target.value;offset=0;selected=null;clearContext();await load();};
  $('ku-refresh').onclick=()=>refresh().catch(e=>error(e.message));$('ku-zoom-in').onclick=()=>renderer?.zoom(1.25);$('ku-zoom-out').onclick=()=>renderer?.zoom(.8);$('ku-fit').onclick=()=>renderer?.fit();
  $('ku-bottom-tutor').onclick=()=>CourseAssistant.open();

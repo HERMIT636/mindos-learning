@@ -4,8 +4,9 @@ const CourseAssistant=(()=>{
  let panelRect=null, panelPointer=null, observations=[], position=null, pointer=null, suppressClick=false,nextFeedback=null,nextContext=null;const pending=new Set(),positions=new Map();
  const root=$('course-assistant'),toggle=$('assistant-toggle'),panel=$('assistant-panel');
  async function request(cid,suffix,method='GET',body){
-  const route=suffix.startsWith('history')?`/api/tutor/conversations?context_id=${encodeURIComponent(cid)}${suffix.includes('?')?'&'+suffix.split('?')[1]:''}`:suffix==='chat'?'/api/tutor/chat':`/api/courses/${encodeURIComponent(cid)}/assistant/${suffix}`;
-  if(suffix==='chat')body={...body,context_id:cid};
+  const resourceSelection=suffix==='chat'?window.MindOSKnowledgeSpace?.selection():null;
+  const route=suffix.startsWith('history')?`/api/tutor/conversations?context_id=${encodeURIComponent(cid)}${suffix.includes('?')?'&'+suffix.split('?')[1]:''}`:suffix==='chat'?(resourceSelection?'/api/resources/tutor/chat':'/api/tutor/chat'):`/api/courses/${encodeURIComponent(cid)}/assistant/${suffix}`;
+  if(suffix==='chat')body={...body,context_id:cid,...(resourceSelection||{})};
   const response=await fetch(route,body===undefined?{method}:{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const data=await response.json();if(!response.ok)throw new Error(data.error || '助教暂时不可用');return data;
  }
@@ -62,6 +63,8 @@ const CourseAssistant=(()=>{
    const related=node('div','','assistant-related');
    (message.related_knowledge || []).forEach(atom=>{const button=node('button',atom.title,'atom-chip');button.type='button';button.dataset.atomId=atom.id;button.onclick=async()=>{const cid=courseId;expanded=false;AssistantButton();if(state.page==='universe'){await MindOSKnowledgeUniverse.selectByAtom(cid,atom.id);return;}if(state.page!=='course')await openCourse(cid,undefined,'stars');else setCourseMode('map');if(state.courseId!==cid)return;await openAtom(atom.id);};related.append(button);});
    if(related.childElementCount)item.append(node('p','相关知识点'),related);
+   for(const citation of message.resource_citations||[]){const source=node('div','','assistant-resource-source');source.append(node('strong','参考材料：'+citation.title),node('blockquote',citation.quote),node('small','原文引用有效不等于事实认证。','muted'));item.append(source);}
+   if(message.resource_mode==='resource_only')item.append(node('p','本次只根据选中材料回答。','muted'));
    if(message.search?.note)item.append(node('p',message.search.note,'muted'));
    (message.search?.sources || []).forEach(source=>{const link=node('a',source.title || source.url,'assistant-source');link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';item.append(link,node('p',source.description,'muted'));});
   }

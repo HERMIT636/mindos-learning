@@ -26,6 +26,7 @@ coverage/
 # Runtime data and private evaluation materials
 data/
 uploads/
+/resources/
 storage/
 logs/
 models/

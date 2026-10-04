@@ -96,9 +96,15 @@ class FakeProvider(BaseHTTPRequestHandler):
                 "type": "concept", "summary": f"第 {n} 步核心定义", "why": "用于理解本节核心方法", "depth": 2}
                 for n in range(1, len(user["sections"]) + 1)],
                 "edges": [{"from": "a1", "to": "a2", "type": "prerequisite"}]}, ensure_ascii=False)
+        elif "MindOS 学习材料生成器" in system:
+            from resource_fixture import ResourceModel
+            content=json.dumps(ResourceModel().resource_json(user),ensure_ascii=False)
         elif "MindOS P6 上下文感知课程导师" in system:
             from tutor_fixture import packet
-            content=json.dumps(packet(user),ensure_ascii=False)
+            if "resource_context" in user.get("context",{}):
+                from resource_fixture import ResourceModel
+                content=json.dumps(ResourceModel().resource_tutor_json(user),ensure_ascii=False)
+            else:content=json.dumps(packet(user),ensure_ascii=False)
         elif "MindOS课程助教回答规划教师" in system:
             content=json.dumps({'need_search':False,'strategy':'生活例子与数学直觉','queries':['课程 最新版本'],'related_atom_ids':[]})
         elif "MindOS课程智能助教" in system:

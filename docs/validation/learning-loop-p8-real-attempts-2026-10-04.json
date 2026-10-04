@@ -1,0 +1,180 @@
+[
+  {
+    "cases": [
+      {
+        "case": "diagram",
+        "checks": {
+          "valid_answer_through_p65": false,
+          "attempts_bounded": true,
+          "actual_selected_resource_context": true,
+          "request_bounded": true,
+          "quality_guidance_present": true,
+          "learning_state_unchanged": true,
+          "actual_quote_citation": false
+        },
+        "all_passed": false
+      },
+      {
+        "case": "formula",
+        "checks": {
+          "valid_answer_through_p65": true,
+          "attempts_bounded": true,
+          "actual_selected_resource_context": true,
+          "request_bounded": true,
+          "quality_guidance_present": true,
+          "learning_state_unchanged": true,
+          "actual_quote_citation": true
+        },
+        "all_passed": true
+      },
+      {
+        "case": "text",
+        "checks": {
+          "valid_answer_through_p65": true,
+          "attempts_bounded": true,
+          "actual_selected_resource_context": true,
+          "request_bounded": true,
+          "quality_guidance_present": true,
+          "learning_state_unchanged": true,
+          "actual_quote_citation": true,
+          "uploaded_claim_not_auto_authority": true
+        },
+        "all_passed": true
+      },
+      {
+        "case": "failed",
+        "checks": {
+          "valid_answer_through_p65": true,
+          "attempts_bounded": true,
+          "actual_selected_resource_context": true,
+          "request_bounded": true,
+          "quality_guidance_present": true,
+          "learning_state_unchanged": true,
+          "explicit_unreadable_not_filename_guess": true,
+          "no_search_fallback": true
+        },
+        "all_passed": true
+      }
+    ],
+    "resource_validation": [
+      {
+        "validation_failures": [],
+        "protocol_failures": [
+          "schema:additionalProperties:",
+          "schema:additionalProperties:"
+        ],
+        "attempts": 2
+      },
+      {
+        "validation_failures": [],
+        "protocol_failures": [
+          "schema:additionalProperties:"
+        ],
+        "attempts": 2
+      },
+      {
+        "validation_failures": [],
+        "protocol_failures": [],
+        "attempts": 1
+      },
+      {
+        "validation_failures": [
+          "ModelStructuredOutputError"
+        ],
+        "protocol_failures": [],
+        "attempts": 2
+      }
+    ],
+    "all_passed": false
+  },
+  {
+    "cases": [
+      {
+        "case": "diagram",
+        "checks": {
+          "valid_answer_through_p65": false,
+          "attempts_bounded": true,
+          "actual_selected_resource_context": true,
+          "request_bounded": true,
+          "quality_guidance_present": true,
+          "learning_state_unchanged": true,
+          "actual_quote_citation": false
+        },
+        "all_passed": false
+      },
+      {
+        "case": "formula",
+        "checks": {
+          "valid_answer_through_p65": true,
+          "attempts_bounded": true,
+          "actual_selected_resource_context": true,
+          "request_bounded": true,
+          "quality_guidance_present": true,
+          "learning_state_unchanged": true,
+          "actual_quote_citation": true
+        },
+        "all_passed": true
+      },
+      {
+        "case": "text",
+        "checks": {
+          "valid_answer_through_p65": true,
+          "attempts_bounded": true,
+          "actual_selected_resource_context": true,
+          "request_bounded": true,
+          "quality_guidance_present": true,
+          "learning_state_unchanged": true,
+          "actual_quote_citation": true,
+          "uploaded_claim_not_auto_authority": true
+        },
+        "all_passed": true
+      },
+      {
+        "case": "failed",
+        "checks": {
+          "valid_answer_through_p65": false,
+          "attempts_bounded": true,
+          "actual_selected_resource_context": true,
+          "request_bounded": true,
+          "quality_guidance_present": true,
+          "learning_state_unchanged": true,
+          "explicit_unreadable_not_filename_guess": false,
+          "no_search_fallback": true
+        },
+        "all_passed": false
+      }
+    ],
+    "resource_validation": [
+      {
+        "validation_failures": [],
+        "protocol_failures": [
+          "schema:required::unexpected=",
+          "schema:required::unexpected="
+        ],
+        "attempts": 2
+      },
+      {
+        "validation_failures": [],
+        "protocol_failures": [
+          "schema:required::unexpected="
+        ],
+        "attempts": 2
+      },
+      {
+        "validation_failures": [],
+        "protocol_failures": [],
+        "attempts": 1
+      },
+      {
+        "validation_failures": [
+          "资料不足必须明确说明"
+        ],
+        "protocol_failures": [
+          "schema:required::unexpected="
+        ],
+        "attempts": 2
+      }
+    ],
+    "all_passed": false
+  }
+]

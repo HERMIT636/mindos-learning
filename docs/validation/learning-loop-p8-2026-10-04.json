@@ -1,0 +1,134 @@
+{
+  "date": "2026-10-04",
+  "baseline": "5ceba62bd654ceb9dafdc325eaa4807664e3d51e",
+  "tests": {
+    "publish": {
+      "tests": 726,
+      "seconds": 74.9,
+      "passed": true,
+      "log_sha256": "2b5cb7c210bd05e2af5007e8879dcd99a4e2e6ee390e5804b4365aa2b5951d5b"
+    },
+    "root": {
+      "tests": 726,
+      "seconds": 72.748,
+      "passed": true,
+      "log_sha256": "4fdb8ca6dc4d820b040065ed51ae5124233012bb6f72ba96a453a4778a9aff70"
+    }
+  },
+  "new_tests": 115,
+  "browser": {
+    "suite_count": 19,
+    "passed": true,
+    "suites": [
+      "resources_p8",
+      "universe_p7",
+      "universe",
+      "presentation",
+      "architecture",
+      "management",
+      "knowledge",
+      "production",
+      "discovery",
+      "atie",
+      "tutor",
+      "loop",
+      "final",
+      "authentic",
+      "personal",
+      "growth",
+      "execution",
+      "tutor_p6",
+      "tutor_quality"
+    ],
+    "desktop": [
+      1440,
+      1000
+    ],
+    "mobile": [
+      390,
+      844
+    ],
+    "model_simulated_in_browser": true,
+    "actual_uploads_and_pdf_selected_page_parser": true,
+    "p8_report": "learning-loop-p8-browser.json",
+    "p7_latest_measurement": {
+      "desktop": [
+        1440,
+        1000
+      ],
+      "mobile": [
+        390,
+        844
+      ],
+      "visible_nodes": 200,
+      "draw_p95_ms": 1.600000023841858,
+      "frame_p50_ms": 6.700000047683716,
+      "frame_p95_ms": 10.300000011920929,
+      "checks": [
+        "profile entry",
+        "3 levels",
+        "read-only selection",
+        "owned current tutor context",
+        "no per-chat graph refresh",
+        "drag/resize/history refresh",
+        "genuine P0 update",
+        "future scope",
+        "search outside 200",
+        "bounded pages",
+        "zoom/pan/pinch",
+        "keyboard selection after pan",
+        "reduced motion",
+        "mobile overflow",
+        "return navigation"
+      ],
+      "boundary": "Headless Edge measurements on this machine, not a guarantee across devices."
+    },
+    "note": "原 ATIE 用例更新为当前 P6 历史接口与动态块断言；首次旧断言失败后修正测试假设并通过。非产品教学算法放宽。"
+  },
+  "real_model": {
+    "cases": 4,
+    "requests": 5,
+    "passed": true,
+    "report": "learning-loop-p8-real-2026-10-04.json",
+    "development_trial_failures_retained": true,
+    "personal_database_and_key_unchanged": true
+  },
+  "frozen": {
+    "files": 73,
+    "sha256_unchanged": true,
+    "manifest": "../learning-loop-p8-frozen.json"
+  },
+  "self_audit": {
+    "A": true,
+    "B": true,
+    "C": true,
+    "D": true,
+    "E": true,
+    "F": true,
+    "G": true,
+    "H": true,
+    "I": true,
+    "J": true,
+    "K": true,
+    "L": true,
+    "M": true,
+    "N": true,
+    "O": true,
+    "P": true,
+    "Q": true,
+    "R": true,
+    "S": true,
+    "T": true
+  },
+  "limitations": [
+    "图片只使用用户说明与替代文字，不包含模型视觉识别。",
+    "PDF 仅提取文字层的选中页，不做 OCR。",
+    "原文引用匹配、范围及质量检查不构成事实认证，四个合成场景不证明一般教学效果。",
+    "公开资料检索继续由既有入口提供；没有新增全网搜索或完整 RAG。"
+  ],
+  "synchronization": {
+    "root_and_publish_byte_identical": true,
+    "code_and_document_files": 317
+  },
+  "all_passed": true
+}

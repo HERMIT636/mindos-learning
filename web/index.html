@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/universe.css">
   <link rel="stylesheet" href="/knowledge-universe.css">
+  <link rel="stylesheet" href="/knowledge-space.css">
+  <script src="/vendor/katex.min.js" defer></script>
   <script src="/components/mindos/state.js" defer></script>
   <script src="/components/teaching/teaching-blocks.js" defer></script>
   <script src="/app.js" defer></script>
@@ -25,6 +27,8 @@
   <script src="/components/mindos/tutor-quality.js" defer></script>
   <script src="/components/mindos/universe-renderer.js" defer></script>
   <script src="/components/mindos/knowledge-universe.js" defer></script>
+  <script src="/components/mindos/resource-renderer.js" defer></script>
+  <script src="/components/mindos/knowledge-space.js" defer></script>
   <script src="/components/CourseAssistant/course-assistant.js" defer></script>
 </head>
 <body>
@@ -65,6 +69,7 @@
         <section id="learning-dashboard" aria-label="学习驾驶舱"><p class="muted">正在读取学习记录…</p></section>
         <section id="growth-roadmap" hidden class="growth-roadmap"></section>
       <section id="growth-profile" hidden aria-label="成长档案"></section>
+      <section id="knowledge-space" hidden aria-label="知识学习空间"></section>
       <section id="knowledge-universe" hidden aria-label="知识宇宙">
         <div class="ku-heading"><div><p class="eyebrow">KNOWLEDGE UNIVERSE · 个人知识档案</p><h1>你的知识，连成宇宙。</h1><p class="muted">课程是星系，章节是星云，知识点是星辰。沿着已有关系探索，学习仍由你掌舵。</p></div><button id="ku-profile-back" class="button secondary">返回个人知识档案</button></div>
         <div class="ku-toolbar"><label>搜索课程、章节或知识点<input id="ku-search" type="search" maxlength="100" placeholder="例如：Attention、图论"></label><label>课程星系<select id="ku-course-select" aria-label="课程星系"></select></label><label>探索视角<select id="ku-view-select"><option value="galaxy">课程星系</option><option value="nebula">章节星云</option><option value="star">知识星辰</option></select></label><button id="ku-refresh" class="button secondary">刷新学习状态</button></div>

@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-04",
+  "desktop": [
+    1440,
+    1000
+  ],
+  "mobile": [
+    390,
+    844
+  ],
+  "checks": [
+    "P7 star opens full space",
+    "dynamic material tabs",
+    "native MathML formula",
+    "safe code highlight",
+    "diagram zoom reset",
+    "actual PNG upload and decode",
+    "image caption boundary",
+    "selected resource tutor citation",
+    "actual PDF page 2 extraction",
+    "resource-only context",
+    "no automatic mastery or timer",
+    "explicit P5 start",
+    "original P2 authentic task",
+    "mobile no overflow"
+  ],
+  "simulated_model": true,
+  "actual_browser_and_parsers": true
+}

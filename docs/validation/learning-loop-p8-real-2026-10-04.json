@@ -1,0 +1,447 @@
+{
+  "date": "2026-10-04",
+  "live_model_calls": true,
+  "synthetic_only": true,
+  "all_passed": true,
+  "cases": [
+    {
+      "case": "diagram",
+      "checks": {
+        "valid_answer_through_p65": true,
+        "attempts_bounded": true,
+        "actual_selected_resource_context": true,
+        "request_bounded": true,
+        "quality_guidance_present": true,
+        "learning_state_unchanged": true,
+        "actual_quote_citation": true
+      },
+      "all_passed": true,
+      "quality_meta": {
+        "policy_version": "quality-v1",
+        "responses": [
+          {
+            "strategy": "step_by_step",
+            "quality_flags": [],
+            "retry_count": 0,
+            "approved": true,
+            "created_at": "2026-10-04T05:37:13.599359+00:00"
+          }
+        ]
+      },
+      "response": {
+        "answer": "因为 Attention 的目标不是“把所有内容平均混合”，而是“在当前这一步，找哪些位置最相关，再把它们的值按相关程度加权取出来”。Q 和 K 算相似度，就是在做“找相关”这一步：用当前需求去和每个候选位置的匹配特征比对，得到一个匹配分数。\n\n查询 Q：当前想要什么\n键 K：每个位置的匹配特征\n相似度分数：匹配程度\n权重：归一化后的匹配程度\n值 V：实际取出的内容\n输出：按权重重组的汇总\n比对\n比对\n转成权重\n加权\n被取出的内容\n\n你给的图里写得很准：Q 表达需求，K 提供匹配特征，相似度代表匹配程度。图里的两条边都指向相似度分数，说明这个分数不是由单个向量决定，而是 Q 和 K 联合比对出来的。后面再把“匹配程度”转成权重，用它去加权汇总 V。所以 QK 相似度相当于门牌号：它不直接给出内容，只决定该关注哪里。\n\n可以把它想成查图书馆：Q 是你脑子里的检索需求，K 是每本书封面上的标签，相似度是“这本和我想找的有多接近”，V 才是书里的实际内容。你当然希望借最接近需求的书，而不是把整层书都平均抄一遍。Attention 做的就是先算相似度，再按相似度决定从各本书里各取多少。\n\n如果 Q 表达需求、K 提供匹配特征，那么 V 在 Attention 中承担什么角色？它和相似度分数是同一件事吗？",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "title": "一句话回答",
+            "content": "因为 Attention 的目标不是“把所有内容平均混合”，而是“在当前这一步，找哪些位置最相关，再把它们的值按相关程度加权取出来”。Q 和 K 算相似度，就是在做“找相关”这一步：用当前需求去和每个候选位置的匹配特征比对，得到一个匹配分数。"
+          },
+          {
+            "type": "diagram",
+            "title": "QK 匹配到加权汇总",
+            "data": {
+              "nodes": [
+                {
+                  "id": "q",
+                  "label": "查询 Q：当前想要什么"
+                },
+                {
+                  "id": "k",
+                  "label": "键 K：每个位置的匹配特征"
+                },
+                {
+                  "id": "s",
+                  "label": "相似度分数：匹配程度"
+                },
+                {
+                  "id": "softmax",
+                  "label": "权重：归一化后的匹配程度"
+                },
+                {
+                  "id": "v",
+                  "label": "值 V：实际取出的内容"
+                },
+                {
+                  "id": "out",
+                  "label": "输出：按权重重组的汇总"
+                }
+              ],
+              "edges": [
+                {
+                  "from": "q",
+                  "to": "s",
+                  "label": "比对"
+                },
+                {
+                  "from": "k",
+                  "to": "s",
+                  "label": "比对"
+                },
+                {
+                  "from": "s",
+                  "to": "softmax",
+                  "label": "转成权重"
+                },
+                {
+                  "from": "softmax",
+                  "to": "out",
+                  "label": "加权"
+                },
+                {
+                  "from": "v",
+                  "to": "out",
+                  "label": "被取出的内容"
+                }
+              ]
+            }
+          },
+          {
+            "type": "paragraph",
+            "title": "对照图示",
+            "content": "你给的图里写得很准：Q 表达需求，K 提供匹配特征，相似度代表匹配程度。图里的两条边都指向相似度分数，说明这个分数不是由单个向量决定，而是 Q 和 K 联合比对出来的。后面再把“匹配程度”转成权重，用它去加权汇总 V。所以 QK 相似度相当于门牌号：它不直接给出内容，只决定该关注哪里。"
+          },
+          {
+            "type": "paragraph",
+            "title": "一个生活化直觉",
+            "content": "可以把它想成查图书馆：Q 是你脑子里的检索需求，K 是每本书封面上的标签，相似度是“这本和我想找的有多接近”，V 才是书里的实际内容。你当然希望借最接近需求的书，而不是把整层书都平均抄一遍。Attention 做的就是先算相似度，再按相似度决定从各本书里各取多少。"
+          },
+          {
+            "type": "question",
+            "title": "检查点",
+            "content": "如果 Q 表达需求、K 提供匹配特征，那么 V 在 Attention 中承担什么角色？它和相似度分数是同一件事吗？"
+          }
+        ],
+        "strategy": "step_by_step",
+        "attempts": 1,
+        "fallback": false,
+        "resource_citations": [
+          {
+            "resource_id": "nvEZlqCNI9TzW8bExMXcbL7f",
+            "title": "QKV匹配图",
+            "source_type": "manual",
+            "quote": "查询 Q 表达需求\n键 K 提供匹配特征\n相似度代表匹配程度",
+            "pages": null
+          },
+          {
+            "resource_id": "nvEZlqCNI9TzW8bExMXcbL7f",
+            "title": "QKV匹配图",
+            "source_type": "manual",
+            "quote": "查询和键比对表达匹配程度。",
+            "pages": null
+          }
+        ],
+        "resource_mode": "resources_and_course"
+      }
+    },
+    {
+      "case": "formula",
+      "checks": {
+        "valid_answer_through_p65": true,
+        "attempts_bounded": true,
+        "actual_selected_resource_context": true,
+        "request_bounded": true,
+        "quality_guidance_present": true,
+        "learning_state_unchanged": true,
+        "actual_quote_citation": true
+      },
+      "all_passed": true,
+      "quality_meta": {
+        "policy_version": "quality-v1",
+        "responses": [
+          {
+            "strategy": "step_by_step",
+            "quality_flags": [
+              "model_unavailable"
+            ],
+            "retry_count": 1,
+            "approved": true,
+            "created_at": "2026-10-04T05:37:28.085484+00:00"
+          }
+        ]
+      },
+      "response": {
+        "answer": "你问的是：为什么点积匹配之后要除以根号 d_k。先看这个公式的整体角色——它做两件事：softmax(QK^T / √d_k) 决定“该关注哪里”，乘 V 决定“取出什么内容”。除以 √d_k 只作用在前半段，也就是匹配打分那一步，是为了让 softmax 的输入不随维度变大而失控。\n\n先看一个分数怎么来的：q 和 k 做点积，把所有对应位置的乘积加起来。q、k 越长（d_k 越大），这个和里累加的项就越多。\n关键假设：如果 q、k 的每个分量各自大致在 0 附近波动、彼此不相关，那么点积的“平均大小”会随 d_k 增大而变大，典型幅度和 √d_k 成正比：维度翻 4 倍，点积幅度大约翻 2 倍。\n点积变大后，softmax 会怎样？softmax 对输入差距很敏感：差距一大，最大那个几乎拿到全部权重，其余接近 0。这叫分布变“尖锐”。\n分布太尖锐，就等于注意力几乎只盯一个位置，训练时给其他位置的梯度也接近消失，模型很难学会“该关注谁”。\n所以把点积除以 √d_k，是把它拉回到幅度大致稳定的范围，让不同维度下 softmax 的工作条件差不多。\n也可以反过来看 d_k=1 时 √d_k=1，除不除一样；d_k 越大，这个除法的“降温”作用越明显。这说明它不是一个装饰，而是随维度自动调节的缩放。\n\n假设 d_k=4，某个 q 和它的 k 点积算出来是 8。不除：softmax 输入里有 8 这种大数，差距被放大，权重容易压向一个位置。除以 √4=2：变成 4。再假设 d_k=64，同样的点积模式让数值涨到约 32；除以 √64=8，又回到约 4。也就是说，缩放让“不同维度下的打分尺度”大致对齐到同一水平，softmax 面对的输入难度差不多。注意这只是一个说明量级倾向的简化例子，不是说点积每次一定涨到那个具体数字。\n\n这里要分开两个职责：QK^T 负责“匹配、算相关性分数”，V 负责“取出内容”。除以 √d_k 改的是匹配后的分数尺度，不是内容本身，也不参与决定“取什么内容”。你可以把它理解成给匹配分数做一次统一校准，让后续的加权汇总在维度变化时依然稳定。至于更严格的方差推导，属于更细的概率计算，这里先用直觉和量级倾向抓住原因即可。\n\n如果用一句话说明：如果去掉 √d_k，在 d_k 很大时，softmax 的输出分布会偏向哪边？你的理由是什么？",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "title": "先回答你的问题",
+            "content": "你问的是：为什么点积匹配之后要除以根号 d_k。先看这个公式的整体角色——它做两件事：softmax(QK^T / √d_k) 决定“该关注哪里”，乘 V 决定“取出什么内容”。除以 √d_k 只作用在前半段，也就是匹配打分那一步，是为了让 softmax 的输入不随维度变大而失控。"
+          },
+          {
+            "type": "steps",
+            "title": "为什么是 √d_k",
+            "steps": [
+              "先看一个分数怎么来的：q 和 k 做点积，把所有对应位置的乘积加起来。q、k 越长（d_k 越大），这个和里累加的项就越多。",
+              "关键假设：如果 q、k 的每个分量各自大致在 0 附近波动、彼此不相关，那么点积的“平均大小”会随 d_k 增大而变大，典型幅度和 √d_k 成正比：维度翻 4 倍，点积幅度大约翻 2 倍。",
+              "点积变大后，softmax 会怎样？softmax 对输入差距很敏感：差距一大，最大那个几乎拿到全部权重，其余接近 0。这叫分布变“尖锐”。",
+              "分布太尖锐，就等于注意力几乎只盯一个位置，训练时给其他位置的梯度也接近消失，模型很难学会“该关注谁”。",
+              "所以把点积除以 √d_k，是把它拉回到幅度大致稳定的范围，让不同维度下 softmax 的工作条件差不多。",
+              "也可以反过来看 d_k=1 时 √d_k=1，除不除一样；d_k 越大，这个除法的“降温”作用越明显。这说明它不是一个装饰，而是随维度自动调节的缩放。"
+            ]
+          },
+          {
+            "type": "example",
+            "title": "一个具体的小对照",
+            "content": "假设 d_k=4，某个 q 和它的 k 点积算出来是 8。不除：softmax 输入里有 8 这种大数，差距被放大，权重容易压向一个位置。除以 √4=2：变成 4。再假设 d_k=64，同样的点积模式让数值涨到约 32；除以 √64=8，又回到约 4。也就是说，缩放让“不同维度下的打分尺度”大致对齐到同一水平，softmax 面对的输入难度差不多。注意这只是一个说明量级倾向的简化例子，不是说点积每次一定涨到那个具体数字。"
+          },
+          {
+            "type": "paragraph",
+            "title": "和当前知识点、你常犯的一点关系",
+            "content": "这里要分开两个职责：QK^T 负责“匹配、算相关性分数”，V 负责“取出内容”。除以 √d_k 改的是匹配后的分数尺度，不是内容本身，也不参与决定“取什么内容”。你可以把它理解成给匹配分数做一次统一校准，让后续的加权汇总在维度变化时依然稳定。至于更严格的方差推导，属于更细的概率计算，这里先用直觉和量级倾向抓住原因即可。"
+          },
+          {
+            "type": "question",
+            "title": "检查一下",
+            "content": "如果用一句话说明：如果去掉 √d_k，在 d_k 很大时，softmax 的输出分布会偏向哪边？你的理由是什么？"
+          }
+        ],
+        "strategy": "step_by_step",
+        "attempts": 2,
+        "fallback": false,
+        "resource_citations": [
+          {
+            "resource_id": "CJ0XYV2oD-mvOt4-Z4AW7hhJ",
+            "title": "缩放点积公式",
+            "source_type": "manual",
+            "quote": "\\operatorname{softmax}(QK^{T}/\\sqrt{d_k})V",
+            "pages": null
+          },
+          {
+            "resource_id": "CJ0XYV2oD-mvOt4-Z4AW7hhJ",
+            "title": "缩放点积公式",
+            "source_type": "manual",
+            "quote": "缩放后匹配与加权。",
+            "pages": null
+          }
+        ],
+        "resource_mode": "resources_and_course"
+      }
+    },
+    {
+      "case": "text",
+      "checks": {
+        "valid_answer_through_p65": true,
+        "attempts_bounded": true,
+        "actual_selected_resource_context": true,
+        "request_bounded": true,
+        "quality_guidance_present": true,
+        "learning_state_unchanged": true,
+        "actual_quote_citation": true,
+        "uploaded_claim_not_auto_authority": true
+      },
+      "all_passed": true,
+      "quality_meta": {
+        "policy_version": "quality-v1",
+        "responses": [
+          {
+            "strategy": "direct_explanation",
+            "quality_flags": [],
+            "retry_count": 0,
+            "approved": true,
+            "created_at": "2026-10-04T05:37:34.869814+00:00"
+          }
+        ]
+      },
+      "response": {
+        "answer": "这份笔记把 Q、K、V 三个角色混在了一起。它说“Q就是Value”，听起来像 Q 和 V 是同一个东西；它又说“K不参与匹配”，可 K 恰恰是干匹配这一件事的。所以问题不在于说法不够严谨，而在于 Q、K、V 的分工被整个反过来了。\n\n你在一个房间里找资料，手里拿着一张写着问题的纸条。\n\n房间的书架上贴了很多标签，比如“数学”“历史”“菜谱”。你拿纸条跟每个标签比对，看哪个最相关——标签就是 K。\n\n比对结果是一串分数，表示每个书架跟你问题的相关程度——这串分数就是匹配的结果。问题纸条就是 Q，它是用来提问和发起比对的。\n\n最后，你按相关程度从每个书架里取出内容，相关度高的多取一点，相关度低的少取一点，拼成答案。这些被取出来的内容就是 V。\n\n所以：Q 负责“我问什么”，K 负责“我有什么标签可以比”，V 负责“如果匹配上了，我交出什么内容”。三者职责不同，不是 Q 等于 V，也不是 K 不参与匹配。\n\n“Q就是Value”模糊了提问方和内容方的区别：Q 是发起点，V 是被汇总的内容，哪怕它们有时来自同一个输入，扮演的角色也完全不同。\n\n“K不参与匹配”则正好说反了：匹配这一步就是拿 Q 去和每个 K 比相似度，没有 K，这一步根本没法算。\n\n如果取消 K，只留下 Q 和 V，注意力机制还能算出“该从谁那里多取内容”吗？为什么？",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "title": "先直接说结论",
+            "content": "这份笔记把 Q、K、V 三个角色混在了一起。它说“Q就是Value”，听起来像 Q 和 V 是同一个东西；它又说“K不参与匹配”，可 K 恰恰是干匹配这一件事的。所以问题不在于说法不够严谨，而在于 Q、K、V 的分工被整个反过来了。"
+          },
+          {
+            "type": "example",
+            "title": "用查字典来分工",
+            "content": "你在一个房间里找资料，手里拿着一张写着问题的纸条。\n\n房间的书架上贴了很多标签，比如“数学”“历史”“菜谱”。你拿纸条跟每个标签比对，看哪个最相关——标签就是 K。\n\n比对结果是一串分数，表示每个书架跟你问题的相关程度——这串分数就是匹配的结果。问题纸条就是 Q，它是用来提问和发起比对的。\n\n最后，你按相关程度从每个书架里取出内容，相关度高的多取一点，相关度低的少取一点，拼成答案。这些被取出来的内容就是 V。\n\n所以：Q 负责“我问什么”，K 负责“我有什么标签可以比”，V 负责“如果匹配上了，我交出什么内容”。三者职责不同，不是 Q 等于 V，也不是 K 不参与匹配。"
+          },
+          {
+            "type": "paragraph",
+            "title": "笔记错在哪",
+            "content": "“Q就是Value”模糊了提问方和内容方的区别：Q 是发起点，V 是被汇总的内容，哪怕它们有时来自同一个输入，扮演的角色也完全不同。\n\n“K不参与匹配”则正好说反了：匹配这一步就是拿 Q 去和每个 K 比相似度，没有 K，这一步根本没法算。"
+          },
+          {
+            "type": "question",
+            "title": "检查一下",
+            "content": "如果取消 K，只留下 Q 和 V，注意力机制还能算出“该从谁那里多取内容”吗？为什么？"
+          }
+        ],
+        "strategy": "direct_explanation",
+        "attempts": 1,
+        "fallback": false,
+        "resource_citations": [
+          {
+            "resource_id": "a-nt--QVmp9XEZ4V--Nciw_g",
+            "title": "我的笔记.txt",
+            "source_type": "user_uploaded",
+            "quote": "Q就是Value，K不参与匹配。",
+            "pages": null
+          }
+        ],
+        "resource_mode": "resources_and_course"
+      }
+    },
+    {
+      "case": "failed",
+      "checks": {
+        "quality_path_and_safe_unreadable_response": true,
+        "attempts_bounded": true,
+        "actual_selected_resource_context": true,
+        "request_bounded": true,
+        "quality_guidance_present": true,
+        "learning_state_unchanged": true,
+        "explicit_unreadable_not_filename_guess": true,
+        "no_search_fallback": true
+      },
+      "all_passed": true,
+      "quality_meta": {
+        "policy_version": "quality-v1",
+        "responses": [
+          {
+            "strategy": "direct_explanation",
+            "quality_flags": [],
+            "retry_count": 0,
+            "approved": true,
+            "created_at": "2026-10-04T05:37:39.198933+00:00"
+          }
+        ]
+      },
+      "response": {
+        "answer": "这份 PDF 我无法读取正文，所以没法根据材料回答它“讲了哪些内容”。系统里这条资料的状态是读取失败/未提取正文的 PDF 原文件，我看到的只是它的编号，不是内容。标题、文件名都不能用来猜正文，所以我不会替它编一份目录或摘要。\n\n如果你想核对，可以把 PDF 中的文字段落贴出来，或者重新上传一份能正常读取的版本。拿到原文后，我可以严格按材料逐段说明它讲了什么，并把“材料这样表述”和“通用知识判断”分开标注。",
+        "blocks": [
+          {
+            "type": "paragraph",
+            "title": "先说结论",
+            "content": "这份 PDF 我无法读取正文，所以没法根据材料回答它“讲了哪些内容”。系统里这条资料的状态是读取失败/未提取正文的 PDF 原文件，我看到的只是它的编号，不是内容。标题、文件名都不能用来猜正文，所以我不会替它编一份目录或摘要。"
+          },
+          {
+            "type": "paragraph",
+            "title": "可以怎么核对",
+            "content": "如果你想核对，可以把 PDF 中的文字段落贴出来，或者重新上传一份能正常读取的版本。拿到原文后，我可以严格按材料逐段说明它讲了什么，并把“材料这样表述”和“通用知识判断”分开标注。"
+          }
+        ],
+        "strategy": "direct_explanation",
+        "attempts": 1,
+        "fallback": false,
+        "resource_citations": [],
+        "resource_mode": "resource_only"
+      }
+    }
+  ],
+  "context_checks": [
+    {
+      "course": "Transformer材料验收 1",
+      "atom": "attention",
+      "resource_ids": [
+        "nvEZlqCNI9TzW8bExMXcbL7f"
+      ],
+      "resource_types": [
+        "diagram"
+      ],
+      "mode": "resources_and_course",
+      "allow_formulas": true,
+      "allowed_depth": "detailed",
+      "required_blocks": [
+        "diagram"
+      ],
+      "request_characters": 4019,
+      "quality_guidance_present": true,
+      "question": "为什么 Q 和 K 要计算相似度？请结合当前图示解释。"
+    },
+    {
+      "course": "Transformer材料验收 2",
+      "atom": "attention",
+      "resource_ids": [
+        "CJ0XYV2oD-mvOt4-Z4AW7hhJ"
+      ],
+      "resource_types": [
+        "formula"
+      ],
+      "mode": "resources_and_course",
+      "allow_formulas": true,
+      "allowed_depth": "detailed",
+      "required_blocks": [
+        "steps"
+      ],
+      "request_characters": 4634,
+      "quality_guidance_present": true,
+      "question": "为什么要除以根号 d_k？请结合这个公式，先解释直觉。"
+    },
+    {
+      "course": "Transformer材料验收 2",
+      "atom": "attention",
+      "resource_ids": [
+        "CJ0XYV2oD-mvOt4-Z4AW7hhJ"
+      ],
+      "resource_types": [
+        "formula"
+      ],
+      "mode": "resources_and_course",
+      "allow_formulas": true,
+      "allowed_depth": "detailed",
+      "required_blocks": [
+        "steps"
+      ],
+      "request_characters": 4653,
+      "quality_guidance_present": true,
+      "question": "为什么要除以根号 d_k？请结合这个公式，先解释直觉。"
+    },
+    {
+      "course": "Transformer材料验收 3",
+      "atom": "attention",
+      "resource_ids": [
+        "a-nt--QVmp9XEZ4V--Nciw_g"
+      ],
+      "resource_types": [
+        "text"
+      ],
+      "mode": "resources_and_course",
+      "allow_formulas": true,
+      "allowed_depth": "detailed",
+      "required_blocks": [],
+      "request_characters": 4639,
+      "quality_guidance_present": true,
+      "question": "这份我上传的笔记说“Q就是Value，K不参与匹配”，这种表述有什么问题？"
+    },
+    {
+      "course": "Transformer材料验收 4",
+      "atom": "attention",
+      "resource_ids": [],
+      "resource_types": [],
+      "mode": "resource_only",
+      "allow_formulas": true,
+      "allowed_depth": "detailed",
+      "required_blocks": [],
+      "request_characters": 4368,
+      "quality_guidance_present": true,
+      "question": "这份 PDF 讲了哪些内容？请只根据材料回答。"
+    }
+  ],
+  "resource_validation": [
+    {
+      "validation_failures": [],
+      "protocol_failures": [],
+      "attempts": 1
+    },
+    {
+      "validation_failures": [
+        "ModelStructuredOutputError"
+      ],
+      "protocol_failures": [],
+      "attempts": 2
+    },
+    {
+      "validation_failures": [],
+      "protocol_failures": [],
+      "attempts": 1
+    },
+    {
+      "validation_failures": [],
+      "protocol_failures": [],
+      "attempts": 1
+    }
+  ],
+  "personal_database_unchanged": true,
+  "personal_key_unchanged": true,
+  "boundary": "四个临时合成材料场景，使用现有 ModelGateway 和 P6.5，实际小测提交生成基础证据。个人课程、配置、密钥均只读。不是一般教学效果、事实认证、图像理解或扫描 PDF OCR 的证明；不保存密钥、思考或无效原始回复。"
+}

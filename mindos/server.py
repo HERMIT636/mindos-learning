@@ -33,7 +33,7 @@ from .web_search import PublicSourceSearch, SearchUnavailable, WebSearch
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
 LOGGER = logging.getLogger("mindos")
-STATIC = {"/knowledge-universe.css": ("knowledge-universe.css", "text/css; charset=utf-8"),"/components/mindos/universe-renderer.js": ("components/mindos/universe-renderer.js", "text/javascript; charset=utf-8"),"/components/mindos/knowledge-universe.js": ("components/mindos/knowledge-universe.js", "text/javascript; charset=utf-8"),"/components/mindos/tutor-quality.js": ("components/mindos/tutor-quality.js", "text/javascript; charset=utf-8"),"/components/mindos/tutor.js": ("components/mindos/tutor.js", "text/javascript; charset=utf-8"),"/components/mindos/study.js": ("components/mindos/study.js", "text/javascript; charset=utf-8"),"/components/mindos/growth.js": ("components/mindos/growth.js", "text/javascript; charset=utf-8"),"/components/mindos/personal.js": ("components/mindos/personal.js", "text/javascript; charset=utf-8"),"/components/mindos/authentic.js": ("components/mindos/authentic.js", "text/javascript; charset=utf-8"),"/components/mindos/course-final.js": ("components/mindos/course-final.js", "text/javascript; charset=utf-8"),"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
+STATIC = {"/knowledge-space.css": ("knowledge-space.css", "text/css; charset=utf-8"),"/components/mindos/knowledge-space.js": ("components/mindos/knowledge-space.js", "text/javascript; charset=utf-8"),"/components/mindos/resource-renderer.js": ("components/mindos/resource-renderer.js", "text/javascript; charset=utf-8"),"/vendor/katex.min.js": ("vendor/katex.min.js", "text/javascript; charset=utf-8"),"/knowledge-universe.css": ("knowledge-universe.css", "text/css; charset=utf-8"),"/components/mindos/universe-renderer.js": ("components/mindos/universe-renderer.js", "text/javascript; charset=utf-8"),"/components/mindos/knowledge-universe.js": ("components/mindos/knowledge-universe.js", "text/javascript; charset=utf-8"),"/components/mindos/tutor-quality.js": ("components/mindos/tutor-quality.js", "text/javascript; charset=utf-8"),"/components/mindos/tutor.js": ("components/mindos/tutor.js", "text/javascript; charset=utf-8"),"/components/mindos/study.js": ("components/mindos/study.js", "text/javascript; charset=utf-8"),"/components/mindos/growth.js": ("components/mindos/growth.js", "text/javascript; charset=utf-8"),"/components/mindos/personal.js": ("components/mindos/personal.js", "text/javascript; charset=utf-8"),"/components/mindos/authentic.js": ("components/mindos/authentic.js", "text/javascript; charset=utf-8"),"/components/mindos/course-final.js": ("components/mindos/course-final.js", "text/javascript; charset=utf-8"),"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
           "/components/teaching/teaching-blocks.js": ("components/teaching/teaching-blocks.js", "text/javascript; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
           "/components/CourseManager/course-manager.js": ("components/CourseManager/course-manager.js", "text/javascript; charset=utf-8"),
@@ -250,6 +250,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
         self._safe_call(self._manage_mutation)
 
     def _manage_mutation(self) -> None:
+        from .resources.api import dispatch as resource_dispatch
+        if resource_dispatch(self):return
         from .universe.api import dispatch as universe_dispatch
         if universe_dispatch(self):return
         from .tutor.quality.api import dispatch as quality_dispatch
@@ -280,15 +282,22 @@ class MindOSHandler(BaseHTTPRequestHandler):
             result=store.update_course(session,cid,payload)
         elif self.command=='DELETE' and operation is None:result=store.recycle_course(session,cid)
         elif self.command=='DELETE' and operation=='permanent':
+            from .resources.service import ResourceService
+            resources=ResourceService(store);resource_ids=resources.course_resource_ids(session,cid)
             store.purge_course(session,cid,self._request_json().get('confirm_title'))
+            resources.cleanup(session,resource_ids)
             self._json(HTTPStatus.OK,{'deleted':True});return
         elif self.command=='POST' and operation=='restore':result=store.restore_course(session,cid)
         elif self.command=='POST' and operation=='copy':
             payload=self._request_json();result=store.copy_course(session,cid,payload.get('title',payload.get('name')))
+            from .resources.service import ResourceService
+            ResourceService(store).copy_links(session,cid,result['id'])
         else:self._json(HTTPStatus.NOT_FOUND,{'error':'课程接口不存在'});return
         self._json(HTTPStatus.OK,{'course':result})
 
     def _get(self) -> None:
+        from .resources.api import dispatch as resource_dispatch
+        if resource_dispatch(self):return
         from .universe.api import dispatch as universe_dispatch
         if universe_dispatch(self):return
         from .tutor.quality.api import dispatch as quality_dispatch
@@ -432,6 +441,8 @@ class MindOSHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.NOT_FOUND, {"error": "页面或接口不存在"})
 
     def _post(self) -> None:
+        from .resources.api import dispatch as resource_dispatch
+        if resource_dispatch(self):return
         from .universe.api import dispatch as universe_dispatch
         if universe_dispatch(self):return
         from .tutor.quality.api import dispatch as quality_dispatch

@@ -136,6 +136,8 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
             migrate_tutor(db)
             from .tutor.quality.integration import migrate as migrate_tutor_quality
             migrate_tutor_quality(db)
+            from .resources.service import migrate as migrate_resources
+            migrate_resources(db)
 
     @contextmanager
     def connect(self):

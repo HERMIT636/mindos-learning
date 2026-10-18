@@ -1,0 +1,6 @@
+# Vendored libraries keep their published form.
+web/vendor/
+
+# Generated publish mirror and local artifacts.
+release/
+data/

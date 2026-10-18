@@ -33,16 +33,25 @@ from .web_search import PublicSourceSearch, SearchUnavailable, WebSearch
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
 LOGGER = logging.getLogger("mindos")
-STATIC = {"/components/mindos/mission.js": ("components/mindos/mission.js", "text/javascript; charset=utf-8"), "/mission.css": ("mission.css", "text/css; charset=utf-8"),"/knowledge-space.css": ("knowledge-space.css", "text/css; charset=utf-8"),"/components/mindos/knowledge-space.js": ("components/mindos/knowledge-space.js", "text/javascript; charset=utf-8"),"/components/mindos/resource-renderer.js": ("components/mindos/resource-renderer.js", "text/javascript; charset=utf-8"),"/vendor/katex.min.js": ("vendor/katex.min.js", "text/javascript; charset=utf-8"),"/knowledge-universe.css": ("knowledge-universe.css", "text/css; charset=utf-8"),"/components/mindos/universe-renderer.js": ("components/mindos/universe-renderer.js", "text/javascript; charset=utf-8"),"/components/mindos/knowledge-universe.js": ("components/mindos/knowledge-universe.js", "text/javascript; charset=utf-8"),"/components/mindos/tutor-quality.js": ("components/mindos/tutor-quality.js", "text/javascript; charset=utf-8"),"/components/mindos/tutor.js": ("components/mindos/tutor.js", "text/javascript; charset=utf-8"),"/components/mindos/study.js": ("components/mindos/study.js", "text/javascript; charset=utf-8"),"/components/mindos/growth.js": ("components/mindos/growth.js", "text/javascript; charset=utf-8"),"/components/mindos/personal.js": ("components/mindos/personal.js", "text/javascript; charset=utf-8"),"/components/mindos/authentic.js": ("components/mindos/authentic.js", "text/javascript; charset=utf-8"),"/components/mindos/course-final.js": ("components/mindos/course-final.js", "text/javascript; charset=utf-8"),"/components/mindos/learning-loop.js": ("components/mindos/learning-loop.js", "text/javascript; charset=utf-8"),"/": ("index.html", "text/html; charset=utf-8"),
-          "/components/teaching/teaching-blocks.js": ("components/teaching/teaching-blocks.js", "text/javascript; charset=utf-8"),
-          "/app.js": ("app.js", "text/javascript; charset=utf-8"),
-          "/components/CourseManager/course-manager.js": ("components/CourseManager/course-manager.js", "text/javascript; charset=utf-8"),
-          "/components/CourseAssistant/course-assistant.js": ("components/CourseAssistant/course-assistant.js", "text/javascript; charset=utf-8"),
-          "/production.js": ("production.js", "text/javascript; charset=utf-8"),
-          "/components/mindos/state.js": ("components/mindos/state.js", "text/javascript; charset=utf-8"),
-          "/components/mindos/universe.js": ("components/mindos/universe.js", "text/javascript; charset=utf-8"),
-          "/universe.css": ("universe.css", "text/css; charset=utf-8"),
-          "/style.css": ("style.css", "text/css; charset=utf-8")}
+MIME_TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+              ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8",
+              ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+              ".webp": "image/webp", ".ico": "image/x-icon", ".txt": "text/plain; charset=utf-8",
+              ".woff2": "font/woff2"}
+
+
+def _build_static_index() -> dict[str, tuple[str, str]]:
+    index: dict[str, tuple[str, str]] = {}
+    for path in sorted(WEB.rglob("*")):
+        mime = MIME_TYPES.get(path.suffix.lower())
+        if path.is_file() and mime:
+            relative = path.relative_to(WEB).as_posix()
+            index["/" + relative] = (relative, mime)
+    index["/"] = ("index.html", MIME_TYPES[".html"])
+    return index
+
+
+STATIC = _build_static_index()
 ENV_KEYS = {"MINDOS_MODEL_BASE_URL", "MINDOS_CHAT_MODEL", "MINDOS_MODEL_API_KEY",
             "MINDOS_BRAVE_SEARCH_API_KEY", "MINDOS_DATA_PATH", "MINDOS_DEBUG_LEARNING"}
 
@@ -79,11 +88,17 @@ class MindOSHandler(BaseHTTPRequestHandler):
             self._session_value = secrets.token_hex(16) if self._new_session else value
         return self._session_value
 
-    def _send(self, status: HTTPStatus, body: bytes, content_type: str) -> None:
+    def _send(self, status: HTTPStatus, body: bytes, content_type: str, etag: str | None = None) -> None:
         self.send_response(status)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
+        if status == HTTPStatus.NOT_MODIFIED:
+            self.send_header("Cache-Control", "no-cache")
+        else:
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            # Static assets carry an ETag so repeat visits revalidate instead of re-downloading.
+            self.send_header("Cache-Control", "no-cache" if etag else "no-store")
+        if etag:
+            self.send_header("ETag", etag)
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'")
@@ -91,7 +106,20 @@ class MindOSHandler(BaseHTTPRequestHandler):
         if self._new_session:
             self.send_header("Set-Cookie", f"mindos_session={self._session_value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000")
         self.end_headers()
-        self.wfile.write(body)
+        if body:
+            self.wfile.write(body)
+
+    def _send_static(self, path: Path, content_type: str) -> None:
+        try:
+            stat = path.stat()
+        except OSError:
+            self._json(HTTPStatus.NOT_FOUND, {"error": "文件不存在"})
+            return
+        etag = f'"{stat.st_mtime_ns:x}-{stat.st_size:x}"'
+        if self.headers.get("If-None-Match") == etag:
+            self._send(HTTPStatus.NOT_MODIFIED, b"", content_type, etag)
+            return
+        self._send(HTTPStatus.OK, path.read_bytes(), content_type, etag)
 
     def _json(self, status: HTTPStatus, payload: dict) -> None:
         self._send(status, json.dumps(payload, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
@@ -315,7 +343,7 @@ class MindOSHandler(BaseHTTPRequestHandler):
         parsed = urlsplit(self.path)
         if parsed.path in STATIC:
             name, content_type = STATIC[parsed.path]
-            self._send(HTTPStatus.OK, (WEB / name).read_bytes(), content_type)
+            self._send_static(WEB / name, content_type)
         elif parsed.path=='/api/debug/learning/personal':
             if os.getenv('MINDOS_DEBUG_LEARNING')!='1':self._json(HTTPStatus.NOT_FOUND,{'error':'接口不存在'});return
             from .learning.personal import PersonalKnowledgeProfileBuilder

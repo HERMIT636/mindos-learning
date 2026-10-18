@@ -449,7 +449,10 @@ const CourseAssistant = (() => {
     AssistantButton();
     error('');
     $('assistant-send').textContent = '正在解释…';
-    AssistantPanel(false);
+    // The learner's own question appears at once; the tutor reply replaces it with the saved turns.
+    const optimistic = { id: `pending-${requestId}`, role: 'user', content: question };
+    messages.push(optimistic);
+    AssistantPanel();
     try {
       const feedback = nextFeedback;
       nextFeedback = null;
@@ -461,7 +464,8 @@ const CourseAssistant = (() => {
         ...(feedback ? { feedback } : {}),
       });
       if (cid === courseId && version === generation) {
-        messages.push(...result.messages);
+        const at = messages.indexOf(optimistic);
+        if (at >= 0) messages.splice(at, messages.length - at, ...result.messages);
         observations = result.observations || [];
         $('tutor-memory-indicator').textContent =
           result.memory_note || '只保留学习相关问答；疑似误区待检测。';
@@ -470,7 +474,12 @@ const CourseAssistant = (() => {
         renderObservations();
       }
     } catch (e) {
-      if (cid === courseId && version === generation) error(e.message);
+      if (cid === courseId && version === generation) {
+        const at = messages.indexOf(optimistic);
+        if (at >= 0) messages.splice(at, 1);
+        error(e.message);
+        AssistantPanel(false);
+      }
     } finally {
       pending.delete(cid);
       AssistantButton();

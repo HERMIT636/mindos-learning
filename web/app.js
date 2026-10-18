@@ -65,18 +65,36 @@ async function api(path, body) {
   return data;
 }
 
+// api() throws the cancellation error by design when the user navigates away mid-request.
+// Async button handlers cannot all attach catch blocks, so keep that expected signal from
+// surfacing as a page error; every other unhandled rejection still reports normally.
+window.addEventListener('unhandledrejection', (event) => {
+  if (event.reason instanceof Error && event.reason.message.startsWith('页面已切换'))
+    event.preventDefault();
+});
+
 async function action(button, message, work) {
   if (state.busy) return;
   state.busy = true;
   if (button) button.disabled = true;
   const version = navigationVersion;
   showNotice(message, true);
+  const started = Date.now();
+  const timer = setInterval(() => {
+    if (version !== navigationVersion) {
+      clearInterval(timer);
+      return;
+    }
+    const seconds = Math.round((Date.now() - started) / 1000);
+    if (seconds >= 3) $('notice').textContent = `${message}（已等待 ${seconds} 秒）`;
+  }, 1000);
   try {
     await work();
     if (version === navigationVersion) showNotice('');
   } catch (error) {
     if (version === navigationVersion) showNotice(error.message);
   } finally {
+    clearInterval(timer);
     state.busy = false;
     if (button) button.disabled = false;
   }
@@ -294,52 +312,6 @@ function renderProfiles(data) {
       : data.model_ready
         ? '模型已选用。建议先测试连接。'
         : '添加或选用模型后即可创建课程。';
-}
-
-function renderMarkdown(target, value) {
-  target.replaceChildren();
-  const lines = value.split('\n');
-  let code = null,
-    list = null;
-  const flush = () => {
-    list = null;
-  };
-  for (const line of lines) {
-    if (line.trim().startsWith('```')) {
-      flush();
-      if (code) {
-        target.append(code);
-        code = null;
-      } else code = node('pre');
-      continue;
-    }
-    if (code) {
-      code.textContent += line + '\n';
-      continue;
-    }
-    if (!line.trim()) {
-      flush();
-      continue;
-    }
-    const heading = line.match(/^(#{1,4})\s+(.+)$/);
-    if (heading) {
-      flush();
-      target.append(node(heading[1].length <= 2 ? 'h2' : 'h3', heading[2]));
-      continue;
-    }
-    const bullet = line.match(/^\s*(?:[-*]|\d+[.)])\s+(.+)$/);
-    if (bullet) {
-      if (!list) {
-        list = node('ul');
-        target.append(list);
-      }
-      list.append(node('li', bullet[1]));
-      continue;
-    }
-    flush();
-    target.append(node('p', line));
-  }
-  if (code) target.append(code);
 }
 
 function renderOutline(data) {

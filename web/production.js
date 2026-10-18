@@ -324,6 +324,17 @@ function sourceForm(id, message, work) {
     });
   };
 }
+function fileBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result);
+      resolve(result.slice(result.indexOf(',') + 1));
+    };
+    reader.onerror = () => reject(new Error('无法读取所选文件'));
+    reader.readAsDataURL(file);
+  });
+}
 sourceForm('source-text-form', '正在保存原文…', (courseId) =>
   api('/api/sources/text', {
     course_id: courseId,
@@ -334,14 +345,10 @@ sourceForm('source-text-form', '正在保存原文…', (courseId) =>
 sourceForm('source-file-form', '正在解析资料结构…', async (courseId) => {
   const file = $('source-file').files[0];
   if (!file || file.size > 6 * 1024 * 1024) throw new Error('请选择不超过 6 MB 的资料');
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 8192)
-    binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
   return api('/api/sources/upload', {
     course_id: courseId,
     filename: file.name,
-    content_base64: btoa(binary),
+    content_base64: await fileBase64(file),
   });
 });
 sourceForm('source-url-form', '正在获取公开网页正文…', (courseId) =>
@@ -398,13 +405,8 @@ async function prepareCourseUploads() {
   if (files.length > 3 || files.reduce((total, f) => total + f.size, 0) > 6 * 1024 * 1024)
     throw new Error('创建课程最多3份资料，总计6 MB');
   const result = [];
-  for (const file of files) {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    let binary = '';
-    for (let i = 0; i < bytes.length; i += 8192)
-      binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-    result.push({ filename: file.name, content_base64: btoa(binary) });
-  }
+  for (const file of files)
+    result.push({ filename: file.name, content_base64: await fileBase64(file) });
   return result;
 }
 function renderDiscovery(courseId, run, conflicts) {

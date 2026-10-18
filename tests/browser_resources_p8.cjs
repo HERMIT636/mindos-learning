@@ -38,6 +38,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'),
         .click();
     };
     await tab('公式');
+    await page.locator('#ks-content math').waitFor();
     assert.equal(await page.locator('#ks-content math').count(), 1);
     assert.equal(await page.locator('#ks-content').getByText('查询', { exact: true }).count(), 1);
     await tab('图示');
@@ -111,6 +112,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'),
     assert.equal((await fixture()).tasks, 0);
     await page.setViewportSize({ width: 390, height: 844 });
     await tab('公式');
+    await page.locator('#ks-content math').waitFor();
     assert.equal(await page.locator('#ks-content math').count(), 1);
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),

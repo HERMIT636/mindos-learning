@@ -7,25 +7,54 @@ window.MindOSResources = (() => {
       b.onclick = fn;
       return b;
     };
+  // KaTeX is fetched on first formula; the raw expression stays visible until then.
+  const katexReady = (() => {
+    let pending = null;
+    return () => {
+      if (window.katex) return Promise.resolve();
+      if (!pending) {
+        pending = new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = '/vendor/katex.min.js';
+          script.onload = resolve;
+          script.onerror = () => {
+            pending = null;
+            reject(new Error('KaTeX 加载失败'));
+          };
+          document.head.append(script);
+        });
+      }
+      return pending;
+    };
+  })();
   function prose(value) {
     return MindOSTeaching.prose(value || '');
   }
   function formula(p) {
     const box = el('div', '', 'ks-formula');
-    try {
-      if (p.format === 'plain') box.append(el('pre', p.expression));
-      else
-        katex.render(p.expression, box, {
-          output: 'mathml',
-          displayMode: true,
-          throwOnError: true,
-          trust: false,
-          strict: 'error',
-        });
-    } catch (_) {
-      box.append(el('pre', p.expression), el('p', '暂无法排版此公式，保留原表达式。', 'muted'));
-    }
-    box.append(prose(p.explanation));
+    const slot = el('div', '', 'ks-formula-slot');
+    slot.append(el('pre', p.expression));
+    if (p.format !== 'plain')
+      katexReady()
+        .then(() => {
+          try {
+            slot.replaceChildren();
+            katex.render(p.expression, slot, {
+              output: 'mathml',
+              displayMode: true,
+              throwOnError: true,
+              trust: false,
+              strict: 'error',
+            });
+          } catch (_) {
+            slot.replaceChildren(
+              el('pre', p.expression),
+              el('p', '暂无法排版此公式，保留原表达式。', 'muted'),
+            );
+          }
+        })
+        .catch(() => {});
+    box.append(slot, prose(p.explanation));
     const dl = el('dl', '', 'ks-symbols');
     for (const [k, v] of Object.entries(p.variables || {})) dl.append(el('dt', k), el('dd', v));
     box.append(dl);

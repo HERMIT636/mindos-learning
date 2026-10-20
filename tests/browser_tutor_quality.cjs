@@ -36,6 +36,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'),
       .getByText(/quality: passed · retry: 1/)
       .waitFor({ state: 'attached' });
     await page.locator('#tutor-quality-debug summary').click();
+    await page.locator('.assistant-chat-message').nth(1).waitFor();
     assert.equal(await page.locator('.assistant-chat-message').count(), 2);
     assert.equal(
       (await page.locator('.assistant-chat-message.assistant .teaching-text').count()) > 0,
@@ -55,6 +56,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'),
     const after = await page.locator('#assistant-panel').boundingBox();
     assert(Math.abs(before.x - after.x) < 2);
     assert(Math.abs(before.y - after.y) < 2);
+    await page.locator('.assistant-chat-message').nth(1).waitFor();
     assert.equal(await page.locator('.assistant-chat-message').count(), 2);
     await page
       .locator('#tutor-quality-debug')

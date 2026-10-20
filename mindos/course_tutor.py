@@ -46,6 +46,12 @@ class CourseTutorStorage:
         return {'messages':[public_message(r) for r in reversed(rows[:80])],'has_more':len(rows)>80,
                 'position':({'x':position['position_x'],'y':position['position_y'],'updated_time':position['updated_time']} if position else None)}
 
+    def assistant_position(self,session,cid):
+        self._knowledge_course(session,cid)
+        with self.connect() as db:
+            position=db.execute('SELECT position_x,position_y,updated_time FROM assistant_position WHERE user_id=? AND course_id=?',(session,cid)).fetchone()
+        return {'position':({'x':position['position_x'],'y':position['position_y'],'updated_time':position['updated_time']} if position else None)}
+
     def assistant_exchange(self,session,cid,exchange_id):
         self._knowledge_course(session,cid)
         with self.connect() as db:

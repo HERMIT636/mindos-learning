@@ -146,6 +146,11 @@ class Storage(KnowledgeStorage, ProductionStorage, DiscoveryStorage, CourseManag
         db = sqlite3.connect(self.path, timeout=10)
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA foreign_keys=ON")
+        # WAL lets the read-heavy local server keep serving while a write commits, instead of
+        # serializing every reader behind it; busy_timeout makes contention wait instead of fail.
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("PRAGMA busy_timeout=5000")
+        db.execute("PRAGMA synchronous=NORMAL")
         try:
             with db:
                 yield db

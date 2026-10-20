@@ -330,20 +330,45 @@ const CourseAssistant = (() => {
     panelPointer = null;
     observations = [];
     courseId = cid;
+    historyLoaded = null;
     loadPanelRect(cid);
     const version = ++generation;
     contextKey = JSON.stringify(c);
     expanded = false;
     messages = [];
     hasMore = false;
-    loadingHistory = true;
+    loadingHistory = false;
     nextFeedback = null;
     nextContext = null;
     error('');
     $('assistant-question').value = '';
+    // Resolve the saved bubble position before the first paint so it never flashes at the
+    // default corner; the transcript itself still waits for first expand.
+    if (!positions.has(cid)) {
+      try {
+        const result = await request(cid, 'position');
+        if (courseId !== cid) return;
+        if (result.position) positions.set(cid, result.position);
+      } catch {
+        /* A missing position just leaves the bubble at its default corner. */
+      }
+    }
+    if (courseId !== cid) return;
     DraggableAssistant(positions.get(cid) || { x: innerWidth - 80, y: innerHeight - 80 });
     AssistantButton();
     AssistantPanel();
+  }
+  // History is fetched on first expand, not on every course switch: the collapsed panel never
+  // shows it. Switching courses resets historyLoaded so the new course's transcript loads fresh.
+  let historyLoaded = null;
+  async function loadHistory() {
+    const cid = courseId;
+    if (!cid || historyLoaded === cid || loadingHistory) return;
+    historyLoaded = cid;
+    loadingHistory = true;
+    AssistantButton();
+    AssistantPanel();
+    const version = generation;
     try {
       const result = await request(cid, 'history');
       if (courseId !== cid || version !== generation) return;
@@ -356,7 +381,10 @@ const CourseAssistant = (() => {
       }
       AssistantPanel();
     } catch (e) {
-      if (courseId === cid && version === generation) error(e.message);
+      if (courseId === cid && version === generation) {
+        historyLoaded = null;
+        error(e.message);
+      }
     } finally {
       if (courseId === cid && version === generation) {
         loadingHistory = false;
@@ -373,6 +401,7 @@ const CourseAssistant = (() => {
     AssistantButton();
     if (expanded) {
       AssistantPanel();
+      if (courseId) loadHistory();
       (courseId ? $('assistant-question') : $('assistant-select-course')).focus();
     }
   });
@@ -856,6 +885,7 @@ const CourseAssistant = (() => {
       expanded = true;
       AssistantButton();
       AssistantPanel();
+      if (courseId) loadHistory();
       $('assistant-question').focus();
     },
   };

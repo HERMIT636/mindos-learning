@@ -99,8 +99,8 @@ const assert = require('node:assert/strict');
     await page.mouse.up();
     await page.waitForFunction(
       async (cid) =>
-        (await fetch(`/api/courses/${cid}/assistant/history`).then((r) => r.json())).position?.x ===
-        8,
+        (await fetch(`/api/courses/${cid}/assistant/position`).then((r) => r.json())).position
+          ?.x === 8,
       cid,
     );
     const saved = await page.locator('#assistant-toggle').boundingBox();

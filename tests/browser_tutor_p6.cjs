@@ -71,12 +71,18 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright'),
     const restored = await page.locator('#assistant-panel').boundingBox();
     assert(Math.abs(restored.x - resized.x) < 2);
     assert(Math.abs(restored.width - resized.width) < 2);
+    // History now loads on first expand, so wait for it before capturing the baseline.
+    await page.locator('.assistant-chat-message').first().waitFor();
     const savedCount = await page.locator('.assistant-chat-message').count();
     await chat('谢谢！');
     assert.equal(await page.locator('.assistant-chat-message').count(), savedCount + 2);
     await page.reload();
     await open('Transformer导师验收课程');
     await page.locator('#assistant-toggle').click();
+    await page
+      .locator('.assistant-chat-message')
+      .nth(savedCount - 1)
+      .waitFor();
     assert.equal(await page.locator('.assistant-chat-message').count(), savedCount);
     await chat('我喜欢先讲直觉，再看公式');
     await chat('我不理解Q和K');

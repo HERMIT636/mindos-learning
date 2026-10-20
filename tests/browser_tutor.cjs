@@ -47,7 +47,7 @@ const assert = require('node:assert/strict');
     const moved = await page.locator('#assistant-toggle').boundingBox();
     assert(Math.abs(moved.x - initial.x) > 100);
     await page.waitForFunction(async (cid) => {
-      const result = await fetch(`/api/courses/${cid}/assistant/history`).then((r) => r.json());
+      const result = await fetch(`/api/courses/${cid}/assistant/position`).then((r) => r.json());
       return !!result.position;
     }, firstCid);
     await page.reload();
@@ -76,6 +76,8 @@ const assert = require('node:assert/strict');
     await open('Attention课程');
     await page.waitForFunction(() => !document.getElementById('assistant-question').disabled);
     await page.locator('#assistant-toggle').click();
+    // History now loads on first expand, so wait for the saved transcript before counting.
+    await page.locator('.assistant-chat-message').nth(5).waitFor();
     assert.equal(await page.locator('.assistant-chat-message').count(), 6);
     await page.locator('#assistant-close').click();
     await open('独立图论课程');

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import base64
 import binascii
+import gzip
 import json
 import logging
 import os
@@ -74,7 +75,6 @@ class MindOSServer(ThreadingHTTPServer):
 
 
 class MindOSHandler(BaseHTTPRequestHandler):
-    server: MindOSServer
 
     def _session(self) -> str:
         if not hasattr(self, "_session_value"):
@@ -102,12 +102,16 @@ class MindOSHandler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'")
+        self.send_header("Vary", "Accept-Encoding")
         self._session()
         if self._new_session:
             self.send_header("Set-Cookie", f"mindos_session={self._session_value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000")
         self.end_headers()
         if body:
             self.wfile.write(body)
+
+    def _accepts_gzip(self) -> bool:
+        return "gzip" in (self.headers.get("Accept-Encoding") or "").lower()
 
     def _send_static(self, path: Path, content_type: str) -> None:
         try:
@@ -124,14 +128,31 @@ class MindOSHandler(BaseHTTPRequestHandler):
     def _json(self, status: HTTPStatus, payload: dict) -> None:
         self._send(status, json.dumps(payload, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
 
+    def _drain_body(self) -> None:
+        # Under keep-alive an unread request body would corrupt the next request on the same
+        # connection, so every rejection path consumes it before answering.
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        remaining = max(0, min(length, 10_000_000))
+        while remaining > 0:
+            chunk = self.rfile.read(min(remaining, 65536))
+            if not chunk:
+                break
+            remaining -= len(chunk)
+
     def _request_json(self, limit: int = 8192, *, array=False) -> dict:
         if self.headers.get_content_type() != "application/json":
+            self._drain_body()
             raise ValueError("请使用 JSON 请求")
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError as exc:
+            self._drain_body()
             raise ValueError("请求长度无效") from exc
         if not 0 < length <= limit:
+            self._drain_body()
             raise ValueError("请求内容过大或为空")
         try:
             payload = json.loads(self.rfile.read(length))
@@ -441,6 +462,9 @@ class MindOSHandler(BaseHTTPRequestHandler):
             before=parse_qs(parsed.query).get('before',[None])[0]
             if before is not None and not before.isdigit():raise ValueError('历史记录页码无效')
             self._json(HTTPStatus.OK,self.server.storage.assistant_history(self._session(),parsed.path.split('/')[3],int(before) if before else None))
+        elif re.fullmatch(r'/api/courses/[A-Za-z0-9_-]+/assistant/position',parsed.path):
+            # Position alone, so switching courses does not pull the transcript it never shows.
+            self._json(HTTPStatus.OK,self.server.storage.assistant_position(self._session(),parsed.path.split('/')[3]))
         elif parsed.path == "/api/draft":
             draft_id = parse_qs(parsed.query).get("draft_id", [""])[0]
             draft = self.server.storage.draft(self._session(), draft_id)

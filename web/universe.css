@@ -157,6 +157,18 @@ h2 {
   background: #687fe81a;
   color: #c5ceff;
   border-color: #778ade28;
+  position: relative;
+}
+.primary-nav .active::before,
+.sidebar-add.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  height: 60%;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #a8b4ff, #7fd5e7);
 }
 .sidebar-add:hover,
 .primary-nav button:hover {
@@ -237,17 +249,26 @@ h2 {
   transition:
     background 0.18s,
     border-color 0.18s,
+    box-shadow 0.18s,
     transform 0.18s;
 }
 .button.primary {
   color: #0c1124;
-  background: #a8b4ff;
+  background: linear-gradient(180deg, #b9c3ff, #9aa8fb);
   border: 1px solid #a8b4ff;
-  box-shadow: 0 3px 20px #748fff13;
+  box-shadow:
+    inset 0 1px 0 #ffffff70,
+    0 3px 20px #748fff26;
 }
 .button.primary:hover {
-  background: #c4cdff;
+  background: linear-gradient(180deg, #ccd4ff, #aeb9ff);
   transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 #ffffff80,
+    0 6px 24px #748fff33;
+}
+.button.primary:active {
+  transform: translateY(0);
 }
 .button.secondary {
   background: #1a2740;
@@ -393,11 +414,16 @@ fieldset {
   grid-template-columns: minmax(0, 1.3fr) minmax(240px, 1fr);
   gap: 30px;
   align-items: center;
-  background: linear-gradient(125deg, #182440, #151b35 65%, #1c223f);
-  border: 1px solid #344563;
+  background:
+    radial-gradient(120% 140% at 12% -10%, #2b3c6b8f, transparent 60%),
+    linear-gradient(125deg, #1a2748, #151b35 62%, #20264a);
+  border: 1px solid #3a4a68;
   border-radius: 22px;
   padding: 45px 45px 38px;
   min-height: 310px;
+  box-shadow:
+    inset 0 1px 0 #ffffff0f,
+    0 24px 60px -30px #050a18cc;
 }
 .hero-copy {
   position: relative;
@@ -409,11 +435,15 @@ fieldset {
   line-height: 1.26;
   margin: 15px 0 18px;
   letter-spacing: -0.045em;
+  background: linear-gradient(180deg, #ffffff, #c3cff5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 .hero-description {
-  font-size: 13px;
+  font-size: 14px;
   max-width: 460px;
-  color: #b2c0da;
+  color: #b6c4de;
   line-height: 1.95;
   margin-bottom: 22px;
 }
@@ -428,12 +458,12 @@ fieldset {
   stroke-width: 1;
 }
 .orbit-core {
-  fill: #8597e61a;
-  stroke: #acbafc44;
+  fill: #8597e61f;
+  stroke: #acbafc59;
 }
 .orbit-inner {
-  fill: #283555;
-  stroke: #99ade999;
+  fill: #2c3a5e;
+  stroke: #9db4ff8f;
 }
 .orbit-symbol {
   fill: #dbe2ff;
@@ -454,7 +484,8 @@ fieldset {
   padding: 20px 24px;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: #11192a;
+  background: linear-gradient(180deg, #141d31, #101827);
+  box-shadow: inset 0 1px 0 #ffffff0a;
 }
 .dashboard-stats small,
 .dashboard-stats span {
@@ -463,11 +494,14 @@ fieldset {
   font-size: 11px;
 }
 .dashboard-stats strong {
-  font-size: 29px;
-  font-weight: 500;
-  color: #d4ddf8;
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: #e6ecff;
   display: block;
-  margin: 4px 0;
+  margin: 6px 0 4px;
+  font-variant-numeric: tabular-nums;
 }
 .dashboard-grid {
   display: grid;
@@ -778,7 +812,23 @@ fieldset {
   margin-top: 18px;
 }
 .galaxy-card {
-  padding: 18px;
+  padding: 18px 18px 16px;
+  position: relative;
+  overflow: hidden;
+  transition:
+    border-color 0.18s,
+    transform 0.18s;
+}
+.galaxy-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, #7f8fe84d, transparent 70%);
+}
+.galaxy-card:hover {
+  border-color: #46587c;
+  transform: translateY(-2px);
 }
 .galaxy-card h3 {
   font-size: 14px;
@@ -791,10 +841,16 @@ fieldset {
   color: #91a4c3;
 }
 .galaxy-card.current {
-  border-color: #647dab;
+  border-color: #7f92d6;
+}
+.galaxy-card.current::before {
+  background: linear-gradient(90deg, #a8b4ff, #7fd5e7);
 }
 .galaxy-card.locked {
-  background: #0f1728;
+  background: #0d1524;
+}
+.galaxy-card.locked::before {
+  background: linear-gradient(90deg, #2c3a58, transparent 70%);
 }
 .study-grid {
   grid-template-columns: 180px minmax(0, 1fr) 200px;
@@ -1068,10 +1124,15 @@ fieldset {
   max-width: 100%;
 }
 .empty-map {
-  font-size: 12px;
-  color: #8ea4c6;
+  font-size: 13px;
+  color: #9db1d4;
   line-height: 1.9;
-  padding: 25px;
+  padding: 40px 25px;
+  text-align: center;
+  border: 1px dashed #2f4260;
+  border-radius: 16px;
+  background-color: #0f1728;
+  background-image: radial-gradient(80% 120% at 50% 0%, #1d2c5026, transparent);
 }
 .star-connection {
   stroke: #687ea888;

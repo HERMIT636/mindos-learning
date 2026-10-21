@@ -779,10 +779,30 @@ fieldset {
   padding: 13px 2px;
   white-space: nowrap;
   font-size: 12px;
+  position: relative;
+  transition:
+    color 0.18s,
+    border-color 0.18s;
+}
+.course-modes button:not(.active):hover {
+  color: #c3d2ef;
 }
 .course-modes button.active {
-  color: #cfdbff;
+  color: #dfe7ff;
   border-color: #9bafff;
+  text-shadow: 0 0 18px #9bafff59;
+}
+.course-modes button.active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  width: 34px;
+  height: 2px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #9bafff, transparent);
+  box-shadow: 0 0 10px #9bafff8c;
 }
 #knowledge-progress {
   font-size: 10px;
@@ -918,7 +938,8 @@ fieldset {
 }
 .outline {
   padding: 20px 14px;
-  background: #10182a;
+  background: linear-gradient(180deg, #121b2e, #0f1728);
+  box-shadow: inset 0 1px 0 #ffffff08;
   position: sticky;
   top: 20px;
 }
@@ -936,15 +957,36 @@ fieldset {
   background: none;
   font-size: 11px;
   line-height: 1.6;
+  position: relative;
+  transition:
+    background 0.16s,
+    color 0.16s,
+    border-color 0.16s;
+}
+.outline-item:not(:disabled):hover {
+  background: #1b2842;
+  color: #cfdcf5;
+  border-color: #2e3f5e;
 }
 .outline-item span {
   font-size: 9px;
   color: #7c91b6;
 }
 .outline-item.active {
-  background: #273659;
+  background: linear-gradient(90deg, #2c3d67, #26365c);
   border-color: #657aae66;
   color: #e0e8ff;
+  box-shadow: 0 2px 14px -6px #7f9ad94d;
+}
+.outline-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 22%;
+  height: 56%;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #a8b4ff, #7fd5e7);
 }
 .outline-item.active span {
   color: #b3c2e7;
@@ -953,11 +995,18 @@ fieldset {
   opacity: 0.42;
 }
 .lesson-card {
-  padding: 28px 32px;
-  background: #131d30;
+  padding: 30px 34px;
+  background:
+    radial-gradient(90% 60% at 50% -10%, #1e2c4d5c, transparent 70%),
+    linear-gradient(180deg, #16223a, #121c2f);
+  box-shadow:
+    inset 0 1px 0 #ffffff0d,
+    0 20px 50px -34px #050a18b3;
 }
 .lesson-card .section-head h2 {
-  font-size: 23px;
+  font-size: 25px;
+  letter-spacing: -0.015em;
+  line-height: 1.4;
 }
 .lesson-content {
   font-size: 15px;
@@ -971,9 +1020,14 @@ fieldset {
 .lesson-card .section-head .muted {
   font-size: 12px;
 }
+.lesson-card .section-head .eyebrow {
+  color: #a8b6ff;
+  font-size: 10px;
+}
 .learning-support {
   padding: 20px;
-  background: #10182a;
+  background: linear-gradient(180deg, #121b2e, #0f1728);
+  box-shadow: inset 0 1px 0 #ffffff08;
 }
 .learning-support h2 {
   font-size: 14px;
@@ -994,9 +1048,15 @@ fieldset {
   margin: 18px 0;
 }
 .next-card {
-  background: #152339;
+  background:
+    radial-gradient(120% 140% at 8% 0%, #26365e8f, transparent 62%),
+    linear-gradient(180deg, #1a2a48, #152339);
+  border-color: #3b4d72;
   align-items: center;
-  padding: 20px;
+  padding: 22px 24px;
+  box-shadow:
+    inset 0 1px 0 #ffffff0d,
+    0 16px 40px -30px #7f9ad966;
 }
 .next-card h2 {
   font-size: 14px;
@@ -1019,10 +1079,26 @@ fieldset {
 .option {
   border-color: #3a4a65;
   color: #c8d5eb;
-  background: #111c30;
+  background: linear-gradient(180deg, #131e33, #111c30);
+  cursor: pointer;
+  transition:
+    background 0.16s,
+    border-color 0.16s,
+    transform 0.16s;
 }
 .option:hover {
-  background: #20334b;
+  background: linear-gradient(180deg, #1d2f49, #182742);
+  border-color: #4d6490;
+  transform: translateX(3px);
+}
+.option:has(input:checked) {
+  border-color: #7f92d6;
+  background: linear-gradient(90deg, #23325a, #1c2a49);
+  color: #e4ebff;
+}
+.option:has(input:focus-visible) {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
 }
 .quiz-question h3 {
   color: #d4e0f3;
@@ -1054,9 +1130,23 @@ fieldset {
 }
 .teaching-block {
   border-color: #2e3e58;
-  background: #152037;
+  background: linear-gradient(180deg, #182541, #141f36);
   padding: 22px;
   border-radius: 13px;
+  box-shadow: inset 0 1px 0 #ffffff0a;
+  animation: rise-in 0.4s cubic-bezier(0.22, 0.68, 0.36, 1) backwards;
+}
+.teaching-block:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.teaching-block:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.teaching-block:nth-child(4) {
+  animation-delay: 0.15s;
+}
+.teaching-block:nth-child(n + 5) {
+  animation-delay: 0.2s;
 }
 .teaching-block h3 {
   color: #c0ceec;
@@ -1070,16 +1160,17 @@ fieldset {
   line-height: 1.95;
 }
 .teaching-question {
-  background: #1a2743;
+  background: linear-gradient(90deg, #1e2c4d, #1a2743 60%);
   border-left: 3px solid #8c9cff;
+  box-shadow: -3px 0 14px -6px #8c9cff59;
 }
 .teaching-analogy,
 .teaching-example {
-  background: #15283a;
+  background: linear-gradient(180deg, #173040, #15283a);
   border-color: #324b65;
 }
 .teaching-checkpoint {
-  background: #172d30;
+  background: linear-gradient(180deg, #1a3437, #172d30);
   border-color: #385558;
 }
 .teaching-blocks {
@@ -1275,13 +1366,19 @@ fieldset {
 }
 .atom-chip {
   color: #bfcde6;
-  background: #1b2a40;
+  background: linear-gradient(180deg, #1f3050, #1b2a40);
   border-color: #354961;
   border-radius: 9px;
   font-size: 11px;
+  transition:
+    background 0.16s,
+    border-color 0.16s,
+    transform 0.16s;
 }
 .atom-chip:hover {
-  background: #2b3d58;
+  background: linear-gradient(180deg, #2e4368, #26385a);
+  border-color: #4a5f85;
+  transform: translateY(-1px);
 }
 .knowledge-sections h3 {
   color: #b5c9e6;

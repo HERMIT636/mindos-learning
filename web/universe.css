@@ -694,6 +694,16 @@ fieldset {
   flex-shrink: 0;
   margin-top: 9px;
   box-shadow: 0 0 10px #8293d522;
+  animation: dot-pulse 4s ease-in-out infinite;
+}
+@keyframes dot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 6px #8293d533;
+  }
+  50% {
+    box-shadow: 0 0 12px #8293d566;
+  }
 }
 .timeline-dot.quiz {
   background: var(--success);
@@ -2470,7 +2480,14 @@ fieldset {
   padding: 16px;
   border: 1px solid var(--line, #33415e);
   border-radius: 14px;
-  background: #13213966;
+  background: linear-gradient(180deg, #16253f66, #13213966);
+  transition:
+    border-color 0.18s,
+    transform 0.18s;
+}
+.growth-gap:hover {
+  transform: translateY(-2px);
+  border-color: #44587e;
 }
 .growth-gap[data-gap='conflicted'] {
   border-color: #d59058;
@@ -2490,9 +2507,13 @@ fieldset {
 }
 .growth-stage {
   margin: 24px 0;
-  padding: 20px;
+  padding: 22px;
   border: 1px solid #35476b;
   border-radius: 16px;
+  background:
+    radial-gradient(100% 80% at 0% 0%, #24345c4d, transparent 60%),
+    linear-gradient(180deg, #16223a, #131d31);
+  box-shadow: inset 0 1px 0 #ffffff0a;
 }
 .growth-stage h3 {
   margin: 8px 0;

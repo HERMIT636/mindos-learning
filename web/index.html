@@ -524,7 +524,7 @@
               </div>
             </div>
             <p id="discovery-banner" class="notice success" role="status"></p>
-            <details id="production-panel" class="card">
+            <details id="production-panel" class="card" data-scope="production">
               <summary>资料与知识生产 · 导入、理解、审查</summary>
               <p class="muted">
                 资料只保存在当前课程。搜索结果是标题与摘要；获取正文后才可抽取。候选须有原文引用并经你确认，才进入知识地图；“审查通过”不等于事实认证，也不改变掌握记录。
@@ -627,7 +627,7 @@
               aria-label="学习建议与短检测"
               hidden
             ></section>
-            <div id="chapter-mode" class="study-grid">
+            <div id="chapter-mode" class="study-grid" data-scope="learn">
               <aside class="card outline">
                 <div class="section-head">
                   <h2>星云导航</h2>
@@ -710,7 +710,7 @@
               <p id="quiz-empty" class="card muted">
                 先在学习空间生成当前小节讲解，再用独立小测检查理解。
               </p>
-              <section id="quiz-card" class="card quiz-card" hidden>
+              <section id="quiz-card" class="card quiz-card" hidden data-scope="quiz">
                 <div class="section-head">
                   <div>
                     <p class="eyebrow">独立小测</p>
@@ -727,7 +727,7 @@
               </section>
             </section>
             <section id="course-history" hidden aria-label="课程学习记录"></section>
-            <div id="map-mode" hidden>
+            <div id="map-mode" hidden data-scope="stars">
               <section class="card">
                 <div class="section-head">
                   <div>

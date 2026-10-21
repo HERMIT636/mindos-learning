@@ -89,10 +89,38 @@ window.addEventListener('unhandledrejection', (event) => {
     event.preventDefault();
 });
 
+// In-flight work is tracked per scope so one slow request only blocks its own area: switching
+// sections or opening the star map stays available while a lesson generates. state.busy remains
+// a derived "anything in flight" flag that the browser checks and status polls rely on.
+const busyScopes = new Map();
+function scopeOf(button) {
+  if (!button) return '';
+  const host = button.closest('[data-scope]');
+  return host ? host.dataset.scope : button.closest('section, aside, form, dialog')?.id || '';
+}
+function scopeBusy(scope) {
+  return (busyScopes.get(scope) || 0) > 0;
+}
+function syncBusy() {
+  state.busy = [...busyScopes.values()].reduce((total, count) => total + count, 0) > 0;
+}
+function scopeButtons(scope, disabled) {
+  if (!scope) return;
+  const root =
+    document.querySelector(`[data-scope="${CSS.escape(scope)}"]`) || document.getElementById(scope);
+  if (!root) return;
+  for (const item of root.querySelectorAll('button'))
+    if (!disabled || !item.closest('[data-scope-keep]')) item.disabled = disabled;
+}
+
 async function action(button, message, work) {
-  if (state.busy) return;
-  state.busy = true;
+  const scope = scopeOf(button);
+  // Only the same area is held back; other panels stay interactive.
+  if (scopeBusy(scope)) return;
+  busyScopes.set(scope, (busyScopes.get(scope) || 0) + 1);
+  syncBusy();
   if (button) button.disabled = true;
+  scopeButtons(scope, true);
   const version = navigationVersion;
   showNotice(message, true);
   const started = Date.now();
@@ -111,8 +139,12 @@ async function action(button, message, work) {
     if (version === navigationVersion) showNotice(error.message);
   } finally {
     clearInterval(timer);
-    state.busy = false;
-    if (button) button.disabled = false;
+    const remaining = (busyScopes.get(scope) || 1) - 1;
+    if (remaining > 0) busyScopes.set(scope, remaining);
+    else busyScopes.delete(scope);
+    syncBusy();
+    if (button && button.isConnected) button.disabled = false;
+    scopeButtons(scope, false);
   }
 }
 

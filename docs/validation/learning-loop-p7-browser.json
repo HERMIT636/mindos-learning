@@ -8,9 +8,9 @@
     844
   ],
   "visible_nodes": 200,
-  "draw_p95_ms": 1.5,
-  "frame_p50_ms": 6.300000011920929,
-  "frame_p95_ms": 8.5,
+  "draw_p95_ms": 3.5999999046325684,
+  "frame_p50_ms": 12.799999952316284,
+  "frame_p95_ms": 17.40000009536743,
   "checks": [
     "profile entry",
     "3 levels",

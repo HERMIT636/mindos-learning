@@ -124,13 +124,28 @@ async function action(button, message, work) {
   const version = navigationVersion;
   showNotice(message, true);
   const started = Date.now();
+  // Long generations move through real server stages; the elapsed counter tells the learner the
+  // request is still alive when a stage estimate turns out optimistic.
+  const stages = Array.isArray(message) ? message : null;
+  const base = stages ? stages[0] : message;
   const timer = setInterval(() => {
     if (version !== navigationVersion) {
       clearInterval(timer);
       return;
     }
     const seconds = Math.round((Date.now() - started) / 1000);
-    if (seconds >= 3) $('notice').textContent = `${message}（已等待 ${seconds} 秒）`;
+    // Reading state and saving are quick; the model call is what actually takes time, so the
+    // middle stage holds much longer than the others.
+    const stage = stages
+      ? stages[
+          seconds < 2
+            ? 0
+            : seconds < 14
+              ? 1
+              : Math.min(stages.length - 1, 2 + Math.floor((seconds - 14) / 6))
+        ]
+      : base;
+    $('notice').textContent = seconds >= 3 ? `${stage}（已等待 ${seconds} 秒）` : stage;
   }, 1000);
   try {
     await work();
@@ -852,15 +867,26 @@ $('review-confirm').addEventListener('click', () => {
 $('review-back').addEventListener('click', showWelcome);
 $('lesson-generate').addEventListener('click', () => {
   const data = state.data;
-  action($('lesson-generate'), 'AI 正在深入讲解这一节，请稍候…', async () => {
-    renderCourse(
-      await api('/api/sections/lesson', {
-        course_id: data.course.id,
-        ordinal: data.section.ordinal,
-        regenerate: Boolean(data.section.lesson_stale),
-      }),
-    );
-  });
+  // The server reads learning state, then generates, then validates before saving; the notice
+  // walks through those stages instead of one static sentence.
+  action(
+    $('lesson-generate'),
+    [
+      '正在读取这节课的学习状态…',
+      'AI 正在深入讲解这一节，请稍候…',
+      '正在核对讲解范围与难度…',
+      '正在保存这一节的讲解…',
+    ],
+    async () => {
+      renderCourse(
+        await api('/api/sections/lesson', {
+          course_id: data.course.id,
+          ordinal: data.section.ordinal,
+          regenerate: Boolean(data.section.lesson_stale),
+        }),
+      );
+    },
+  );
 });
 $('ask-form').addEventListener('submit', (event) => {
   event.preventDefault();
@@ -880,11 +906,18 @@ $('ask-form').addEventListener('submit', (event) => {
 });
 $('quiz-new').addEventListener('click', () => {
   const data = state.data;
-  action($('quiz-new'), '正在生成新的独立小测…', async () => {
-    renderCourse(
-      await api('/api/sections/quiz', { course_id: data.course.id, ordinal: data.section.ordinal }),
-    );
-  });
+  action(
+    $('quiz-new'),
+    ['正在读取本节的掌握情况…', '正在生成新的独立小测…', '正在保存题目…'],
+    async () => {
+      renderCourse(
+        await api('/api/sections/quiz', {
+          course_id: data.course.id,
+          ordinal: data.section.ordinal,
+        }),
+      );
+    },
+  );
 });
 $('next-section').addEventListener('click', () => {
   const data = state.data;
@@ -1179,9 +1212,13 @@ function renderKnowledgeTests(target, tests, refresh) {
 $('mode-course').addEventListener('click', () => setCourseMode('course'));
 $('mode-map').addEventListener('click', () => setCourseMode('map'));
 $('graph-build').addEventListener('click', () =>
-  action($('graph-build'), '正在拆分课程知识点与关系…', async () => {
-    renderCourse(await api('/api/knowledge/build', { course_id: state.data.course.id }));
-  }),
+  action(
+    $('graph-build'),
+    ['正在读取课程资料与章节…', '正在拆分课程知识点与关系…', '正在保存知识地图…'],
+    async () => {
+      renderCourse(await api('/api/knowledge/build', { course_id: state.data.course.id }));
+    },
+  ),
 );
 $('section-read').addEventListener('click', () =>
   action($('section-read'), '正在记录本节阅读…', async () => {

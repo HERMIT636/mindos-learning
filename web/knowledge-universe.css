@@ -40,6 +40,26 @@
   touch-action: none;
   cursor: grab;
 }
+/* Slow ambient light drifting behind the canvas; the star field itself is drawn on canvas. */
+.ku-canvas::after {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle 180px at 30% 35%, #7f9ad91f, transparent 70%),
+    radial-gradient(circle 220px at 72% 62%, #7fd5e716, transparent 70%);
+  animation: ku-drift 26s ease-in-out infinite;
+}
+@keyframes ku-drift {
+  0%,
+  100% {
+    transform: translate3d(-3%, -2%, 0);
+  }
+  50% {
+    transform: translate3d(4%, 3%, 0);
+  }
+}
 .ku-canvas:active {
   cursor: grabbing;
 }

@@ -254,15 +254,26 @@ h2 {
 }
 .button.primary {
   color: #0c1124;
-  background: linear-gradient(180deg, #b9c3ff, #9aa8fb);
+  background:
+    linear-gradient(180deg, #b9c3ff, #9aa8fb) padding-box,
+    linear-gradient(110deg, #ffffff00 38%, #ffffff73 50%, #ffffff00 62%) border-box;
+  background-size:
+    auto,
+    220% 100%;
   border: 1px solid #a8b4ff;
   box-shadow:
     inset 0 1px 0 #ffffff70,
     0 3px 20px #748fff26;
 }
 .button.primary:hover {
-  background: linear-gradient(180deg, #ccd4ff, #aeb9ff);
+  background:
+    linear-gradient(180deg, #ccd4ff, #aeb9ff) padding-box,
+    linear-gradient(110deg, #ffffff00 38%, #ffffff73 50%, #ffffff00 62%) border-box;
+  background-size:
+    auto,
+    220% 100%;
   transform: translateY(-1px);
+  animation: sheen 0.9s ease-out;
   box-shadow:
     inset 0 1px 0 #ffffff80,
     0 6px 24px #748fff33;
@@ -456,10 +467,21 @@ fieldset {
   fill: none;
   stroke: #93a2e13c;
   stroke-width: 1;
+  transform-origin: 210px 160px;
+  animation: orbit-spin 60s linear infinite;
+}
+.orbit-ring:nth-of-type(2) {
+  animation-duration: 84s;
+  animation-direction: reverse;
+}
+.orbit-ring:nth-of-type(3) {
+  animation-duration: 108s;
 }
 .orbit-core {
   fill: #8597e61f;
   stroke: #acbafc59;
+  transform-origin: 210px 160px;
+  animation: glow-pulse 6s ease-in-out infinite;
 }
 .orbit-inner {
   fill: #2c3a5e;
@@ -468,17 +490,52 @@ fieldset {
 .orbit-symbol {
   fill: #dbe2ff;
   font-size: 40px;
+  animation: glow-pulse 5s ease-in-out infinite;
 }
 .orbit-star {
   fill: #b0c0ff;
   stroke: #eef3ff;
   stroke-width: 1;
+  animation: drift 7s ease-in-out infinite;
+}
+.orbit-star:nth-of-type(2n) {
+  animation-duration: 9s;
+  animation-delay: -2s;
+}
+.orbit-star:nth-of-type(3n) {
+  animation-duration: 11s;
+  animation-delay: -4s;
+}
+@keyframes orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .dashboard-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   margin: 22px 0;
+}
+.dashboard-hero,
+.dashboard-stats > div,
+.dashboard-grid > * {
+  animation: rise-in 0.5s cubic-bezier(0.22, 0.68, 0.36, 1) backwards;
+}
+.dashboard-hero {
+  animation-delay: 0.02s;
+}
+.dashboard-stats > div:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.dashboard-stats > div:nth-child(3) {
+  animation-delay: 0.16s;
+}
+.dashboard-grid > *:nth-child(1) {
+  animation-delay: 0.22s;
+}
+.dashboard-grid > *:nth-child(2) {
+  animation-delay: 0.28s;
 }
 .dashboard-stats > div {
   padding: 20px 24px;
@@ -827,8 +884,9 @@ fieldset {
   background: linear-gradient(90deg, #7f8fe84d, transparent 70%);
 }
 .galaxy-card:hover {
-  border-color: #46587c;
+  border-color: #4d5f86;
   transform: translateY(-2px);
+  box-shadow: 0 12px 32px -18px #7f9ad94d;
 }
 .galaxy-card h3 {
   font-size: 14px;
@@ -845,6 +903,7 @@ fieldset {
 }
 .galaxy-card.current::before {
   background: linear-gradient(90deg, #a8b4ff, #7fd5e7);
+  box-shadow: 0 0 12px #a8b4ff80;
 }
 .galaxy-card.locked {
   background: #0d1524;
@@ -1145,11 +1204,46 @@ fieldset {
 .knowledge-star-halo {
   fill: #8296c512;
   stroke: #687b9d36;
+  transition:
+    stroke 0.2s,
+    stroke-width 0.2s,
+    fill 0.2s;
 }
 .knowledge-star-core {
   fill: #7184a4;
   stroke: #95a9cb;
   stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: star-twinkle 5s ease-in-out infinite;
+}
+.knowledge-star.learning .knowledge-star-core {
+  animation-duration: 4s;
+}
+.knowledge-star.strong .knowledge-star-core {
+  animation-duration: 6s;
+  animation-delay: -1.5s;
+}
+.knowledge-star.weak .knowledge-star-core {
+  animation-duration: 3.4s;
+  animation-delay: -0.7s;
+}
+.knowledge-star:nth-of-type(3n) .knowledge-star-core {
+  animation-delay: -2.4s;
+}
+.knowledge-star:nth-of-type(4n) .knowledge-star-core {
+  animation-delay: -3.1s;
+}
+@keyframes star-twinkle {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(0.9);
+  }
 }
 .knowledge-star.learning .knowledge-star-core {
   fill: #a7b8ff;
@@ -1374,6 +1468,44 @@ fieldset {
   50% {
     stroke-opacity: 0.9;
     fill-opacity: 0.5;
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.06);
+  }
+}
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+@keyframes sheen {
+  from {
+    background-position: -120% 0;
+  }
+  to {
+    background-position: 220% 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {

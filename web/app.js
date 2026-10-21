@@ -38,6 +38,22 @@ function node(tag, text = '', className = '') {
   return item;
 }
 
+// Saved records are immutable once submitted, so their rendered DOM is reused across the
+// full-view re-renders instead of being rebuilt on every action. Keys must be unique per
+// record; anything holding live input or toggled <details> state is built fresh each time.
+const domCache = new Map();
+function cachedNode(key, build) {
+  let item = domCache.get(key);
+  if (!item) {
+    item = build();
+    // Pending/optimistic entries are one-shot; drop the oldest once the cache grows past the
+    // handful of records a single view shows.
+    if (domCache.size > 400) domCache.delete(domCache.keys().next().value);
+    domCache.set(key, item);
+  }
+  return item;
+}
+
 function showNotice(message, success = false) {
   $('notice').hidden = !message;
   $('notice').textContent = message || '';
@@ -340,21 +356,25 @@ function renderConversation(turns) {
   const context = { courseId: state.courseId, ordinal: state.data.section.ordinal };
   // The first assistant turn is the saved lesson already shown above.
   turns.slice(1).forEach((turn, index) => {
-    const item = node('div', '', `conversation-turn ${turn.role}`);
-    item.append(node('strong', turn.role === 'user' ? '你的问题' : 'AI 教师'));
-    if (turn.role === 'assistant') {
-      const content = node('div');
-      MindOSTeaching.render(
-        content,
-        turn.blocks?.length ? turn.blocks : MindOSTeaching.fromText(turn.content),
-        {
-          action: turn.teaching_action,
-          onFeedback: (feedback) =>
-            respondToTeaching({ ...feedback, ...context, referenceTurn: index + 1 }),
-        },
-      );
-      item.append(content);
-    } else item.append(node('p', turn.content));
+    // Turns are append-only within a section, so the section-scoped index is a stable key.
+    const item = cachedNode(`turn:${context.courseId}:${context.ordinal}:${index}`, () => {
+      const row = node('div', '', `conversation-turn ${turn.role}`);
+      row.append(node('strong', turn.role === 'user' ? '你的问题' : 'AI 教师'));
+      if (turn.role === 'assistant') {
+        const content = node('div');
+        MindOSTeaching.render(
+          content,
+          turn.blocks?.length ? turn.blocks : MindOSTeaching.fromText(turn.content),
+          {
+            action: turn.teaching_action,
+            onFeedback: (feedback) =>
+              respondToTeaching({ ...feedback, ...context, referenceTurn: index + 1 }),
+          },
+        );
+        row.append(content);
+      } else row.append(node('p', turn.content));
+      return row;
+    });
     box.append(item);
   });
 }
@@ -365,23 +385,28 @@ function renderQuiz(data) {
   const completed = data.quizzes.filter((quiz) => quiz.submitted_at);
   $('quiz-count').textContent = `已测 ${completed.length} 次`;
   completed.forEach((quiz, index) => {
-    const details = node('details', '', 'history-item');
-    details.append(
-      node('summary', `第 ${index + 1} 次小测 · ${quiz.score}/${quiz.questions.length} 题正确`),
-    );
-    quiz.questions.forEach((question, qIndex) => {
-      const result = quiz.results[qIndex];
-      const wrap = node('div', '', 'quiz-result');
-      if (quiz.user_answers[qIndex] !== result.answer) wrap.classList.add('needs');
-      wrap.append(node('h3', `${qIndex + 1}. ${question.prompt}`));
-      wrap.append(
-        node(
-          'p',
-          `你的选择：${quiz.user_answers[qIndex].toUpperCase()}　正确选择：${result.answer.toUpperCase()}`,
-        ),
+    // A submitted quiz never changes; only its position in the list can, so the details keep
+    // the user's expanded state across re-renders.
+    const details = cachedNode(`quiz:${quiz.id}`, () => {
+      const box = node('details', '', 'history-item');
+      box.append(
+        node('summary', `第 ${index + 1} 次小测 · ${quiz.score}/${quiz.questions.length} 题正确`),
       );
-      wrap.append(node('p', result.explanation));
-      details.append(wrap);
+      quiz.questions.forEach((question, qIndex) => {
+        const result = quiz.results[qIndex];
+        const wrap = node('div', '', 'quiz-result');
+        if (quiz.user_answers[qIndex] !== result.answer) wrap.classList.add('needs');
+        wrap.append(node('h3', `${qIndex + 1}. ${question.prompt}`));
+        wrap.append(
+          node(
+            'p',
+            `你的选择：${quiz.user_answers[qIndex].toUpperCase()}　正确选择：${result.answer.toUpperCase()}`,
+          ),
+        );
+        wrap.append(node('p', result.explanation));
+        box.append(wrap);
+      });
+      return box;
     });
     history.append(details);
   });
@@ -437,21 +462,26 @@ function renderQuiz(data) {
 function renderContentHistory(target, history, lesson = false) {
   target.replaceChildren();
   for (const version of history) {
-    const box = node('details', '', 'history-item');
-    box.append(node('summary', `旧版讲解 · 依据第 ${version.revision} 版课程`));
-    const content = node('div');
-    const snapshot = version.snapshot;
-    let blocks = [];
-    if (lesson) {
-      try {
-        blocks = JSON.parse(snapshot.lesson_blocks_json || '[]');
-      } catch (_) {}
-    }
-    MindOSTeaching.render(
-      content,
-      blocks.length ? blocks : MindOSTeaching.fromText(snapshot.lesson || snapshot.content || ''),
-    );
-    box.append(content);
+    // Content versions are only ever inserted, so the revision is a stable key; reusing the
+    // same node also keeps an expanded version expanded across re-renders.
+    const box = cachedNode(`version:${version.revision}:${lesson}`, () => {
+      const details = node('details', '', 'history-item');
+      details.append(node('summary', `旧版讲解 · 依据第 ${version.revision} 版课程`));
+      const content = node('div');
+      const snapshot = version.snapshot;
+      let blocks = [];
+      if (lesson) {
+        try {
+          blocks = JSON.parse(snapshot.lesson_blocks_json || '[]');
+        } catch (_) {}
+      }
+      MindOSTeaching.render(
+        content,
+        blocks.length ? blocks : MindOSTeaching.fromText(snapshot.lesson || snapshot.content || ''),
+      );
+      details.append(content);
+      return details;
+    });
     target.append(box);
   }
 }
@@ -1047,21 +1077,26 @@ function renderKnowledgeTests(target, tests, refresh) {
   tests
     .filter((t) => t.submitted_at)
     .forEach((test) => {
-      const details = node('details', '', 'quiz-result');
-      details.append(
-        node(
-          'summary',
-          `测试 ${test.score}/${test.questions.length} · ${test.submitted_at.slice(0, 10)}`,
-        ),
-      );
-      test.questions.forEach((q, index) => {
-        const result = test.results[index];
-        details.append(
+      // Keyed by test id, not by target, because growth and personal views render the same
+      // submitted tests into their own containers.
+      const details = cachedNode(`atomtest:${test.id}`, () => {
+        const box = node('details', '', 'quiz-result');
+        box.append(
           node(
-            'p',
-            `${index + 1}. ${q.prompt} · ${test.user_answers[index] === result.answer ? '答对' : '答错'} · 正确选项 ${result.answer.toUpperCase()}：${result.explanation}`,
+            'summary',
+            `测试 ${test.score}/${test.questions.length} · ${test.submitted_at.slice(0, 10)}`,
           ),
         );
+        test.questions.forEach((q, index) => {
+          const result = test.results[index];
+          box.append(
+            node(
+              'p',
+              `${index + 1}. ${q.prompt} · ${test.user_answers[index] === result.answer ? '答对' : '答错'} · 正确选项 ${result.answer.toUpperCase()}：${result.explanation}`,
+            ),
+          );
+        });
+        return box;
       });
       target.append(details);
     });

@@ -20,6 +20,20 @@ const CourseAssistant = (() => {
   const root = $('course-assistant'),
     toggle = $('assistant-toggle'),
     panel = $('assistant-panel');
+  // Saved records are immutable once persisted, so their rendered DOM is reused across panel
+  // re-renders instead of being rebuilt on every sync.
+  const domCache = new Map();
+  function cachedNode(key, build) {
+    let item = domCache.get(key);
+    if (!item) {
+      item = build();
+      // Pending/optimistic entries are one-shot; drop the oldest once the cache grows past the
+      // handful of records a single view shows.
+      if (domCache.size > 400) domCache.delete(domCache.keys().next().value);
+      domCache.set(key, item);
+    }
+    return item;
+  }
   async function request(cid, suffix, method = 'GET', body) {
     const missionSelection = suffix === 'chat' ? window.MindOSMission?.selection() : null;
     const resourceSelection = suffix === 'chat' ? window.MindOSKnowledgeSpace?.selection() : null;
@@ -263,7 +277,11 @@ const CourseAssistant = (() => {
     MindOSTutorQuality.render(courseId, messages.map((m) => m.id).join(','));
     renderObservations();
     const history = $('assistant-messages');
-    history.replaceChildren(...messages.map(ChatMessage));
+    // Saved messages are immutable, so reuse their DOM; the optimistic pending message has a
+    // unique id per send and is simply rebuilt.
+    history.replaceChildren(
+      ...messages.map((m) => cachedNode(`chat:${m.id}`, () => ChatMessage(m))),
+    );
     if (!messages.length)
       history.append(
         node(

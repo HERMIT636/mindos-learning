@@ -834,9 +834,21 @@ fieldset {
   stroke: #8d9bc94a;
   stroke-width: 1;
   stroke-dasharray: 5 6;
+  animation: order-flow 30s linear infinite;
+}
+@keyframes order-flow {
+  to {
+    stroke-dashoffset: -220;
+  }
 }
 .galaxy-node {
   cursor: pointer;
+}
+.galaxy-node .galaxy-halo,
+.galaxy-node .galaxy-core {
+  transition:
+    fill 0.2s,
+    stroke 0.2s;
 }
 .galaxy-halo {
   fill: #7487b712;
@@ -846,6 +858,12 @@ fieldset {
   fill: #213049;
   stroke: #617592;
   stroke-width: 1.4;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    fill 0.2s,
+    stroke 0.2s,
+    transform 0.2s;
 }
 .galaxy-number {
   fill: #bdcce5;
@@ -862,6 +880,20 @@ fieldset {
 .galaxy-node.current .galaxy-halo {
   stroke: #a5baff99;
   fill: #9aafff12;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: galaxy-breathe 5s ease-in-out infinite;
+}
+@keyframes galaxy-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.07);
+    opacity: 1;
+  }
 }
 .galaxy-node.current .galaxy-core {
   fill: #718bda;
@@ -876,6 +908,10 @@ fieldset {
 }
 .galaxy-node.locked {
   opacity: 0.42;
+}
+.galaxy-node:hover .galaxy-core {
+  transform: scale(1.1);
+  stroke: #8fa6d8;
 }
 .galaxy-node:focus .galaxy-halo,
 .galaxy-node:hover .galaxy-halo {
@@ -1471,15 +1507,51 @@ fieldset {
   border: 1px solid #a8bbf29c;
   color: #edf3ff;
   background: radial-gradient(circle at 32% 25%, #668ad0, #364a8b 70%);
-  box-shadow: 0 4px 28px #637ccc28;
+  box-shadow:
+    inset 0 1px 0 #ffffff2e,
+    0 4px 28px #637ccc38;
   display: flex;
   flex-direction: column;
   gap: 0;
   line-height: 1;
-  transition: box-shadow 0.18s;
+  transition:
+    box-shadow 0.18s,
+    transform 0.18s;
+}
+.assistant-floating:hover {
+  box-shadow:
+    inset 0 1px 0 #ffffff3d,
+    0 6px 34px #7f9ad95c;
+}
+/* Scale the glyph, not the button: the drag logic and saved position read its layout box. */
+/* A slow halo so the tutor reads as available without demanding attention. */
+.assistant-floating::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid #a8bbf22e;
+  animation: halo-ring 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes halo-ring {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.9;
+  }
 }
 .assistant-floating > span {
   font-size: 24px;
+  transition: transform 0.18s;
+}
+/* Scale the glyph, not the button: the drag logic and saved position read its layout box. */
+.assistant-floating:hover > span {
+  transform: scale(1.08);
 }
 .assistant-floating small {
   font-size: 9px;
@@ -1491,9 +1563,13 @@ fieldset {
   box-shadow: 0 0 25px #85d9ff66;
 }
 .assistant-panel {
-  background: #111c30f7;
+  background:
+    radial-gradient(120% 60% at 50% 0%, #1d2b4a8c, transparent 60%),
+    linear-gradient(180deg, #131f36f7, #101a2cf7);
   border-color: #4a5e85;
-  box-shadow: 0 15px 80px #0009;
+  box-shadow:
+    inset 0 1px 0 #ffffff12,
+    0 18px 60px -22px #050a18e6;
   border-radius: 18px;
   padding: 20px;
   backdrop-filter: blur(18px);
@@ -1517,14 +1593,20 @@ fieldset {
   margin: 6px 0;
 }
 .assistant-chat-message {
-  background: #1b2b44;
+  background: linear-gradient(180deg, #1d2d47, #1a2941);
   border: 1px solid #304965;
   color: #d2e1f4;
   border-radius: 11px;
+  box-shadow: inset 0 1px 0 #ffffff0a;
+  animation: rise-in 0.32s cubic-bezier(0.22, 0.68, 0.36, 1) backwards;
 }
 .assistant-chat-message.user {
-  background: #252d4b;
+  background: linear-gradient(180deg, #27304e, #232b45);
   border-color: #454f76;
+  border-left: 2px solid #c4a279;
+}
+.assistant-chat-message.assistant {
+  border-left: 2px solid #8e9eff;
 }
 .assistant-chat-message strong {
   color: #91add6;
